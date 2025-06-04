@@ -116,7 +116,19 @@ export async function POST(request: NextRequest) {
       }
 
       // Create squares for the campaign - only include columns that exist
-      const squares = [];
+      const squares: Array<{
+        campaign_id: string;
+        row: number;
+        col: number;
+        number: number;
+        value: number;
+        claimed_by: null;
+        donor_name: null;
+        payment_status: string;
+        payment_type: string;
+        claimed_at: null;
+      }> = [];
+      
       for (let row = 0; row < rows; row++) {
         for (let col = 0; col < columns; col++) {
           const position = row * columns + col + 1;

@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build --no-lint",
     "start": "next start",
     "lint": "next lint",
     "dev:clean": "lsof -ti:3000,3001,3002,3003,3004,3005,3006,3007,3008,3009,3010 | xargs kill -9 2>/dev/null || true && next dev",

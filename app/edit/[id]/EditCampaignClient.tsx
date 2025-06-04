@@ -162,16 +162,26 @@ export default function EditCampaignClient({ campaign, user }: EditCampaignClien
 
   // Grid preview generation
   const generateGridPreview = () => {
-    const squares = [];
-    for (let row = 0; row < watchedValues.rows; row++) {
-      for (let col = 0; col < watchedValues.columns; col++) {
-        const squareNumber = row * watchedValues.columns + col + 1;
+    const squares: Array<{
+      number: number;
+      price: number;
+      row: number;
+      col: number;
+      available: boolean;
+    }> = [];
+    
+    const rows = watchedValues.rows || 1;
+    const columns = watchedValues.columns || 1;
+    
+    for (let row = 0; row < rows; row++) {
+      for (let col = 0; col < columns; col++) {
+        const squareNumber = row * columns + col + 1;
         let price = 0;
         
         if (watchedValues.pricing_type === 'fixed') {
           price = watchedValues.fixed_price || 10;
         } else if (watchedValues.pricing_type === 'sequential') {
-          const start = watchedValues.sequential_start || 5;
+          const start = watchedValues.sequential_start || 1;
           const increment = watchedValues.sequential_increment || 1;
           price = start + (squareNumber - 1) * increment;
         }
