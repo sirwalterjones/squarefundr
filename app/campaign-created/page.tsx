@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Share2, Copy, CheckCircle } from 'lucide-react';
 
-export default function CampaignCreatedPage() {
+function CampaignCreatedContent() {
   const searchParams = useSearchParams();
   const [campaignUrl, setCampaignUrl] = useState('');
   const [campaignTitle, setCampaignTitle] = useState('');
@@ -125,5 +125,21 @@ export default function CampaignCreatedPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function CampaignCreatedPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-pulse p-8 text-center">
+          <div className="w-16 h-16 bg-gray-200 rounded-full mx-auto mb-6"></div>
+          <div className="h-8 bg-gray-200 rounded w-3/4 mx-auto mb-4"></div>
+          <div className="h-4 bg-gray-200 rounded w-1/2 mx-auto"></div>
+        </div>
+      </div>
+    }>
+      <CampaignCreatedContent />
+    </Suspense>
   );
 } 

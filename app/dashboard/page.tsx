@@ -1,11 +1,10 @@
 import { redirect } from 'next/navigation';
-import { createServerSupabaseClient, isDemoMode } from '@/lib/supabaseClient';
-import { cookies } from 'next/headers';
+import { createServerSupabaseClient } from '@/lib/supabaseServer';
+import { isDemoMode } from '@/lib/supabaseClient';
 import DashboardClient from './DashboardClient';
 
 export default async function DashboardPage() {
-  const cookieStore = await cookies();
-  const supabase = await createServerSupabaseClient(cookieStore);
+  const supabase = await createServerSupabaseClient();
 
   // Handle demo mode
   if (isDemoMode()) {

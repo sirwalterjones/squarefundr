@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '@/lib/supabaseClient';
-import { cookies } from 'next/headers';
+import { createServerSupabaseClient } from '@/lib/supabaseServer';
 
 export async function GET(
   request: NextRequest,
@@ -13,8 +12,7 @@ export async function GET(
       return NextResponse.json({ error: 'Slug is required' }, { status: 400 });
     }
 
-    const cookieStore = await cookies();
-    const supabase = await createServerSupabaseClient(cookieStore);
+    const supabase = await createServerSupabaseClient();
 
     // Get campaign by slug
     const { data: campaign, error: campaignError } = await supabase

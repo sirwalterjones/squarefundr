@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabaseClient, supabaseAdmin, isDemoMode } from '@/lib/supabaseClient';
-import { cookies } from 'next/headers';
+import { createServerSupabaseClient } from '@/lib/supabaseServer';
+import { supabaseAdmin, isDemoMode } from '@/lib/supabaseClient';
 import { v4 as uuidv4 } from 'uuid';
 
 function generateSlug(title: string): string {
@@ -46,8 +46,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get authenticated user
-    const cookieStore = await cookies();
-    const supabase = await createServerSupabaseClient(cookieStore);
+    const supabase = await createServerSupabaseClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     let actualUserId = userId;

@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (isDemoMode) {
+    if (isDemoMode()) {
       console.log('Running in demo mode - returning mock signup');
       return NextResponse.json({
         success: true,

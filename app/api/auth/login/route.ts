@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabaseClient, isDemoMode } from '@/lib/supabaseClient';
-import { cookies } from 'next/headers';
+import { createServerSupabaseClient } from '@/lib/supabaseServer';
+import { isDemoMode } from '@/lib/supabaseClient';
 
 interface LoginRequest {
   email: string;
@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (isDemoMode) {
+    if (isDemoMode()) {
       console.log('Running in demo mode - returning mock login');
       return NextResponse.json({
         success: true,
@@ -37,8 +37,7 @@ export async function POST(request: NextRequest) {
     // Real login using Supabase Auth
     console.log('Authenticating user...');
     
-    const cookieStore = cookies();
-    const supabase = createServerSupabaseClient(cookieStore);
+    const supabase = await createServerSupabaseClient();
     
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
@@ -85,15 +84,14 @@ export async function DELETE(request: NextRequest) {
   try {
     console.log('Logout request');
 
-    if (isDemoMode) {
+    if (isDemoMode()) {
       return NextResponse.json({
         success: true,
         message: 'Demo mode: User would be logged out'
       });
     }
 
-    const cookieStore = cookies();
-    const supabase = createServerSupabaseClient(cookieStore);
+    const supabase = await createServerSupabaseClient();
     
     const { error } = await supabase.auth.signOut();
 

@@ -71,7 +71,7 @@ export default function CreateCampaignPage() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        if (isDemoMode) {
+        if (isDemoMode()) {
           // In demo mode, create a mock user
           const mockUser = {
             id: 'demo-user-' + Date.now(),
@@ -343,7 +343,7 @@ export default function CreateCampaignPage() {
         </div>
 
         {/* Demo Mode Notice */}
-        {isDemoMode && (
+        {isDemoMode() && (
           <div className="mb-8 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
             <div className="flex items-start">
               <div className="flex-shrink-0">

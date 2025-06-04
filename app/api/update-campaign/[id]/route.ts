@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '@/lib/supabaseClient';
-import { cookies } from 'next/headers';
+import { createServerSupabaseClient } from '@/lib/supabaseServer';
 
 interface UpdateCampaignData {
   title: string;
@@ -20,8 +19,7 @@ export async function PUT(
   try {
     const resolvedParams = await params;
     const { id } = resolvedParams;
-    const cookieStore = await cookies();
-    const supabase = createServerSupabaseClient(cookieStore);
+    const supabase = await createServerSupabaseClient();
 
     // Check authentication
     const { data: { user }, error: authError } = await supabase.auth.getUser();

@@ -1,6 +1,5 @@
 import { redirect } from 'next/navigation';
-import { createServerSupabaseClient } from '@/lib/supabaseClient';
-import { cookies } from 'next/headers';
+import { createServerSupabaseClient } from '@/lib/supabaseServer';
 import EditCampaignClient from './EditCampaignClient';
 
 interface EditCampaignPageProps {
@@ -10,9 +9,8 @@ interface EditCampaignPageProps {
 }
 
 export default async function EditCampaignPage({ params }: EditCampaignPageProps) {
-  const cookieStore = await cookies();
   const resolvedParams = await params;
-  const supabase = await createServerSupabaseClient(cookieStore);
+  const supabase = await createServerSupabaseClient();
 
   // Check authentication
   const { data: { user }, error: authError } = await supabase.auth.getUser();

@@ -4,7 +4,6 @@
 export {
   supabase,
   supabaseAdmin,
-  createServerSupabaseClient,
   isDemoMode
 } from './supabaseClient';
 
