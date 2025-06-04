@@ -1,0 +1,248 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #ffffff;
+  --foreground: #111827;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #ffffff;
+    --foreground: #111827;
+  }
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  
+  .text-shadow-sm {
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  }
+  
+  .text-shadow {
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+  }
+  
+  .animate-fade-in {
+    animation: fadeIn 0.8s ease-out;
+  }
+  
+  .animate-slide-up {
+    animation: slideUp 0.8s ease-out 0.2s both;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Custom components */
+@layer components {
+  .btn-primary {
+    @apply bg-brand-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-brand-700 transition-all duration-200 shadow-lg hover:shadow-xl;
+  }
+  
+  .btn-secondary {
+    @apply bg-gray-100 text-gray-900 px-6 py-3 rounded-xl font-semibold hover:bg-gray-200 transition-all duration-200;
+  }
+  
+  .btn-outline {
+    @apply border-2 border-brand-600 text-brand-600 px-6 py-3 rounded-xl font-semibold hover:bg-brand-600 hover:text-white transition-all duration-200;
+  }
+  
+  .input-field {
+    @apply w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:border-transparent outline-none transition-all duration-200 bg-white text-gray-900 placeholder-gray-500;
+  }
+  
+  .card {
+    @apply bg-white rounded-2xl shadow-lg border border-gray-100 p-8;
+  }
+  
+  .square-grid {
+    @apply grid gap-1 w-full max-w-full;
+  }
+  
+  .square-item {
+    @apply aspect-square border border-gray-300 rounded-lg cursor-pointer transition-all duration-200 flex items-center justify-center text-xs font-semibold hover:scale-105;
+  }
+  
+  .square-available {
+    @apply bg-white hover:bg-brand-50 hover:border-brand-400 hover:text-brand-600;
+  }
+  
+  .square-selected {
+    @apply bg-brand-600 text-white border-brand-600 shadow-lg;
+  }
+  
+  .square-claimed {
+    @apply bg-gray-100 text-gray-500 border-gray-200 cursor-not-allowed;
+  }
+  
+  .container-responsive {
+    @apply w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+}
+
+/* Ensure all form elements have proper contrast */
+input, textarea, select {
+  color: #111827 !important;
+  background-color: #ffffff !important;
+}
+
+input::placeholder, textarea::placeholder {
+  color: #6b7280 !important;
+}
+
+label {
+  color: #374151 !important;
+  font-weight: 500;
+}
+
+/* Mobile-first responsive grid */
+.grid-responsive {
+  display: grid;
+  width: 100%;
+  gap: 2px;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+/* Grid size adjustments for mobile */
+@media (max-width: 640px) {
+  .grid-responsive {
+    gap: 1px;
+  }
+  
+  .square-item {
+    font-size: 0.5rem;
+    min-height: 24px;
+    min-width: 24px;
+  }
+  
+  .grid-overlay .square-item {
+    border-radius: 2px;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1023px) {
+  .grid-responsive {
+    gap: 2px;
+  }
+  
+  .square-item {
+    font-size: 0.625rem;
+    min-height: 32px;
+    min-width: 32px;
+  }
+  
+  .grid-overlay .square-item {
+    border-radius: 3px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .grid-responsive {
+    gap: 3px;
+  }
+  
+  .square-item {
+    font-size: 0.75rem;
+    min-height: 40px;
+    min-width: 40px;
+  }
+  
+  .grid-overlay .square-item {
+    border-radius: 4px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .square-item {
+    font-size: 0.875rem;
+    min-height: 48px;
+    min-width: 48px;
+  }
+}
+
+/* Image overlay styles */
+.image-overlay {
+  position: relative;
+  width: 100%;
+  height: auto;
+}
+
+.grid-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.grid-overlay .square-item {
+  pointer-events: all;
+  background-color: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(1px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.grid-overlay .square-item:hover {
+  background-color: rgba(255, 255, 255, 0.4);
+  border-color: rgba(59, 130, 246, 0.8);
+  backdrop-filter: blur(2px);
+  transform: scale(1.03);
+  box-shadow: 0 2px 12px rgba(59, 130, 246, 0.3);
+}
+
+.grid-overlay .square-selected {
+  background-color: rgba(59, 130, 246, 0.6) !important;
+  border-color: rgba(59, 130, 246, 0.9) !important;
+  backdrop-filter: blur(3px);
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+  transform: scale(1.05);
+}
+
+.grid-overlay .square-claimed {
+  background-color: rgba(239, 68, 68, 0.6) !important;
+  border-color: rgba(239, 68, 68, 0.8) !important;
+  backdrop-filter: blur(2px);
+  cursor: not-allowed;
+}
+
+.grid-overlay .square-claimed:hover {
+  background-color: rgba(239, 68, 68, 0.6) !important;
+  transform: none;
+  box-shadow: none;
+}
