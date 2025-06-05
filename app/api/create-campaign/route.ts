@@ -150,9 +150,12 @@ export async function POST(request: NextRequest) {
         
         squares.push({
           campaign_id: campaign.id,
-          row,
-          col,
+          row: row,
+          col: col,
+          row_num: row,
+          col_num: col,
           number: position,
+          position: position,
           value: price,
           claimed_by: null,
           donor_name: null,
