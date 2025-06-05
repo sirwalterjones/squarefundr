@@ -1,4 +1,4 @@
--- Simple SquareFundr Database Setup
+-- SquareFundr Database Setup (Updated)
 -- Run this entire script in Supabase SQL Editor
 
 -- First, drop existing tables if they have wrong schema (be careful in production!)
@@ -14,12 +14,11 @@ CREATE TABLE public.campaigns (
   description TEXT,
   slug TEXT UNIQUE NOT NULL,
   image_url TEXT,
+  rows INTEGER NOT NULL CHECK (rows > 0),
+  columns INTEGER NOT NULL CHECK (columns > 0),
   total_squares INTEGER NOT NULL,
-  price_per_square DECIMAL(10,2),
-  pricing_type TEXT DEFAULT 'fixed',
-  price_data JSONB,
-  public_url TEXT,
-  paid_to_admin BOOLEAN DEFAULT false,
+  pricing_type TEXT NOT NULL CHECK (pricing_type IN ('fixed', 'sequential', 'manual')),
+  price_data JSONB NOT NULL,
   is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -29,16 +28,19 @@ CREATE TABLE public.campaigns (
 CREATE TABLE public.squares (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   campaign_id UUID REFERENCES public.campaigns(id) ON DELETE CASCADE,
-  position INTEGER NOT NULL,
-  row_num INTEGER NOT NULL,
-  col_num INTEGER NOT NULL,
-  is_sold BOOLEAN DEFAULT false,
-  buyer_name TEXT,
-  buyer_email TEXT,
-  price DECIMAL(10,2),
-  sold_at TIMESTAMP WITH TIME ZONE,
+  row INTEGER NOT NULL,
+  col INTEGER NOT NULL,
+  number INTEGER NOT NULL,
+  value DECIMAL(10,2) NOT NULL,
+  claimed_by UUID,
+  donor_name TEXT,
+  payment_status TEXT DEFAULT 'pending' CHECK (payment_status IN ('pending', 'completed', 'failed')),
+  payment_type TEXT DEFAULT 'stripe' CHECK (payment_type IN ('stripe', 'cash')),
+  claimed_at TIMESTAMP WITH TIME ZONE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  UNIQUE(campaign_id, position)
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(campaign_id, row, col),
+  UNIQUE(campaign_id, number)
 );
 
 -- Create user_roles table for admin functionality
@@ -101,8 +103,10 @@ CREATE POLICY "Users can view their own role" ON public.user_roles
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_campaigns_user_id ON public.campaigns(user_id);
 CREATE INDEX IF NOT EXISTS idx_campaigns_slug ON public.campaigns(slug);
+CREATE INDEX IF NOT EXISTS idx_campaigns_active ON public.campaigns(is_active);
 CREATE INDEX IF NOT EXISTS idx_squares_campaign_id ON public.squares(campaign_id);
-CREATE INDEX IF NOT EXISTS idx_squares_position ON public.squares(campaign_id, position);
+CREATE INDEX IF NOT EXISTS idx_squares_claimed_by ON public.squares(claimed_by);
+CREATE INDEX IF NOT EXISTS idx_squares_payment_status ON public.squares(payment_status);
 CREATE INDEX IF NOT EXISTS idx_user_roles_user_id ON public.user_roles(user_id);
 
 -- Success message
