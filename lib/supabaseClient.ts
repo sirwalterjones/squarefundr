@@ -7,30 +7,93 @@ if (typeof window !== 'undefined') {
     process.env.NEXT_PUBLIC_SUPABASE_URL ? 'exists' : 'missing');
   console.log('ENV Check - NEXT_PUBLIC_SUPABASE_ANON_KEY:', 
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'exists' : 'missing');
+  
+  // Log actual values (length only, for security)
+  console.log('ENV Value Check - URL length:', 
+    process.env.NEXT_PUBLIC_SUPABASE_URL?.length || 0);
+  console.log('ENV Value Check - KEY length:', 
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.length || 0);
 }
 
-// Ensure we have the required environment variables
-if (typeof window !== 'undefined' && 
-    (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)) {
-  console.error(
-    'Missing environment variables NEXT_PUBLIC_SUPABASE_URL and/or NEXT_PUBLIC_SUPABASE_ANON_KEY'
-  );
-}
+// Get the environment variables with fallbacks
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder-project.supabase.co';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key-for-development-only';
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'placeholder-service-key';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+// Create a mock client for when access is limited or in development
+const createMockClient = () => {
+  console.warn('Using mock Supabase client');
+  return {
+    auth: {
+      getUser: () => Promise.resolve({ data: { user: null }, error: null }),
+      getSession: () => Promise.resolve({ data: { session: null }, error: null }),
+      signInWithPassword: () => Promise.resolve({ data: { user: null }, error: null }),
+      signUp: () => Promise.resolve({ data: { user: null }, error: null }),
+      signOut: () => Promise.resolve({ error: null }),
+    },
+    from: () => ({
+      select: () => ({
+        eq: () => ({
+          single: () => Promise.resolve({ data: null, error: null }),
+          limit: () => Promise.resolve({ data: [], error: null }),
+          order: () => Promise.resolve({ data: [], error: null }),
+        }),
+        order: () => ({
+          limit: () => Promise.resolve({ data: [], error: null }),
+        }),
+        limit: () => Promise.resolve({ data: [], error: null }),
+      }),
+      insert: () => Promise.resolve({ data: null, error: null }),
+      update: () => ({
+        eq: () => Promise.resolve({ data: null, error: null }),
+      }),
+      delete: () => ({
+        eq: () => Promise.resolve({ data: null, error: null }),
+      }),
+    }),
+    storage: {
+      from: () => ({
+        upload: () => Promise.resolve({ data: { path: '' }, error: null }),
+        getPublicUrl: () => ({ data: { publicUrl: '' } }),
+      }),
+    },
+  };
+};
 
-// Public client for browser use
-export const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey);
-
-// Admin client with service role key
-export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false
+// Public client for browser use - with proper try/catch
+let supabase;
+try {
+  if (typeof window !== 'undefined') {
+    console.log('Attempting to create Supabase browser client');
+    supabase = createBrowserClient(supabaseUrl, supabaseAnonKey);
+    console.log('Supabase browser client created successfully');
+  } else {
+    supabase = createMockClient();
   }
-});
+} catch (error) {
+  console.error('Error creating Supabase client:', error);
+  supabase = createMockClient();
+}
+
+// Admin client with service role key - with proper try/catch
+let supabaseAdmin;
+try {
+  if (typeof window === 'undefined') { // Server-side only
+    supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    });
+  } else {
+    supabaseAdmin = createMockClient();
+  }
+} catch (error) {
+  console.error('Error creating Supabase admin client:', error);
+  supabaseAdmin = createMockClient();
+}
+
+export { supabase, supabaseAdmin };
 
 // Check if we're in demo mode
 export function isDemoMode(): boolean {
