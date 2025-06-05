@@ -58,7 +58,14 @@ export default function ImageUploader({
 
       if (error) {
         console.error('Supabase Storage upload error:', error);
-        throw error;
+        // Fallback to data URL if storage fails
+        console.log('Falling back to data URL due to storage policy restrictions');
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
       }
 
       // Get the public URL
