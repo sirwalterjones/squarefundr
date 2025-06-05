@@ -1,15 +1,15 @@
 import type { Metadata } from "next";
-import { Nunito, Roboto_Mono } from "next/font/google";
+import { Outfit, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 
-const nunito = Nunito({
+const outfit = Outfit({
   variable: "--font-sans",
   subsets: ["latin"],
   display: "swap",
 });
 
-const robotoMono = Roboto_Mono({
+const jetbrainsMono = JetBrains_Mono({
   variable: "--font-mono",
   subsets: ["latin"],
   display: "swap",
@@ -29,7 +29,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${nunito.variable} ${robotoMono.variable} antialiased min-h-screen bg-gray-50`}
+        className={`${outfit.variable} ${jetbrainsMono.variable} antialiased min-h-screen bg-gray-50`}
       >
         <Navbar />
         <main className="min-h-screen">
