@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
       customer_email: donorEmail,
       metadata: {
         campaign_id: campaignId,
-        square_ids: JSON.stringify(squares.map((s: SelectedSquare) => `${s.row},${s.column}`)),
+        square_ids: JSON.stringify(squares.map((s: SelectedSquare) => `${s.row},${s.col}`)),
         donor_name: donorName || '',
         anonymous: anonymous ? 'true' : 'false',
       },

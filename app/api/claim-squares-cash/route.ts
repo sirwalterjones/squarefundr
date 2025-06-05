@@ -25,13 +25,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if squares are still available
-    const squareKeys = squares.map((s: SelectedSquare) => `${s.row},${s.column}`);
+    const squareKeys = squares.map((s: SelectedSquare) => `${s.row},${s.col}`);
     const { data: existingSquares, error: squareError } = await supabase
       .from('squares')
       .select('*')
       .eq('campaign_id', campaignId)
       .in('row', squares.map((s: SelectedSquare) => s.row))
-      .in('column', squares.map((s: SelectedSquare) => s.column));
+      .in('col', squares.map((s: SelectedSquare) => s.col));
 
     if (squareError) {
       return NextResponse.json({ error: 'Error checking square availability' }, { status: 500 });
@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
 
     // Check if any squares are already claimed
     const unavailableSquares = existingSquares?.filter(square => 
-      square.claimed_by && squareKeys.includes(`${square.row},${square.column}`)
+      square.claimed_by && squareKeys.includes(`${square.row},${square.col}`)
     );
 
     if (unavailableSquares && unavailableSquares.length > 0) {
@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
     const squareUpdates = squares.map((square: SelectedSquare) => ({
       campaign_id: campaignId,
       row: square.row,
-      column: square.column,
+      col: square.col,
       claimed_by: donorEmail || 'anonymous',
       donor_name: anonymous ? null : donorName,
       payment_status: 'pending' as const,
@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
         })
         .eq('campaign_id', update.campaign_id)
         .eq('row', update.row)
-        .eq('column', update.column);
+        .eq('col', update.col);
 
       if (updateError) {
         console.error('Error updating square:', updateError);
