@@ -1,42 +1,13 @@
 -- Fix Production Database Schema for SquareFundr
 -- Run this SQL in your Supabase SQL Editor to fix the schema issues
 
--- 1. Fix the campaigns table structure
+-- Note: The campaigns table already has all required columns (rows, columns, etc.)
+-- We only need to fix the squares table structure
 
--- First, check what tables and columns exist
-SELECT table_name, column_name 
-FROM information_schema.columns 
-WHERE table_schema = 'public' 
-  AND table_name = 'campaigns';
-
--- Add missing columns to campaigns table if they don't exist
-ALTER TABLE IF EXISTS public.campaigns 
-ADD COLUMN IF NOT EXISTS columns INTEGER NOT NULL DEFAULT 10 CHECK (columns >= 2 AND columns <= 50);
-
-ALTER TABLE IF EXISTS public.campaigns 
-ADD COLUMN IF NOT EXISTS rows INTEGER NOT NULL DEFAULT 10 CHECK (rows >= 2 AND rows <= 50);
-
-ALTER TABLE IF EXISTS public.campaigns 
-ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
-
-ALTER TABLE IF EXISTS public.campaigns 
-ADD COLUMN IF NOT EXISTS sold_squares INTEGER DEFAULT 0;
-
-ALTER TABLE IF EXISTS public.campaigns 
-ADD COLUMN IF NOT EXISTS pricing_type TEXT NOT NULL DEFAULT 'fixed' CHECK (pricing_type IN ('fixed', 'sequential', 'manual'));
-
-ALTER TABLE IF EXISTS public.campaigns 
-ADD COLUMN IF NOT EXISTS price_data JSONB DEFAULT '{"fixed": 10}'::jsonb;
-
-ALTER TABLE IF EXISTS public.campaigns 
-ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;
-
--- 2. Fix squares table structure to match code expectations
+-- 1. Fix the squares table structure to match code expectations
 -- Based on provided structure:
 -- Current: position, row_num, col_num, is_sold, buyer_name, buyer_email, price, sold_at, created_at, row, col, number
 -- Expected: row, col, number, value, claimed_by, donor_name, payment_status, payment_type, claimed_at, created_at, updated_at
-
--- First, we'll create view-compatible mappings for the existing structure
 
 -- 1. Add value column if it doesn't exist (using price column's values)
 DO $$
@@ -212,7 +183,7 @@ BEGIN
   END IF;
 END $$;
 
--- 3. Create or update indexes for better performance
+-- 2. Create or update indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_campaigns_slug ON public.campaigns(slug);
 CREATE INDEX IF NOT EXISTS idx_campaigns_user_id ON public.campaigns(user_id);
 CREATE INDEX IF NOT EXISTS idx_campaigns_active ON public.campaigns(is_active);
@@ -220,7 +191,7 @@ CREATE INDEX IF NOT EXISTS idx_squares_campaign_id ON public.squares(campaign_id
 CREATE INDEX IF NOT EXISTS idx_squares_claimed_by ON public.squares(claimed_by);
 CREATE INDEX IF NOT EXISTS idx_squares_payment_status ON public.squares(payment_status);
 
--- 4. Create update trigger for campaign sold_squares
+-- 3. Create update trigger for campaign sold_squares
 CREATE OR REPLACE FUNCTION update_sold_squares_count()
 RETURNS TRIGGER AS $$
 BEGIN
