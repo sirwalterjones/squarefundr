@@ -121,14 +121,25 @@ class SupabaseClientSingleton {
       }
     } else {
       // Browser environment - mock admin client (should never be used in browser)
-      this._supabaseAdmin = this.createMockClient('browser admin placeholder');
+      // This is expected behavior - admin clients should only exist on server
+      this._supabaseAdmin = this.createQuietMockClient('browser admin placeholder');
     }
+  }
+
+  // Create a quiet mock client for expected scenarios (like admin client in browser)
+  private createQuietMockClient(context: string) {
+    // No warnings for expected mock scenarios
+    return this.createBasicMockClient(context);
   }
 
   // Create a mock client for fallback ONLY if necessary
   private createMockClient(context: string) {
     console.warn(`Using mock Supabase client - THIS SHOULD NOT HAPPEN IN PRODUCTION (context: ${context})`);
     console.trace('Mock client creation stack trace');
+    return this.createBasicMockClient(context);
+  }
+
+  private createBasicMockClient(context: string) {
     
     const mockError = new Error(`Mock Supabase client used in ${context} - this should not happen in production`);
     

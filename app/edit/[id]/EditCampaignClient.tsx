@@ -148,9 +148,8 @@ export default function EditCampaignClient({ campaign, user }: EditCampaignClien
     }
   };
 
-  const handleImageUpload = (file: File) => {
-    // Create a URL for the uploaded file
-    const url = URL.createObjectURL(file);
+  const handleImageUpload = (file: File, url: string) => {
+    // Use the storage URL or data URL which persists across sessions
     setImageUrl(url);
     setUploadedImage(file);
   };

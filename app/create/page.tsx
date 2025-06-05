@@ -101,17 +101,14 @@ export default function CreateCampaignPage() {
     checkAuth();
   }, [router]);
 
-  const handleImageUpload = async (file: File) => {
+  const handleImageUpload = async (file: File, url: string) => {
     setIsUploading(true);
     try {
-      // For now, create a local object URL for preview
-      // In production, this would upload to Supabase storage
-      const objectUrl = URL.createObjectURL(file);
-      setImageUrl(objectUrl);
+      // Use the storage URL or data URL which persists across sessions
+      setImageUrl(url);
       setUploadedImage(file);
       
-      // TODO: Replace with actual Supabase storage upload when storage bucket is configured
-      console.log('Image uploaded locally:', file.name, file.size);
+      console.log('Image processed:', file.name, file.size, 'URL:', url);
     } catch (error) {
       console.error('Upload error:', error);
       alert('Failed to upload image. Please try again.');
