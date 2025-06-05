@@ -1,6 +1,13 @@
 import { createClient } from '@supabase/supabase-js';
 import { createBrowserClient } from '@supabase/ssr';
 
+// Declare the testSupabaseConnection function on the Window interface
+declare global {
+  interface Window {
+    testSupabaseConnection: () => Promise<{ success: boolean, data?: any, error?: any }>;
+  }
+}
+
 // Log environment variables presence for debugging (only on client)
 if (typeof window !== 'undefined') {
   console.log('ENV Check - NEXT_PUBLIC_SUPABASE_URL:', 
@@ -15,15 +22,29 @@ if (typeof window !== 'undefined') {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.length || 0);
 }
 
-// Get the environment variables with fallbacks
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder-project.supabase.co';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key-for-development-only';
-const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'placeholder-service-key';
+// Get the environment variables with strict validation
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+if (!supabaseUrl) {
+  console.error('ERROR: NEXT_PUBLIC_SUPABASE_URL is required but not set');
+}
 
-// Create a mock client for when access is limited or in development
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+if (!supabaseAnonKey) {
+  console.error('ERROR: NEXT_PUBLIC_SUPABASE_ANON_KEY is required but not set');
+}
+
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+if (typeof window === 'undefined' && !supabaseServiceRoleKey) {
+  console.error('ERROR: SUPABASE_SERVICE_ROLE_KEY is required but not set');
+}
+
+// Force direct definition of our real clients
+let supabase: any;
+let supabaseAdmin: any;
+
+// Create a mock client for fallback ONLY if necessary
 const createMockClient = () => {
-  console.warn('Using mock Supabase client');
-  // Log stack trace to find where this is being called from
+  console.warn('Using mock Supabase client - THIS SHOULD NOT HAPPEN IN PRODUCTION');
   console.trace('Mock client creation stack trace');
   
   return {
@@ -63,54 +84,70 @@ const createMockClient = () => {
   };
 };
 
-// Public client for browser use - with proper try/catch
-let supabase;
-try {
-  if (typeof window !== 'undefined') {
-    console.log('Attempting to create Supabase browser client');
-    const realClient = createBrowserClient(supabaseUrl, supabaseAnonKey);
-    console.log('Supabase browser client created successfully');
-    
-    // Add a direct test to see if realClient is valid
-    if (!realClient) {
-      console.error('❌ ERROR: realClient is undefined or null after creation');
+// ONLY initialize browser client in browser environment
+if (typeof window !== 'undefined') {
+  // Browser environment - use browser client
+  console.log('BROWSER: Creating Supabase browser client');
+  try {
+    if (!supabaseUrl || !supabaseAnonKey) {
+      console.error('Cannot create Supabase browser client: missing environment variables');
       supabase = createMockClient();
     } else {
-      console.log('✅ SUCCESS: Using real Supabase client in browser');
-      supabase = realClient;
+      supabase = createBrowserClient(supabaseUrl, supabaseAnonKey);
+      console.log('✅ SUCCESS: Real Supabase browser client initialized');
+      
+      // Create a test function to verify client works
+      window.testSupabaseConnection = async () => {
+        try {
+          const { data, error } = await supabase.from('campaigns').select('id').limit(1);
+          if (error) throw error;
+          console.log('Supabase connection test result:', { data, success: true });
+          return { success: true, data };
+        } catch (err) {
+          console.error('Supabase connection test failed:', err);
+          return { success: false, error: err };
+        }
+      };
     }
-  } else {
-    console.log('Not in browser environment, using mock client');
+  } catch (error) {
+    console.error('Failed to create Supabase browser client:', error);
     supabase = createMockClient();
   }
-} catch (error) {
-  console.error('Error creating Supabase client:', error);
+} else {
+  // Server environment - mock client only for typing, will be overridden by server client
   supabase = createMockClient();
 }
 
-// Admin client with service role key - with proper try/catch
-let supabaseAdmin;
-try {
-  if (typeof window === 'undefined') { // Server-side only
-    supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
-    });
-  } else {
+// ONLY initialize admin client in server environment
+if (typeof window === 'undefined') {
+  // Server environment - use server client with service role
+  console.log('SERVER: Creating Supabase admin client');
+  try {
+    if (!supabaseUrl || !supabaseServiceRoleKey) {
+      console.error('Cannot create Supabase admin client: missing environment variables');
+      supabaseAdmin = createMockClient();
+    } else {
+      supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey, {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
+        }
+      });
+      console.log('✅ SUCCESS: Real Supabase admin client initialized');
+    }
+  } catch (error) {
+    console.error('Failed to create Supabase admin client:', error);
     supabaseAdmin = createMockClient();
   }
-} catch (error) {
-  console.error('Error creating Supabase admin client:', error);
+} else {
+  // Browser environment - mock admin client (should never be used in browser)
   supabaseAdmin = createMockClient();
 }
 
 export { supabase, supabaseAdmin };
 
-// Check if we're in demo mode
+// Demo mode is ALWAYS false now
 export function isDemoMode(): boolean {
-  // Set to false to work with real data
   return false;
 }
 
