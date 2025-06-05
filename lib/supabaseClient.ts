@@ -1,24 +1,71 @@
 import { createClient } from '@supabase/supabase-js';
 import { createBrowserClient } from '@supabase/ssr';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+
+// Check if Supabase is fully configured
+const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
+
+// Create a mock client for when Supabase is not configured
+const createMockClient = () => {
+  console.warn('Supabase not configured - using mock client');
+  return {
+    auth: {
+      getUser: () => Promise.resolve({ data: { user: null }, error: null }),
+      getSession: () => Promise.resolve({ data: { session: null }, error: null }),
+      signInWithPassword: () => Promise.resolve({ data: { user: null }, error: null }),
+      signUp: () => Promise.resolve({ data: { user: null }, error: null }),
+      signOut: () => Promise.resolve({ error: null }),
+    },
+    from: () => ({
+      select: () => ({
+        eq: () => ({
+          single: () => Promise.resolve({ data: null, error: null }),
+          limit: () => Promise.resolve({ data: [], error: null }),
+          order: () => Promise.resolve({ data: [], error: null }),
+        }),
+        order: () => ({
+          limit: () => Promise.resolve({ data: [], error: null }),
+        }),
+        limit: () => Promise.resolve({ data: [], error: null }),
+      }),
+      insert: () => Promise.resolve({ data: null, error: null }),
+      update: () => ({
+        eq: () => Promise.resolve({ data: null, error: null }),
+      }),
+      delete: () => ({
+        eq: () => Promise.resolve({ data: null, error: null }),
+      }),
+    }),
+    storage: {
+      from: () => ({
+        upload: () => Promise.resolve({ data: { path: '' }, error: null }),
+        getPublicUrl: () => ({ data: { publicUrl: '' } }),
+      }),
+    },
+  };
+};
 
 // Public client for browser use
-export const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey);
+export const supabase = isSupabaseConfigured
+  ? createBrowserClient(supabaseUrl, supabaseAnonKey)
+  : createMockClient() as any;
 
 // Admin client with service role key
-export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false
-  }
-});
+export const supabaseAdmin = isSupabaseConfigured && supabaseServiceRoleKey
+  ? createClient(supabaseUrl, supabaseServiceRoleKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    })
+  : createMockClient() as any;
 
 // Check if we're in demo mode
 export function isDemoMode(): boolean {
-  return !supabaseUrl || !supabaseAnonKey || supabaseUrl.includes('demo');
+  return !isSupabaseConfigured;
 }
 
 // Database type definitions
