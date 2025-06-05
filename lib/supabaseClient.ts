@@ -23,6 +23,9 @@ const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'placeho
 // Create a mock client for when access is limited or in development
 const createMockClient = () => {
   console.warn('Using mock Supabase client');
+  // Log stack trace to find where this is being called from
+  console.trace('Mock client creation stack trace');
+  
   return {
     auth: {
       getUser: () => Promise.resolve({ data: { user: null }, error: null }),
@@ -65,9 +68,19 @@ let supabase;
 try {
   if (typeof window !== 'undefined') {
     console.log('Attempting to create Supabase browser client');
-    supabase = createBrowserClient(supabaseUrl, supabaseAnonKey);
+    const realClient = createBrowserClient(supabaseUrl, supabaseAnonKey);
     console.log('Supabase browser client created successfully');
+    
+    // Add a direct test to see if realClient is valid
+    if (!realClient) {
+      console.error('❌ ERROR: realClient is undefined or null after creation');
+      supabase = createMockClient();
+    } else {
+      console.log('✅ SUCCESS: Using real Supabase client in browser');
+      supabase = realClient;
+    }
   } else {
+    console.log('Not in browser environment, using mock client');
     supabase = createMockClient();
   }
 } catch (error) {
