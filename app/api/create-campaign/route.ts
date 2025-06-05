@@ -134,7 +134,10 @@ export async function POST(request: NextRequest) {
       campaign_id: string;
       row: number;
       col: number;
+      row_num: number;
+      col_num: number;
       number: number;
+      position: number;
       value: number;
       claimed_by: null;
       donor_name: null;
