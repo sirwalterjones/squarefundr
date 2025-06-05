@@ -1,27 +1,63 @@
 import Stripe from 'stripe';
 import { loadStripe } from '@stripe/stripe-js';
 
-// Ensure we have the required Stripe environment variables in server context
-if (typeof window === 'undefined' && !process.env.STRIPE_SECRET_KEY) {
-  console.error('Missing environment variable STRIPE_SECRET_KEY');
-}
+// Check if Stripe is properly configured
+const isStripeConfigured = Boolean(
+  process.env.STRIPE_SECRET_KEY && 
+  process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+);
 
-// Server-side Stripe instance
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-05-28.basil',
-});
+// Create a mock Stripe instance for when Stripe is not yet configured
+const createMockStripe = () => {
+  return {
+    checkout: {
+      sessions: {
+        create: () => {
+          console.warn('Stripe not configured - using mock implementation');
+          return Promise.resolve({ url: '/stripe-not-configured' });
+        }
+      }
+    },
+    accounts: {
+      create: () => Promise.resolve({ id: 'mock_acct_123' })
+    },
+    accountLinks: {
+      create: () => Promise.resolve({ url: '/mock-account-link' })
+    },
+    paymentIntents: {
+      create: () => Promise.resolve({ client_secret: 'mock_pi_secret' })
+    }
+  } as unknown as Stripe;
+};
+
+// Server-side Stripe instance with fallback for when not configured
+export const stripe = isStripeConfigured
+  ? new Stripe(process.env.STRIPE_SECRET_KEY!, {
+      apiVersion: '2025-05-28.basil',
+    })
+  : createMockStripe();
 
 // Client-side Stripe instance
 export const getStripe = () => {
   if (!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) {
-    console.error('Missing environment variable NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY');
+    console.warn('Stripe publishable key not configured');
     return Promise.resolve(null);
   }
   return loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
 };
 
+// Check if we're in demo mode for Stripe (not configured yet)
+export function isStripeDemo(): boolean {
+  return !isStripeConfigured;
+}
+
 // Stripe Connect helpers
 export async function createConnectedAccount(email: string) {
+  if (!isStripeConfigured) {
+    console.warn('Stripe not configured - using mock implementation');
+    return { id: 'mock_acct_123' };
+  }
+  
   try {
     const account = await stripe.accounts.create({
       type: 'standard',
@@ -35,6 +71,11 @@ export async function createConnectedAccount(email: string) {
 }
 
 export async function createAccountLink(accountId: string, refreshUrl: string, returnUrl: string) {
+  if (!isStripeConfigured) {
+    console.warn('Stripe not configured - using mock implementation');
+    return { url: returnUrl };
+  }
+  
   try {
     const accountLink = await stripe.accountLinks.create({
       account: accountId,
@@ -51,6 +92,11 @@ export async function createAccountLink(accountId: string, refreshUrl: string, r
 
 // Admin fee payment - simplified to regular payment
 export async function createAdminFeePaymentIntent(amount: number, currency: string = 'usd') {
+  if (!isStripeConfigured) {
+    console.warn('Stripe not configured - using mock implementation');
+    return { client_secret: 'mock_pi_secret' };
+  }
+  
   try {
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(amount * 100), // Convert to cents
@@ -70,6 +116,11 @@ export async function createDonationPaymentIntent(
   applicationFeeAmount: number,
   currency: string = 'usd'
 ) {
+  if (!isStripeConfigured) {
+    console.warn('Stripe not configured - using mock implementation');
+    return { client_secret: 'mock_pi_secret' };
+  }
+  
   try {
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(amount * 100), // Convert to cents
@@ -96,6 +147,11 @@ export async function createCheckoutSession(
   cancelUrl: string,
   donorEmail?: string
 ) {
+  if (!isStripeConfigured) {
+    console.warn('Stripe not configured - using mock implementation');
+    return { url: successUrl };
+  }
+  
   try {
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
