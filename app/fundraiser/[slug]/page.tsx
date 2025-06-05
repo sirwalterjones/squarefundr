@@ -76,7 +76,7 @@ export default function FundraiserPage() {
                 id: `square-${number}`,
                 campaign_id: demoCampaign.id,
                 row,
-                column: col,
+                col: col,
                 number,
                 value,
                 claimed_by: isClaimed ? `donor-${number}` : undefined,
@@ -121,7 +121,7 @@ export default function FundraiserPage() {
 
   const handleSquareDeselect = (square: SelectedSquare) => {
     setSelectedSquares(prev => 
-      prev.filter(s => !(s.row === square.row && s.column === square.column))
+      prev.filter(s => !(s.row === square.row && s.col === square.col))
     );
   };
 
@@ -136,10 +136,10 @@ export default function FundraiserPage() {
   const handlePaymentSuccess = () => {
     // For demo campaigns, update state locally
     if (slug === 'team-championship-fund') {
-      const claimedSquareIds = selectedSquares.map(s => `${s.row}-${s.column}`);
+      const claimedSquareIds = selectedSquares.map(s => `${s.row}-${s.col}`);
       
       setSquares(prev => prev.map(square => {
-        const squareId = `${square.row}-${square.column}`;
+        const squareId = `${square.row}-${square.col}`;
         if (claimedSquareIds.includes(squareId)) {
           return {
             ...square,

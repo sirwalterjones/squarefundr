@@ -27,7 +27,7 @@ export interface Square {
   id: string;
   campaign_id: string;
   row: number;
-  column: number;
+  col: number;
   number: number;
   value: number;
   claimed_by?: string;
@@ -63,7 +63,7 @@ export interface PriceData {
 
 export interface SelectedSquare {
   row: number;
-  column: number;
+  col: number;
   number: number;
   value: number;
 }

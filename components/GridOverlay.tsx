@@ -25,8 +25,8 @@ export default function GridOverlay({
 }: GridOverlayProps) {
   const [imageLoaded, setImageLoaded] = useState(false);
 
-  const isSquareSelected = (row: number, column: number) => {
-    return selectedSquares.some(s => s.row === row && s.column === column);
+  const isSquareSelected = (row: number, col: number) => {
+    return selectedSquares.some(s => s.row === row && s.col === col);
   };
 
   const isSquareAvailable = (square: SquareType) => {
@@ -38,12 +38,12 @@ export default function GridOverlay({
 
     const selectedSquare: SelectedSquare = {
       row: square.row,
-      column: square.column,
+      col: square.col,
       number: square.number,
       value: square.value
     };
 
-    if (isSquareSelected(square.row, square.column)) {
+    if (isSquareSelected(square.row, square.col)) {
       onSquareDeselect(selectedSquare);
     } else {
       onSquareSelect(selectedSquare);
@@ -76,7 +76,7 @@ export default function GridOverlay({
             <Square
               key={square.id}
               square={square}
-              isSelected={isSquareSelected(square.row, square.column)}
+              isSelected={isSquareSelected(square.row, square.col)}
               isAvailable={isSquareAvailable(square)}
               onClick={() => handleSquareClick(square)}
               campaign={campaign}

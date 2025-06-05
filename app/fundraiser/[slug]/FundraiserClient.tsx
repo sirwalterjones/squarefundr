@@ -56,7 +56,7 @@ export default function FundraiserClient({ campaign, squares: initialSquares }: 
 
   const handleSquareDeselect = (square: SelectedSquare) => {
     setSelectedSquares(prev => 
-      prev.filter(s => !(s.row === square.row && s.column === square.column))
+      prev.filter(s => !(s.row === square.row && s.col === square.col))
     );
   };
 
@@ -182,7 +182,7 @@ export default function FundraiserClient({ campaign, squares: initialSquares }: 
                   <div className="max-h-32 overflow-y-auto space-y-2">
                     {selectedSquares.map((square) => (
                       <div
-                        key={`${square.row}-${square.column}`}
+                        key={`${square.row}-${square.col}`}
                         className="flex justify-between items-center text-sm"
                       >
                         <span>Square #{square.number}</span>

@@ -2,7 +2,7 @@ import { PriceData, PricingType } from '@/types';
 
 export function calculateSquarePrice(
   row: number,
-  column: number,
+  col: number,
   number: number,
   pricingType: PricingType,
   priceData: PriceData
@@ -19,7 +19,7 @@ export function calculateSquarePrice(
     
     case 'manual':
       if (priceData.manual) {
-        const key = `${row},${column}`;
+        const key = `${row},${col}`;
         return priceData.manual[key] || 0;
       }
       return 0;
@@ -30,12 +30,12 @@ export function calculateSquarePrice(
 }
 
 export function calculateTotalPrice(
-  squares: Array<{ row: number; column: number; number: number }>,
+  squares: Array<{ row: number; col: number; number: number }>,
   pricingType: PricingType,
   priceData: PriceData
 ): number {
   return squares.reduce((total, square) => {
-    return total + calculateSquarePrice(square.row, square.column, square.number, pricingType, priceData);
+    return total + calculateSquarePrice(square.row, square.col, square.number, pricingType, priceData);
   }, 0);
 }
 

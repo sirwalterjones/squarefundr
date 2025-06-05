@@ -149,7 +149,7 @@ export default function PaymentModal({
               <h3 className="font-medium text-gray-900 mb-2">Selected Squares</h3>
               <div className="space-y-1">
                 {selectedSquares.map((square) => (
-                  <div key={`${square.row}-${square.column}`} className="flex justify-between text-sm">
+                  <div key={`${square.row}-${square.col}`} className="flex justify-between text-sm">
                     <span>Square #{square.number}</span>
                     <span>{formatPrice(square.value)}</span>
                   </div>
