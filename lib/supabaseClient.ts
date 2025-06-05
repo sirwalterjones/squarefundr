@@ -1,6 +1,14 @@
 import { createClient } from '@supabase/supabase-js';
 import { createBrowserClient } from '@supabase/ssr';
 
+// Log environment variables presence for debugging (only on client)
+if (typeof window !== 'undefined') {
+  console.log('ENV Check - NEXT_PUBLIC_SUPABASE_URL:', 
+    process.env.NEXT_PUBLIC_SUPABASE_URL ? 'exists' : 'missing');
+  console.log('ENV Check - NEXT_PUBLIC_SUPABASE_ANON_KEY:', 
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'exists' : 'missing');
+}
+
 // Ensure we have the required environment variables
 if (typeof window !== 'undefined' && 
     (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)) {
