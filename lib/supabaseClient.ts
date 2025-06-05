@@ -130,6 +130,8 @@ class SupabaseClientSingleton {
     console.warn(`Using mock Supabase client - THIS SHOULD NOT HAPPEN IN PRODUCTION (context: ${context})`);
     console.trace('Mock client creation stack trace');
     
+    const mockError = new Error(`Mock Supabase client used in ${context} - this should not happen in production`);
+    
     return {
       auth: {
         getUser: () => Promise.resolve({ data: { user: null }, error: null }),
@@ -138,31 +140,96 @@ class SupabaseClientSingleton {
         signUp: () => Promise.resolve({ data: { user: null }, error: null }),
         signOut: () => Promise.resolve({ error: null }),
       },
-      from: () => ({
-        select: () => ({
-          eq: () => ({
-            single: () => Promise.resolve({ data: null, error: null }),
-            limit: () => Promise.resolve({ data: [], error: null }),
-            order: () => Promise.resolve({ data: [], error: null }),
-          }),
-          order: () => ({
-            limit: () => Promise.resolve({ data: [], error: null }),
-          }),
-          limit: () => Promise.resolve({ data: [], error: null }),
-        }),
-        insert: () => Promise.resolve({ data: null, error: null }),
-        update: () => ({
-          eq: () => Promise.resolve({ data: null, error: null }),
-        }),
-        delete: () => ({
-          eq: () => Promise.resolve({ data: null, error: null }),
-        }),
-      }),
+      from: (table: string) => {
+        // Log every interaction with the mock client
+        console.warn(`Mock Supabase client: Attempted to access table '${table}' in ${context}`);
+        
+        return {
+          select: (columns?: string) => {
+            console.warn(`Mock Supabase client: select(${columns}) called on table '${table}' in ${context}`);
+            return {
+              eq: (column: string, value: any) => {
+                console.warn(`Mock Supabase client: eq(${column}, ${value}) called on table '${table}' in ${context}`);
+                return {
+                  single: () => Promise.resolve({ 
+                    data: null, 
+                    error: { message: `Mock client cannot return data for ${table}.${column}=${value}` } 
+                  }),
+                  limit: () => Promise.resolve({ 
+                    data: [], 
+                    error: { message: `Mock client cannot return data for ${table}.${column}=${value}` } 
+                  }),
+                  order: () => Promise.resolve({ 
+                    data: [], 
+                    error: { message: `Mock client cannot return data for ${table}.${column}=${value}` } 
+                  }),
+                };
+              },
+              order: (column: string) => {
+                console.warn(`Mock Supabase client: order(${column}) called on table '${table}' in ${context}`);
+                return {
+                  limit: () => Promise.resolve({ 
+                    data: [], 
+                    error: { message: `Mock client cannot return ordered data for ${table}.${column}` } 
+                  }),
+                };
+              },
+              limit: () => Promise.resolve({ 
+                data: [], 
+                error: { message: `Mock client cannot return limited data for ${table}` } 
+              }),
+            };
+          },
+          insert: (data: any) => {
+            console.warn(`Mock Supabase client: insert called on table '${table}' in ${context}`, data);
+            return Promise.resolve({ 
+              data: null, 
+              error: { message: `Mock client cannot insert data into ${table}` } 
+            });
+          },
+          update: (data: any) => {
+            console.warn(`Mock Supabase client: update called on table '${table}' in ${context}`, data);
+            return {
+              eq: (column: string, value: any) => {
+                console.warn(`Mock Supabase client: update.eq(${column}, ${value}) called on table '${table}' in ${context}`);
+                return Promise.resolve({ 
+                  data: null, 
+                  error: { message: `Mock client cannot update data in ${table}.${column}=${value}` } 
+                });
+              },
+            };
+          },
+          delete: () => {
+            console.warn(`Mock Supabase client: delete called on table '${table}' in ${context}`);
+            return {
+              eq: (column: string, value: any) => {
+                console.warn(`Mock Supabase client: delete.eq(${column}, ${value}) called on table '${table}' in ${context}`);
+                return Promise.resolve({ 
+                  data: null, 
+                  error: { message: `Mock client cannot delete data from ${table}.${column}=${value}` } 
+                });
+              },
+            };
+          },
+        };
+      },
       storage: {
-        from: () => ({
-          upload: () => Promise.resolve({ data: { path: '' }, error: null }),
-          getPublicUrl: () => ({ data: { publicUrl: '' } }),
-        }),
+        from: (bucket: string) => {
+          console.warn(`Mock Supabase client: storage.from(${bucket}) called in ${context}`);
+          return {
+            upload: (path: string, file: any) => {
+              console.warn(`Mock Supabase client: upload(${path}) called for bucket '${bucket}' in ${context}`);
+              return Promise.resolve({ 
+                data: { path: '' }, 
+                error: { message: `Mock client cannot upload to ${bucket}/${path}` } 
+              });
+            },
+            getPublicUrl: (path: string) => {
+              console.warn(`Mock Supabase client: getPublicUrl(${path}) called for bucket '${bucket}' in ${context}`);
+              return { data: { publicUrl: '' } };
+            },
+          };
+        },
       },
     };
   }
