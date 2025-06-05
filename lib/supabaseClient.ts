@@ -97,8 +97,8 @@ export { supabase, supabaseAdmin };
 
 // Check if we're in demo mode
 export function isDemoMode(): boolean {
-  // Temporarily set to true to enable demo mode for testing
-  return true;
+  // Set to false to work with real data
+  return false;
 }
 
 // Database type definitions
