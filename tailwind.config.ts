@@ -25,7 +25,8 @@ const config: Config = {
         },
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
+        sans: ["var(--font-sans)", 'system-ui', 'sans-serif'],
+        mono: ["var(--font-mono)", 'monospace'],
       },
       animation: {
         'fade-in': 'fadeIn 0.5s ease-in-out',
