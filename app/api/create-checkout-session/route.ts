@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabaseServer';
-import { stripe } from '@/lib/stripe';
+import { stripe, isStripeDemo } from '@/lib/stripe';
 import { SelectedSquare } from '@/types';
 
 export async function POST(request: NextRequest) {
@@ -22,6 +22,15 @@ export async function POST(request: NextRequest) {
 
     if (campaignError || !campaign) {
       return NextResponse.json({ error: 'Campaign not found' }, { status: 404 });
+    }
+
+    // Check if we're in demo mode (Stripe not configured)
+    if (isStripeDemo()) {
+      console.log('Stripe not configured, returning demo success URL');
+      // Return a demo success URL
+      return NextResponse.json({ 
+        url: `${request.nextUrl.origin}/fundraiser/${campaign.slug}?success=true&demo=true` 
+      });
     }
 
     // Calculate total amount
