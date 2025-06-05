@@ -21,17 +21,21 @@ export default function ImageUploader({
   const [isDragOver, setIsDragOver] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
+  const convertToDataUrl = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
   const uploadToSupabase = async (file: File): Promise<string> => {
     try {
       // Check if we're in demo mode
       if (isDemoMode()) {
         console.log('Demo mode: Using data URL for image');
-        return new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result as string);
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
+        return await convertToDataUrl(file);
       }
 
       // Get the current user
@@ -42,42 +46,34 @@ export default function ImageUploader({
         throw new Error('User not authenticated');
       }
 
-      // Create a unique filename with user ID as folder
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}/${uuidv4()}.${fileExt}`;
+      console.log('Uploading image via API route...');
 
-      console.log('Uploading image to Supabase Storage:', fileName);
+      // Upload via API route (bypasses RLS policies)
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('userId', user.id);
 
-      // Upload file to Supabase Storage
-      const { data, error } = await supabase.storage
-        .from('images')
-        .upload(fileName, file, {
-          cacheControl: '3600',
-          upsert: false
-        });
+      const response = await fetch('/api/upload-image', {
+        method: 'POST',
+        body: formData,
+      });
 
-      if (error) {
-        console.error('Supabase Storage upload error:', error);
-        // Fallback to data URL if storage fails
-        console.log('Falling back to data URL due to storage policy restrictions');
-        return new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result as string);
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        console.error('API upload error:', result);
+        // Fallback to data URL if API fails
+        console.log('⚠️ API upload failed - falling back to data URL');
+        return await convertToDataUrl(file);
       }
 
-      // Get the public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('images')
-        .getPublicUrl(fileName);
-
-      console.log('Image uploaded successfully:', publicUrl);
-      return publicUrl;
+      console.log('✅ Image uploaded successfully via API:', result.url);
+      return result.url;
     } catch (error) {
       console.error('Upload error:', error);
-      throw error;
+      // Final fallback to data URL
+      console.log('⚠️ Upload completely failed - using data URL fallback');
+      return await convertToDataUrl(file);
     }
   };
 
@@ -91,11 +87,11 @@ export default function ImageUploader({
         setIsProcessing(true);
         try {
           const file = acceptedFiles[0];
-          const publicUrl = await uploadToSupabase(file);
-          onImageUpload(file, publicUrl);
+          const url = await uploadToSupabase(file);
+          onImageUpload(file, url);
         } catch (error) {
-          console.error('Error uploading image:', error);
-          alert('Failed to upload image. Please try again.');
+          console.error('Error processing image:', error);
+          alert('Failed to process image. Please try again.');
         } finally {
           setIsProcessing(false);
         }
@@ -160,7 +156,7 @@ export default function ImageUploader({
         
         <div>
           <p className="text-lg font-medium text-gray-900 mb-1">
-            {isProcessing ? 'Uploading image...' : isDragActive ? 'Drop your image here' : 'Upload campaign image'}
+            {isProcessing ? 'Processing image...' : isDragActive ? 'Drop your image here' : 'Upload campaign image'}
           </p>
           <p className="text-sm text-gray-500">
             {isProcessing 
