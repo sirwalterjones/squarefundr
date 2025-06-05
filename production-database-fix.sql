@@ -31,65 +31,186 @@ ADD COLUMN IF NOT EXISTS price_data JSONB DEFAULT '{"fixed": 10}'::jsonb;
 ALTER TABLE IF EXISTS public.campaigns 
 ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;
 
--- 2. Fix squares table structure
+-- 2. Fix squares table structure to match code expectations
+-- Based on provided structure:
+-- Current: position, row_num, col_num, is_sold, buyer_name, buyer_email, price, sold_at, created_at, row, col, number
+-- Expected: row, col, number, value, claimed_by, donor_name, payment_status, payment_type, claimed_at, created_at, updated_at
 
--- First, check if squares table exists and what columns it has
-SELECT table_name, column_name 
-FROM information_schema.columns 
-WHERE table_schema = 'public' 
-  AND table_name = 'squares';
+-- First, we'll create view-compatible mappings for the existing structure
 
--- Create squares table if it doesn't exist
-CREATE TABLE IF NOT EXISTS public.squares (
-  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-  campaign_id UUID REFERENCES public.campaigns(id) ON DELETE CASCADE NOT NULL,
-  row INTEGER NOT NULL,
-  col INTEGER NOT NULL,
-  number INTEGER NOT NULL,
-  value DECIMAL(10,2) NOT NULL CHECK (value >= 0.01),
-  claimed_by TEXT,
-  donor_name TEXT,
-  payment_status TEXT NOT NULL DEFAULT 'pending' CHECK (payment_status IN ('pending', 'completed', 'failed')),
-  payment_type TEXT NOT NULL DEFAULT 'stripe' CHECK (payment_type IN ('stripe', 'cash')),
-  claimed_at TIMESTAMP WITH TIME ZONE,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  UNIQUE(campaign_id, row, col)
-);
+-- 1. Add value column if it doesn't exist (using price column's values)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'squares' 
+    AND column_name = 'value' 
+    AND table_schema = 'public'
+  ) THEN
+    ALTER TABLE public.squares ADD COLUMN value DECIMAL(10,2);
+    -- Copy values from price to value
+    UPDATE public.squares SET value = price;
+  END IF;
+END $$;
 
--- Add missing columns to squares table if they exist but don't have necessary columns
-ALTER TABLE IF EXISTS public.squares 
-ADD COLUMN IF NOT EXISTS row INTEGER NOT NULL DEFAULT 0;
+-- 2. Add payment_status based on is_sold
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'squares' 
+    AND column_name = 'payment_status' 
+    AND table_schema = 'public'
+  ) THEN
+    ALTER TABLE public.squares ADD COLUMN payment_status TEXT DEFAULT 'pending';
+    -- Set completed status for sold squares
+    UPDATE public.squares SET payment_status = 
+      CASE WHEN is_sold = true THEN 'completed' ELSE 'pending' END;
+  END IF;
+END $$;
 
-ALTER TABLE IF EXISTS public.squares 
-ADD COLUMN IF NOT EXISTS col INTEGER NOT NULL DEFAULT 0;
+-- 3. Add payment_type column
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'squares' 
+    AND column_name = 'payment_type' 
+    AND table_schema = 'public'
+  ) THEN
+    ALTER TABLE public.squares ADD COLUMN payment_type TEXT DEFAULT 'stripe';
+  END IF;
+END $$;
 
-ALTER TABLE IF EXISTS public.squares 
-ADD COLUMN IF NOT EXISTS number INTEGER NOT NULL DEFAULT 0;
+-- 4. Add claimed_by for buyer information
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'squares' 
+    AND column_name = 'claimed_by' 
+    AND table_schema = 'public'
+  ) THEN
+    ALTER TABLE public.squares ADD COLUMN claimed_by TEXT;
+    -- Use buyer_email if available
+    UPDATE public.squares SET claimed_by = buyer_email WHERE buyer_email IS NOT NULL;
+  END IF;
+END $$;
 
-ALTER TABLE IF EXISTS public.squares 
-ADD COLUMN IF NOT EXISTS value DECIMAL(10,2) NOT NULL DEFAULT 10.00;
+-- 5. Add donor_name using buyer_name
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'squares' 
+    AND column_name = 'donor_name' 
+    AND table_schema = 'public'
+  ) THEN
+    ALTER TABLE public.squares ADD COLUMN donor_name TEXT;
+    -- Use buyer_name if available
+    UPDATE public.squares SET donor_name = buyer_name WHERE buyer_name IS NOT NULL;
+  END IF;
+END $$;
 
-ALTER TABLE IF EXISTS public.squares 
-ADD COLUMN IF NOT EXISTS claimed_by TEXT;
+-- 6. Add claimed_at using sold_at
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'squares' 
+    AND column_name = 'claimed_at' 
+    AND table_schema = 'public'
+  ) THEN
+    ALTER TABLE public.squares ADD COLUMN claimed_at TIMESTAMP WITH TIME ZONE;
+    -- Use sold_at if available
+    UPDATE public.squares SET claimed_at = sold_at WHERE sold_at IS NOT NULL;
+  END IF;
+END $$;
 
-ALTER TABLE IF EXISTS public.squares 
-ADD COLUMN IF NOT EXISTS donor_name TEXT;
+-- 7. Add updated_at column
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'squares' 
+    AND column_name = 'updated_at' 
+    AND table_schema = 'public'
+  ) THEN
+    ALTER TABLE public.squares ADD COLUMN updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
+  END IF;
+END $$;
 
-ALTER TABLE IF EXISTS public.squares 
-ADD COLUMN IF NOT EXISTS payment_status TEXT NOT NULL DEFAULT 'pending';
+-- 8. Ensure row_num/col_num values are copied to row/col if they exist but are null
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'squares' 
+    AND column_name = 'row_num' 
+    AND table_schema = 'public'
+  ) AND EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'squares' 
+    AND column_name = 'row' 
+    AND table_schema = 'public'
+  ) THEN
+    -- Copy row_num values to row where row is null
+    UPDATE public.squares SET row = row_num WHERE row IS NULL AND row_num IS NOT NULL;
+  END IF;
+  
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'squares' 
+    AND column_name = 'col_num' 
+    AND table_schema = 'public'
+  ) AND EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'squares' 
+    AND column_name = 'col' 
+    AND table_schema = 'public'
+  ) THEN
+    -- Copy col_num values to col where col is null
+    UPDATE public.squares SET col = col_num WHERE col IS NULL AND col_num IS NOT NULL;
+  END IF;
+END $$;
 
-ALTER TABLE IF EXISTS public.squares 
-ADD COLUMN IF NOT EXISTS payment_type TEXT NOT NULL DEFAULT 'stripe';
+-- 9. Ensure position values are copied to number if they exist but are null
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'squares' 
+    AND column_name = 'position' 
+    AND table_schema = 'public'
+  ) AND EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'squares' 
+    AND column_name = 'number' 
+    AND table_schema = 'public'
+  ) THEN
+    -- Copy position values to number where number is null
+    UPDATE public.squares SET number = position WHERE number IS NULL AND position IS NOT NULL;
+  END IF;
+END $$;
 
-ALTER TABLE IF EXISTS public.squares 
-ADD COLUMN IF NOT EXISTS claimed_at TIMESTAMP WITH TIME ZONE;
-
-ALTER TABLE IF EXISTS public.squares 
-ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
-
-ALTER TABLE IF EXISTS public.squares 
-ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
+-- 10. Make sure price values are copied to value column
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'squares' 
+    AND column_name = 'price' 
+    AND table_schema = 'public'
+  ) AND EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'squares' 
+    AND column_name = 'value' 
+    AND table_schema = 'public'
+  ) THEN
+    -- Copy price values to value where value is null
+    UPDATE public.squares SET value = price WHERE value IS NULL AND price IS NOT NULL;
+  END IF;
+END $$;
 
 -- 3. Create or update indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_campaigns_slug ON public.campaigns(slug);
