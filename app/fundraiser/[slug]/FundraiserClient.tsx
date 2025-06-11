@@ -55,7 +55,7 @@ export default function FundraiserClient({
       // Auto-hide error message after 5 seconds
       setTimeout(() => setErrorMessage(null), 5000);
     }
-  }, []);
+  }, [isDemoMode]);
 
   // Real-time subscription to squares updates
   useEffect(() => {
@@ -113,9 +113,17 @@ export default function FundraiserClient({
       }
 
       setSelectedSquares([]);
-      setSuccessMessage(
-        "Squares claimed successfully! Payment arrangement confirmed.",
-      );
+
+      // Show appropriate success message based on demo mode
+      if (isDemoMode) {
+        setSuccessMessage(
+          "Demo Campaign - Start Yours Now! Link to Create Campaign.",
+        );
+      } else {
+        setSuccessMessage(
+          "Squares claimed successfully! Payment arrangement confirmed.",
+        );
+      }
       // Auto-hide success message after 5 seconds
       setTimeout(() => setSuccessMessage(null), 5000);
     } catch (error) {
