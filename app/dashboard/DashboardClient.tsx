@@ -50,107 +50,35 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
     0,
   );
 
-  const loadDonations = async (campaignId?: string, retryCount = 0) => {
-    console.log(
-      "[DASHBOARD] Loading donations, campaignId:",
-      campaignId,
-      "retry:",
-      retryCount,
-    );
+  const loadDonations = async (campaignId?: string) => {
     setLoadingDonations(true);
-
-    const maxRetries = 3;
-    const retryDelay = 1000 * (retryCount + 1);
+    setDonationsError(null);
 
     try {
-      setDonationsError(null);
-
       const url = campaignId
         ? `/api/donations?campaignId=${campaignId}`
         : "/api/donations";
-      console.log("[DASHBOARD] Fetching from URL:", url);
-
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
 
       const response = await fetch(url, {
-        signal: controller.signal,
         headers: {
-          "Cache-Control": "no-cache, no-store, must-revalidate",
-          Pragma: "no-cache",
-          Expires: "0",
+          "Cache-Control": "no-cache",
         },
       });
 
-      clearTimeout(timeoutId);
-      console.log("[DASHBOARD] Response status:", response.status);
-
       if (response.ok) {
         const data = await response.json();
-        console.log("[DASHBOARD] API response data:", data);
-        console.log(
-          "[DASHBOARD] Donations count:",
-          data.donations?.length || 0,
-        );
         setDonations(data.donations || []);
-        setDonationsError(null);
-        setLoadingDonations(false);
-        return;
       } else {
-        console.error(
-          "[DASHBOARD] API response not ok:",
-          response.status,
-          response.statusText,
-        );
         const errorData = await response.json().catch(() => null);
-        console.error("[DASHBOARD] Error data:", errorData);
-
-        if (response.status >= 500 && retryCount < maxRetries) {
-          console.log(`[DASHBOARD] Retrying in ${retryDelay}ms...`);
-          setTimeout(
-            () => loadDonations(campaignId, retryCount + 1),
-            retryDelay,
-          );
-          return;
-        } else {
-          setDonationsError(
-            `Server error: ${response.status} ${response.statusText}`,
-          );
-        }
+        setDonationsError(
+          errorData?.error || `Server error: ${response.status}`,
+        );
       }
     } catch (error: any) {
       console.error("Error loading donations:", error);
-
-      if (
-        retryCount < maxRetries &&
-        (error instanceof TypeError || error.name === "AbortError")
-      ) {
-        console.log(
-          `[DASHBOARD] Network error, retrying in ${retryDelay}ms...`,
-        );
-        setTimeout(() => loadDonations(campaignId, retryCount + 1), retryDelay);
-        return;
-      }
-
-      if (
-        error instanceof TypeError &&
-        error.message.includes("Failed to fetch")
-      ) {
-        console.error("[DASHBOARD] Network connectivity issue detected");
-        setDonationsError(
-          "Network connection failed. Please check your internet connection and try again.",
-        );
-      } else if (error.name === "AbortError") {
-        setDonationsError("Request timed out. Please try again.");
-      } else {
-        setDonationsError(
-          "An unexpected error occurred while loading donations.",
-        );
-      }
+      setDonationsError("Failed to load donations. Please try again.");
     } finally {
-      if (retryCount >= maxRetries) {
-        setLoadingDonations(false);
-      }
+      setLoadingDonations(false);
     }
   };
 
