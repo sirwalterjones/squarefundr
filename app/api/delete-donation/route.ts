@@ -4,7 +4,24 @@ import { createServerSupabaseClient } from "@/lib/supabaseServer";
 export async function DELETE(request: NextRequest) {
   try {
     console.log("[DELETE-DONATION] Starting delete request");
-    const requestBody = await request.json();
+
+    let requestBody;
+    try {
+      requestBody = await request.json();
+    } catch (parseError) {
+      console.error(
+        "[DELETE-DONATION] Failed to parse request body:",
+        parseError,
+      );
+      return NextResponse.json(
+        {
+          error: "Invalid request format",
+          details: "Request body must be valid JSON",
+        },
+        { status: 400 },
+      );
+    }
+
     const { transactionId } = requestBody;
     console.log("[DELETE-DONATION] Request body:", requestBody);
     console.log(
@@ -39,7 +56,10 @@ export async function DELETE(request: NextRequest) {
     if (authError) {
       console.error("[DELETE-DONATION] Auth error:", authError);
       return NextResponse.json(
-        { error: "Authentication failed", details: authError.message },
+        {
+          error: "Authentication failed",
+          details: authError.message || "Unable to verify user authentication",
+        },
         { status: 401 },
       );
     }
@@ -47,7 +67,10 @@ export async function DELETE(request: NextRequest) {
     if (!user) {
       console.log("[DELETE-DONATION] No user found");
       return NextResponse.json(
-        { error: "User not authenticated" },
+        {
+          error: "User not authenticated",
+          details: "No valid user session found",
+        },
         { status: 401 },
       );
     }
@@ -66,7 +89,12 @@ export async function DELETE(request: NextRequest) {
         campaignError,
       );
       return NextResponse.json(
-        { error: "Failed to fetch campaigns" },
+        {
+          error: "Failed to fetch campaigns",
+          details:
+            campaignError.message ||
+            "Database error while fetching user campaigns",
+        },
         { status: 500 },
       );
     }
@@ -132,6 +160,14 @@ export async function DELETE(request: NextRequest) {
           console.error(
             "[DELETE-DONATION] Error resetting squares:",
             resetError,
+          );
+          return NextResponse.json(
+            {
+              error: "Failed to reset squares",
+              details:
+                resetError.message || "Database error while resetting squares",
+            },
+            { status: 500 },
           );
         }
       }
@@ -199,7 +235,12 @@ export async function DELETE(request: NextRequest) {
       if (resetError) {
         console.error("[DELETE-DONATION] Error resetting squares:", resetError);
         return NextResponse.json(
-          { error: "Failed to reset squares", details: resetError.message },
+          {
+            error: "Failed to reset squares",
+            details:
+              resetError.message ||
+              "Database error while resetting claimed squares",
+          },
           { status: 500 },
         );
       }
@@ -241,10 +282,19 @@ export async function DELETE(request: NextRequest) {
     );
   } catch (error) {
     console.error("[DELETE-DONATION] Unexpected error:", error);
+
+    // Provide more detailed error information
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error occurred";
+    const errorStack = error instanceof Error ? error.stack : undefined;
+
+    console.error("[DELETE-DONATION] Error stack:", errorStack);
+
     return NextResponse.json(
       {
         error: "Internal server error",
-        details: error instanceof Error ? error.message : "Unknown error",
+        details: `Server encountered an unexpected error: ${errorMessage}`,
+        timestamp: new Date().toISOString(),
       },
       { status: 500 },
     );

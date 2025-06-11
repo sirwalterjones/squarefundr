@@ -158,7 +158,23 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
         body: JSON.stringify({ transactionId: donationToDelete.id }),
       });
 
-      const responseData = await response.json();
+      let responseData;
+      try {
+        responseData = await response.json();
+      } catch (parseError) {
+        console.error("[DASHBOARD] Failed to parse response JSON:", parseError);
+        responseData = {
+          error: "Invalid server response",
+          details: "Response was not valid JSON",
+        };
+      }
+
+      console.log("[DASHBOARD] Delete response:", {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok,
+        data: responseData,
+      });
 
       if (response.ok) {
         setSuccessMessage("Donation deleted successfully!");
@@ -172,17 +188,29 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
 
         setTimeout(() => setSuccessMessage(null), 3000);
       } else {
-        console.error("Error deleting donation:", responseData);
+        const errorMessage =
+          responseData?.error || `Server error (${response.status})`;
+        const errorDetails =
+          responseData?.details || response.statusText || "Unknown error";
+
+        console.error("[DASHBOARD] Error deleting donation:", {
+          status: response.status,
+          error: errorMessage,
+          details: errorDetails,
+          fullResponse: responseData,
+        });
+
         alert(
-          "Failed to delete donation: " +
-            (responseData.error || "Unknown error") +
-            (responseData.details ? " (" + responseData.details + ")" : ""),
+          `Failed to delete donation: ${errorMessage}${errorDetails ? ` (${errorDetails})` : ""}`,
         );
       }
     } catch (error) {
-      console.error("Error deleting donation:", error);
+      console.error(
+        "[DASHBOARD] Network/unexpected error deleting donation:",
+        error,
+      );
       alert(
-        "Failed to delete donation. Please check your connection and try again.",
+        `Failed to delete donation. Network error: ${error instanceof Error ? error.message : "Unknown error"}. Please check your connection and try again.`,
       );
     }
   };
