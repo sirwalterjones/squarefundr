@@ -38,6 +38,10 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [donationToDelete, setDonationToDelete] = useState<any>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [deleteCampaignModalOpen, setDeleteCampaignModalOpen] = useState(false);
+  const [campaignToDelete, setCampaignToDelete] =
+    useState<CampaignWithStats | null>(null);
+  const [deletingCampaign, setDeletingCampaign] = useState(false);
 
   const totalRaised = campaigns.reduce(
     (sum, campaign) => sum + campaign.stats.totalRaised,
@@ -139,6 +143,49 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
     setDeleteModalOpen(true);
   };
 
+  const showDeleteCampaignConfirmation = (campaign: CampaignWithStats) => {
+    setCampaignToDelete(campaign);
+    setDeleteCampaignModalOpen(true);
+  };
+
+  const deleteCampaign = async () => {
+    if (!campaignToDelete) return;
+
+    setDeletingCampaign(true);
+    try {
+      console.log("Deleting campaign:", campaignToDelete.id);
+
+      const response = await fetch("/api/delete-campaign", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ campaignId: campaignToDelete.id }),
+      });
+
+      const responseData = await response.json();
+
+      if (response.ok) {
+        setSuccessMessage("Campaign deleted successfully!");
+        setDeleteCampaignModalOpen(false);
+        setCampaignToDelete(null);
+
+        // Refresh the page to update the campaigns list
+        window.location.reload();
+      } else {
+        const errorMessage =
+          responseData?.error || `Server error (${response.status})`;
+        console.error("Error deleting campaign:", errorMessage);
+        alert(`Failed to delete campaign: ${errorMessage}`);
+      }
+    } catch (error) {
+      console.error("Network error deleting campaign:", error);
+      alert(
+        `Failed to delete campaign. Network error: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
+    } finally {
+      setDeletingCampaign(false);
+    }
+  };
+
   const deleteDonation = async () => {
     if (!donationToDelete) return;
 
@@ -198,11 +245,34 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
           error: errorMessage,
           details: errorDetails,
           fullResponse: responseData,
+          debug: responseData?.debug,
         });
 
-        alert(
-          `Failed to delete donation: ${errorMessage}${errorDetails ? ` (${errorDetails})` : ""}`,
-        );
+        // Show more detailed error message
+        let alertMessage = `Failed to delete donation: ${errorMessage}`;
+
+        if (responseData?.debug) {
+          const debug = responseData.debug;
+          alertMessage += `\n\nDebug Information:`;
+          alertMessage += `\n• Transaction ID: ${debug.searchedId}`;
+          alertMessage += `\n• Your campaigns: ${debug.userCampaigns}`;
+
+          if (debug.globalMatch) {
+            alertMessage += `\n• Found transaction in campaign: ${debug.globalMatch.campaign_id}`;
+            alertMessage += `\n• Belongs to you: ${debug.globalMatch.belongsToUser ? "Yes" : "No"}`;
+          } else {
+            alertMessage += `\n• Transaction not found in database`;
+          }
+
+          if (debug.recentTransactions?.length > 0) {
+            alertMessage += `\n• Recent transactions: ${debug.recentTransactions
+              .slice(0, 3)
+              .map((t) => t.id.substring(0, 8))
+              .join(", ")}...`;
+          }
+        }
+
+        alert(alertMessage);
       }
     } catch (error) {
       console.error(
@@ -622,6 +692,14 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
                           >
                             Edit
                           </Link>
+                          <button
+                            onClick={() =>
+                              showDeleteCampaignConfirmation(campaign)
+                            }
+                            className="px-3 py-2 text-red-600 hover:text-red-700 border border-red-300 rounded-lg hover:bg-red-50 transition-colors text-sm"
+                          >
+                            Delete
+                          </button>
                           <div className="text-right">
                             <div className="text-2xl font-bold text-gray-900">
                               {Math.round(campaign.stats.progressPercentage)}%
@@ -971,6 +1049,75 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
                 className="px-4 py-2 bg-red-600 text-white hover:bg-red-700 rounded-lg transition-colors"
               >
                 Delete Donation
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deleteCampaignModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex items-center mb-4">
+              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mr-4">
+                <svg
+                  className="w-6 h-6 text-red-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
+                  />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Delete Campaign
+                </h3>
+                <p className="text-sm text-gray-600">
+                  This action cannot be undone
+                </p>
+              </div>
+            </div>
+
+            <div className="mb-6">
+              <p className="text-gray-700">
+                Are you sure you want to delete the campaign{" "}
+                <span className="font-semibold">
+                  &quot;{campaignToDelete?.title}&quot;
+                </span>
+                ?
+              </p>
+              <p className="text-sm text-gray-500 mt-2">
+                This will permanently delete the campaign, all its squares, and
+                all associated donations. This action cannot be undone.
+              </p>
+            </div>
+
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => {
+                  setDeleteCampaignModalOpen(false);
+                  setCampaignToDelete(null);
+                }}
+                disabled={deletingCampaign}
+                className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={deleteCampaign}
+                disabled={deletingCampaign}
+                className="px-4 py-2 bg-red-600 text-white hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50 flex items-center"
+              >
+                {deletingCampaign && (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                )}
+                {deletingCampaign ? "Deleting..." : "Delete Campaign"}
               </button>
             </div>
           </div>

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabaseServer";
+import { createClient } from "@supabase/supabase-js";
 
 export async function DELETE(request: NextRequest) {
   try {
@@ -118,32 +119,115 @@ export async function DELETE(request: NextRequest) {
       "[DELETE-DONATION] Looking for transaction with ID:",
       transactionId,
     );
+    console.log("[DELETE-DONATION] Campaign IDs to search in:", campaignIds);
 
-    const { data: transaction, error: transactionError } = await supabase
+    // Use admin client for better access
+    const adminSupabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      },
+    );
+
+    // First, let's check if the transaction exists at all (without campaign filter)
+    const { data: globalTransaction, error: globalError } = await adminSupabase
+      .from("transactions")
+      .select("*")
+      .eq("id", transactionId)
+      .maybeSingle();
+
+    console.log("[DELETE-DONATION] Global transaction lookup:", {
+      found: !!globalTransaction,
+      error: globalError,
+      transaction: globalTransaction
+        ? {
+            id: globalTransaction.id,
+            campaign_id: globalTransaction.campaign_id,
+            donor_name: globalTransaction.donor_name,
+            total: globalTransaction.total,
+          }
+        : null,
+    });
+
+    // Now check with campaign filter
+    const { data: transaction, error: transactionError } = await adminSupabase
       .from("transactions")
       .select("*")
       .eq("id", transactionId)
       .in("campaign_id", campaignIds)
       .maybeSingle();
 
+    console.log("[DELETE-DONATION] Filtered transaction lookup:", {
+      found: !!transaction,
+      error: transactionError,
+      transaction: transaction
+        ? {
+            id: transaction.id,
+            campaign_id: transaction.campaign_id,
+            donor_name: transaction.donor_name,
+            total: transaction.total,
+          }
+        : null,
+    });
+
     if (transaction) {
       console.log("[DELETE-DONATION] Found transaction, deleting...");
+      console.log("[DELETE-DONATION] Transaction details:", {
+        id: transaction.id,
+        campaign_id: transaction.campaign_id,
+        square_ids: transaction.square_ids,
+        donor_name: transaction.donor_name,
+        total: transaction.total,
+      });
 
-      // Parse square_ids and reset the squares
+      // Parse square_ids and reset the squares - match the logic from donations route
       let squareIds = transaction.square_ids;
+      console.log(
+        "[DELETE-DONATION] Original square_ids:",
+        squareIds,
+        "(type:",
+        typeof squareIds,
+        ")",
+      );
+
       if (typeof squareIds === "string") {
         try {
           squareIds = JSON.parse(squareIds);
+          console.log(
+            "[DELETE-DONATION] Parsed square_ids from JSON:",
+            squareIds,
+          );
         } catch (e) {
+          console.log(
+            "[DELETE-DONATION] Failed to parse JSON, splitting by comma:",
+            e.message,
+          );
           squareIds = squareIds
             .split(",")
             .map((id) => id.trim())
-            .filter((id) => id);
+            .filter((id) => id !== "");
+          console.log("[DELETE-DONATION] Split square_ids:", squareIds);
         }
       }
 
+      if (!Array.isArray(squareIds)) {
+        squareIds = squareIds ? [squareIds] : [];
+      }
+
       if (Array.isArray(squareIds) && squareIds.length > 0) {
-        const { error: resetError } = await supabase
+        console.log(
+          "[DELETE-DONATION] Resetting squares:",
+          squareIds,
+          "for campaign:",
+          transaction.campaign_id,
+        );
+
+        // Reset squares by their IDs (not numbers) since square_ids contains UUIDs
+        const { data: resetData, error: resetError } = await adminSupabase
           .from("squares")
           .update({
             claimed_by: null,
@@ -154,7 +238,14 @@ export async function DELETE(request: NextRequest) {
             updated_at: new Date().toISOString(),
           })
           .eq("campaign_id", transaction.campaign_id)
-          .in("number", squareIds);
+          .in("id", squareIds)
+          .select();
+
+        console.log("[DELETE-DONATION] Square reset result:", {
+          data: resetData,
+          error: resetError,
+          affectedRows: resetData?.length || 0,
+        });
 
         if (resetError) {
           console.error(
@@ -170,13 +261,29 @@ export async function DELETE(request: NextRequest) {
             { status: 500 },
           );
         }
+      } else {
+        console.log(
+          "[DELETE-DONATION] No squares to reset or invalid square_ids:",
+          squareIds,
+        );
       }
 
       // Delete the transaction
-      const { error: deleteError } = await supabase
+      console.log(
+        "[DELETE-DONATION] Deleting transaction with ID:",
+        transactionId,
+      );
+      const { data: deleteData, error: deleteError } = await adminSupabase
         .from("transactions")
         .delete()
-        .eq("id", transactionId);
+        .eq("id", transactionId)
+        .select();
+
+      console.log("[DELETE-DONATION] Transaction deletion result:", {
+        data: deleteData,
+        error: deleteError,
+        deletedRows: deleteData?.length || 0,
+      });
 
       if (deleteError) {
         console.error(
@@ -192,6 +299,7 @@ export async function DELETE(request: NextRequest) {
         );
       }
 
+      console.log("[DELETE-DONATION] Transaction deleted successfully");
       return NextResponse.json({
         success: true,
         message: "Donation deleted successfully",
@@ -205,21 +313,61 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
+    // If transaction not found, let's check why
+    if (globalTransaction && !transaction) {
+      console.log(
+        "[DELETE-DONATION] Transaction exists globally but not in user's campaigns",
+      );
+      console.log(
+        "[DELETE-DONATION] Transaction campaign_id:",
+        globalTransaction.campaign_id,
+      );
+      console.log("[DELETE-DONATION] User campaign_ids:", campaignIds);
+      console.log(
+        "[DELETE-DONATION] Campaign ID match:",
+        campaignIds.includes(globalTransaction.campaign_id),
+      );
+
+      return NextResponse.json(
+        {
+          error: "Access denied",
+          details: "This donation belongs to a different user's campaign",
+          debug: {
+            transactionCampaignId: globalTransaction.campaign_id,
+            userCampaignIds: campaignIds,
+            belongsToUser: campaignIds.includes(globalTransaction.campaign_id),
+          },
+        },
+        { status: 403 },
+      );
+    }
+
     // If not found as transaction, check if it's a square that was claimed directly
     console.log("[DELETE-DONATION] Checking for squares claimed by this ID...");
 
-    const { data: claimedSquares, error: squareError } = await supabase
+    const { data: claimedSquares, error: squareError } = await adminSupabase
       .from("squares")
       .select("*")
       .eq("claimed_by", transactionId)
       .in("campaign_id", campaignIds);
+
+    console.log("[DELETE-DONATION] Claimed squares lookup:", {
+      found: claimedSquares?.length || 0,
+      error: squareError,
+      squares:
+        claimedSquares?.map((s) => ({
+          id: s.id,
+          number: s.number,
+          campaign_id: s.campaign_id,
+        })) || [],
+    });
 
     if (claimedSquares && claimedSquares.length > 0) {
       console.log(
         "[DELETE-DONATION] Found squares claimed by this ID, resetting...",
       );
 
-      const { error: resetError } = await supabase
+      const { error: resetError } = await adminSupabase
         .from("squares")
         .update({
           claimed_by: null,
@@ -258,24 +406,64 @@ export async function DELETE(request: NextRequest) {
     // If nothing found, return error with debug info
     console.log("[DELETE-DONATION] Donation not found anywhere");
 
-    // Get some debug info
-    const { data: sampleTransactions } = await supabase
+    // Get recent transactions for debugging
+    const { data: allTransactions } = await adminSupabase
       .from("transactions")
-      .select("id, donor_name, total")
+      .select("id, donor_name, campaign_id, timestamp")
       .in("campaign_id", campaignIds)
-      .limit(5);
+      .order("timestamp", { ascending: false })
+      .limit(10);
+
+    // Check if the transaction exists anywhere (not just user's campaigns)
+    const { data: globalTransactionDebug } = await adminSupabase
+      .from("transactions")
+      .select("id, donor_name, total, campaign_id")
+      .eq("id", transactionId)
+      .maybeSingle();
+
+    console.log("[DELETE-DONATION] Debug info:", {
+      searchedTransactionId: transactionId,
+      userCampaignIds: campaignIds,
+      recentTransactions: allTransactions?.map((t) => ({
+        id: t.id,
+        donor: t.donor_name,
+      })),
+      globalMatch: globalTransactionDebug
+        ? {
+            id: globalTransactionDebug.id,
+            campaign_id: globalTransactionDebug.campaign_id,
+            belongsToUser: campaignIds.includes(
+              globalTransactionDebug.campaign_id,
+            ),
+          }
+        : null,
+    });
 
     return NextResponse.json(
       {
         error: "Donation not found",
         details: `No donation found with ID: ${transactionId}`,
         debug: {
-          transactionId,
+          searchedId: transactionId,
+          searchedIdType: typeof transactionId,
           userCampaigns: campaignIds.length,
-          sampleTransactions: sampleTransactions?.map((t) => ({
-            id: t.id,
-            donor_name: t.donor_name,
-          })),
+          campaignIds: campaignIds,
+          recentTransactions:
+            allTransactions?.map((t) => ({
+              id: t.id,
+              donor_name: t.donor_name,
+              campaign_id: t.campaign_id,
+              timestamp: t.timestamp,
+            })) || [],
+          globalMatch: globalTransactionDebug
+            ? {
+                id: globalTransactionDebug.id,
+                campaign_id: globalTransactionDebug.campaign_id,
+                belongsToUser: campaignIds.includes(
+                  globalTransactionDebug.campaign_id,
+                ),
+              }
+            : null,
         },
       },
       { status: 404 },
