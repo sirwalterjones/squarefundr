@@ -35,9 +35,9 @@ export default function FundraiserClient({
     const demo = urlParams.get("demo");
 
     if (success === "true") {
-      if (demo === "true") {
+      if (demo === "true" || isDemoMode) {
         setSuccessMessage(
-          "Demo payment completed! In production, squares would be saved to the database.",
+          "Demo Campaign - Start Yours Now! Link to Create Campaign.",
         );
       } else {
         setSuccessMessage(
@@ -148,6 +148,51 @@ export default function FundraiserClient({
   const totalRaised = squares
     .filter((s) => s.payment_status === "completed")
     .reduce((sum, s) => sum + s.value, 0);
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setSuccessMessage("Campaign link copied to clipboard!");
+      setTimeout(() => setSuccessMessage(null), 3000);
+    } catch (error) {
+      console.error("Copy failed:", error);
+      setErrorMessage("Failed to copy link. Please try again.");
+      setTimeout(() => setErrorMessage(null), 3000);
+    }
+  };
+
+  const handleShareFacebook = () => {
+    const shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}&quote=${encodeURIComponent(`${campaign.title} - ${campaign.description || "Help us reach our goal!"}`)}`;
+    window.open(shareUrl, "_blank", "width=600,height=400");
+  };
+
+  const handleShareInstagram = () => {
+    // Instagram doesn't have a direct web share API, so we'll copy the link and show instructions
+    handleCopyLink();
+    setSuccessMessage(
+      "Link copied! Open Instagram and paste the link in your story or post.",
+    );
+    setTimeout(() => setSuccessMessage(null), 5000);
+  };
+
+  const handleNativeShare = async () => {
+    const shareData = {
+      title: campaign?.title || "Support this fundraiser",
+      text: campaign?.description || "Help us reach our goal!",
+      url: window.location.href,
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        // Fallback: copy to clipboard
+        await handleCopyLink();
+      }
+    } catch (error) {
+      console.error("Share failed:", error);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -271,6 +316,91 @@ export default function FundraiserClient({
 
           {/* Sidebar */}
           <div className="space-y-6">
+            {/* Share Campaign */}
+            <div className="bg-white rounded-xl shadow-sm p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Share Campaign
+              </h3>
+              <p className="text-gray-600 text-sm mb-4">
+                Help spread the word about this campaign!
+              </p>
+
+              <div className="space-y-3">
+                {/* Copy Link Button */}
+                <button
+                  onClick={handleCopyLink}
+                  className="w-full flex items-center justify-center space-x-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-3 rounded-lg transition-colors"
+                >
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                    />
+                  </svg>
+                  <span className="font-medium">Copy Link</span>
+                </button>
+
+                {/* Social Media Share Buttons */}
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={handleShareFacebook}
+                    className="flex items-center justify-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg transition-colors"
+                  >
+                    <svg
+                      className="w-4 h-4"
+                      fill="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+                    </svg>
+                    <span className="text-sm font-medium">Facebook</span>
+                  </button>
+
+                  <button
+                    onClick={handleShareInstagram}
+                    className="flex items-center justify-center space-x-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-4 py-3 rounded-lg transition-colors"
+                  >
+                    <svg
+                      className="w-4 h-4"
+                      fill="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" />
+                    </svg>
+                    <span className="text-sm font-medium">Instagram</span>
+                  </button>
+                </div>
+
+                {/* Native Share Button (for mobile devices) */}
+                <button
+                  onClick={handleNativeShare}
+                  className="w-full flex items-center justify-center space-x-2 bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg transition-colors"
+                >
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z"
+                    />
+                  </svg>
+                  <span className="font-medium">Share</span>
+                </button>
+              </div>
+            </div>
+
             {/* Demo Mode Notice */}
             {isDemoMode && (
               <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
@@ -447,6 +577,20 @@ export default function FundraiserClient({
         onSuccess={handlePaymentSuccess}
         isDemoMode={isDemoMode}
       />
+
+      <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50">
+        <div className="flex items-center justify-center space-x-4">
+          <button onClick={handleCopyLink} className="btn-primary">
+            Copy Link
+          </button>
+          <button onClick={handleShareFacebook} className="btn-primary">
+            Share on Facebook
+          </button>
+          <button onClick={handleShareInstagram} className="btn-primary">
+            Share on Instagram
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
