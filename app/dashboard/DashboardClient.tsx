@@ -215,6 +215,15 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
     if (!donationToDelete) return;
 
     try {
+      console.log(
+        "[DASHBOARD] Deleting donation with ID:",
+        donationToDelete.id,
+        "(type:",
+        typeof donationToDelete.id,
+        ")",
+      );
+      console.log("[DASHBOARD] Full donation object:", donationToDelete);
+
       const response = await fetch("/api/delete-donation", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },

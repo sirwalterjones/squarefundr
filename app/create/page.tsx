@@ -1061,15 +1061,12 @@ export default function CreateCampaignPage() {
                 </div>
               </div>
 
-              <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <h4 className="font-medium text-yellow-800 mb-2">
-                  Before you launch:
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <h4 className="font-medium text-blue-800 mb-2">
+                  Ready to launch:
                 </h4>
-                <ul className="text-sm text-yellow-700 space-y-1">
-                  <li>• A one-time setup fee of $10 will be charged</li>
-                  <li>
-                    • Your campaign will be live immediately after payment
-                  </li>
+                <ul className="text-sm text-blue-700 space-y-1">
+                  <li>• Your campaign will be live immediately</li>
                   <li>
                     • You can edit pricing and details from your dashboard
                   </li>
@@ -1099,7 +1096,7 @@ export default function CreateCampaignPage() {
                       Creating Campaign...
                     </div>
                   ) : (
-                    "Launch Campaign ($10)"
+                    "Launch Campaign"
                   )}
                 </button>
               </div>

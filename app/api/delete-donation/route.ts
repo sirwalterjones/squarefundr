@@ -55,15 +55,71 @@ export async function DELETE(request: NextRequest) {
     console.log("[DELETE-DONATION] User authenticated:", user.id);
 
     // Strategy: Look for donation in multiple places
-    // 1. Check transactions table
+    // 1. Check transactions table with multiple ID formats
     // 2. Check squares table for direct square claims
 
     console.log("[DELETE-DONATION] Looking up transaction:", transactionId);
-    const { data: transaction, error: transactionError } = await supabase
+    console.log("[DELETE-DONATION] Transaction ID type:", typeof transactionId);
+
+    // Try multiple approaches to find the transaction
+    let transaction: any = null;
+    let transactionError: any = null;
+
+    // First try: Direct UUID lookup
+    const { data: directTransaction, error: directError } = await supabase
       .from("transactions")
       .select("*")
       .eq("id", transactionId)
-      .single();
+      .maybeSingle();
+
+    if (directTransaction) {
+      transaction = directTransaction;
+      console.log("[DELETE-DONATION] Found transaction via direct UUID lookup");
+    } else if (directError && directError.code !== "PGRST116") {
+      transactionError = directError;
+      console.log("[DELETE-DONATION] Direct lookup error:", directError);
+    } else {
+      console.log("[DELETE-DONATION] Direct UUID lookup returned no results");
+
+      // Second try: If it looks like a number, try numeric lookup
+      if (!isNaN(Number(transactionId))) {
+        console.log(
+          "[DELETE-DONATION] Trying numeric ID:",
+          Number(transactionId),
+        );
+        const { data: numericTransaction, error: numericError } = await supabase
+          .from("transactions")
+          .select("*")
+          .eq("id", Number(transactionId))
+          .maybeSingle();
+
+        if (numericTransaction) {
+          transaction = numericTransaction;
+          console.log("[DELETE-DONATION] Found transaction via numeric lookup");
+        } else if (numericError && numericError.code !== "PGRST116") {
+          transactionError = numericError;
+          console.log("[DELETE-DONATION] Numeric lookup error:", numericError);
+        }
+      }
+
+      // Third try: Search by string representation in case of type mismatch
+      if (!transaction && !transactionError) {
+        console.log("[DELETE-DONATION] Trying string conversion lookup");
+        const { data: stringTransaction, error: stringError } = await supabase
+          .from("transactions")
+          .select("*")
+          .eq("id", String(transactionId))
+          .maybeSingle();
+
+        if (stringTransaction) {
+          transaction = stringTransaction;
+          console.log("[DELETE-DONATION] Found transaction via string lookup");
+        } else if (stringError && stringError.code !== "PGRST116") {
+          transactionError = stringError;
+          console.log("[DELETE-DONATION] String lookup error:", stringError);
+        }
+      }
+    }
 
     console.log("[DELETE-DONATION] Transaction lookup result:", {
       transaction: transaction
@@ -218,11 +274,79 @@ export async function DELETE(request: NextRequest) {
       "[DELETE-DONATION] Not found in transactions, checking squares table for ID:",
       transactionId,
     );
-    const { data: square, error: squareError } = await supabase
+
+    // Try multiple approaches to find the square
+    let square: any = null;
+    let squareError: any = null;
+
+    // First try: Direct lookup
+    const { data: directSquare, error: directSquareError } = await supabase
       .from("squares")
       .select("*")
       .eq("id", transactionId)
-      .single();
+      .maybeSingle();
+
+    if (directSquare) {
+      square = directSquare;
+      console.log("[DELETE-DONATION] Found square via direct lookup");
+    } else if (directSquareError && directSquareError.code !== "PGRST116") {
+      squareError = directSquareError;
+      console.log(
+        "[DELETE-DONATION] Direct square lookup error:",
+        directSquareError,
+      );
+    } else {
+      console.log("[DELETE-DONATION] Direct square lookup returned no results");
+
+      // Second try: Numeric lookup
+      if (!isNaN(Number(transactionId))) {
+        console.log(
+          "[DELETE-DONATION] Trying numeric square ID:",
+          Number(transactionId),
+        );
+        const { data: numericSquare, error: numericSquareError } =
+          await supabase
+            .from("squares")
+            .select("*")
+            .eq("id", Number(transactionId))
+            .maybeSingle();
+
+        if (numericSquare) {
+          square = numericSquare;
+          console.log("[DELETE-DONATION] Found square via numeric lookup");
+        } else if (
+          numericSquareError &&
+          numericSquareError.code !== "PGRST116"
+        ) {
+          squareError = numericSquareError;
+          console.log(
+            "[DELETE-DONATION] Numeric square lookup error:",
+            numericSquareError,
+          );
+        }
+      }
+
+      // Third try: String conversion lookup
+      if (!square && !squareError) {
+        console.log("[DELETE-DONATION] Trying string square lookup");
+        const { data: stringSquare, error: stringSquareError } = await supabase
+          .from("squares")
+          .select("*")
+          .eq("id", String(transactionId))
+          .maybeSingle();
+
+        if (stringSquare) {
+          square = stringSquare;
+          console.log("[DELETE-DONATION] Found square via string lookup");
+        } else if (stringSquareError && stringSquareError.code !== "PGRST116") {
+          squareError = stringSquareError;
+          console.log(
+            "[DELETE-DONATION] String square lookup error:",
+            stringSquareError,
+          );
+        }
+      }
+    }
 
     console.log("[DELETE-DONATION] Square lookup result:", {
       square: square
@@ -264,20 +388,35 @@ export async function DELETE(request: NextRequest) {
         transactionIdType: typeof transactionId,
         searchedInTransactions: true,
         searchedInSquares: true,
-        foundTransaction: false,
-        foundSquare: false,
+        foundTransaction: !!transaction,
+        foundSquare: !!square,
+        transactionError: transactionError?.message,
+        squareError: squareError?.message,
       });
 
-      // Let's also try a broader search to see if the ID exists anywhere
-      const { data: allSquares, error: allSquaresError } = await supabase
+      // Let's also try a broader search to see what data exists
+      const { data: sampleTransactions, error: sampleTransError } =
+        await supabase
+          .from("transactions")
+          .select("id, campaign_id, donor_name")
+          .limit(3);
+
+      const { data: sampleSquares, error: sampleSquareError } = await supabase
         .from("squares")
         .select("id, campaign_id, claimed_by")
-        .limit(5);
+        .limit(3);
 
-      console.log("[DELETE-DONATION] Sample squares in database:", {
-        allSquares: allSquares?.slice(0, 3),
-        allSquaresError,
-        totalFound: allSquares?.length,
+      console.log("[DELETE-DONATION] Sample data in database:", {
+        sampleTransactions: sampleTransactions?.map((t) => ({
+          id: t.id,
+          type: typeof t.id,
+        })),
+        sampleSquares: sampleSquares?.map((s) => ({
+          id: s.id,
+          type: typeof s.id,
+        })),
+        sampleTransError: sampleTransError?.message,
+        sampleSquareError: sampleSquareError?.message,
       });
 
       return NextResponse.json(
@@ -286,9 +425,19 @@ export async function DELETE(request: NextRequest) {
           details: `No donation found with ID: ${transactionId} (type: ${typeof transactionId})`,
           debug: {
             searchedTransactions: true,
-            searchedSquares: true,
+            searchedInSquares: true,
             transactionId,
             transactionIdType: typeof transactionId,
+            foundTransaction: !!transaction,
+            foundSquare: !!square,
+            sampleTransactionIds: sampleTransactions?.map((t) => ({
+              id: t.id,
+              type: typeof t.id,
+            })),
+            sampleSquareIds: sampleSquares?.map((s) => ({
+              id: s.id,
+              type: typeof s.id,
+            })),
           },
         },
         { status: 404 },
@@ -322,7 +471,7 @@ export async function DELETE(request: NextRequest) {
     // Delete the square claim by resetting it
     console.log(
       "[DELETE-DONATION] Resetting square claim for square ID:",
-      transactionId,
+      square.id,
     );
     const { error: squareUpdateError, data: updatedSquare } = await supabase
       .from("squares")
@@ -334,7 +483,7 @@ export async function DELETE(request: NextRequest) {
         claimed_at: null,
         updated_at: new Date().toISOString(),
       })
-      .eq("id", transactionId)
+      .eq("id", square.id)
       .select();
 
     if (squareUpdateError) {

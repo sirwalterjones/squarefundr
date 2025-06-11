@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabaseClient';
-import { User } from '@supabase/supabase-js';
+import Link from "next/link";
+import { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabaseClient";
+import { User } from "@supabase/supabase-js";
 
 export default function Navbar() {
   const [user, setUser] = useState<User | null>(null);
@@ -18,11 +18,11 @@ export default function Navbar() {
     });
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setUser(session?.user ?? null);
-      }
-    );
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user ?? null);
+    });
 
     return () => subscription.unsubscribe();
   }, []);
@@ -49,23 +49,23 @@ export default function Navbar() {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
-            <Link 
-              href="/create" 
+            <a
+              href="https://www.squarefundr.com/auth"
               className="text-gray-600 hover:text-blue-600 transition-colors font-medium"
             >
               Create Campaign
-            </Link>
-            <Link 
-              href="/fundraiser/team-championship-fund" 
+            </a>
+            <Link
+              href="/fundraiser/team-championship-fund"
               className="text-gray-600 hover:text-blue-600 transition-colors font-medium"
             >
               View Demo
             </Link>
-            
+
             {user ? (
               <>
-                <Link 
-                  href="/dashboard" 
+                <Link
+                  href="/dashboard"
                   className="text-gray-600 hover:text-blue-600 transition-colors font-medium"
                 >
                   Dashboard
@@ -78,8 +78,8 @@ export default function Navbar() {
                 </button>
               </>
             ) : (
-              <Link 
-                href="/auth" 
+              <Link
+                href="/auth"
                 className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-2 rounded-xl font-semibold hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-lg hover:shadow-xl"
               >
                 Sign In
@@ -92,8 +92,18 @@ export default function Navbar() {
             onClick={() => setIsMenuOpen(!isMenuOpen)}
             className="md:hidden p-2 rounded-xl hover:bg-gray-100 transition-colors"
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 6h16M4 12h16M4 18h16"
+              />
             </svg>
           </button>
         </div>
@@ -102,25 +112,25 @@ export default function Navbar() {
         {isMenuOpen && (
           <div className="md:hidden py-4 border-t border-gray-100">
             <div className="flex flex-col space-y-4">
-              <Link 
-                href="/create" 
+              <a
+                href="https://www.squarefundr.com/auth"
                 className="text-gray-600 hover:text-blue-600 transition-colors py-2 font-medium"
                 onClick={() => setIsMenuOpen(false)}
               >
                 Create Campaign
-              </Link>
-              <Link 
-                href="/fundraiser/team-championship-fund" 
+              </a>
+              <Link
+                href="/fundraiser/team-championship-fund"
                 className="text-gray-600 hover:text-blue-600 transition-colors py-2 font-medium"
                 onClick={() => setIsMenuOpen(false)}
               >
                 View Demo
               </Link>
-              
+
               {user ? (
                 <>
-                  <Link 
-                    href="/dashboard" 
+                  <Link
+                    href="/dashboard"
                     className="text-gray-600 hover:text-blue-600 transition-colors py-2 font-medium"
                     onClick={() => setIsMenuOpen(false)}
                   >
@@ -137,8 +147,8 @@ export default function Navbar() {
                   </button>
                 </>
               ) : (
-                <Link 
-                  href="/auth" 
+                <Link
+                  href="/auth"
                   className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-2 rounded-xl font-semibold hover:from-blue-700 hover:to-blue-800 transition-all duration-200 inline-block text-center shadow-lg"
                   onClick={() => setIsMenuOpen(false)}
                 >

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabaseServer";
-import { stripe, isStripeDemo } from "@/lib/stripe";
 import { SelectedSquare } from "@/types";
 
 export async function POST(request: NextRequest) {
@@ -29,14 +28,6 @@ export async function POST(request: NextRequest) {
         { error: "Campaign not found" },
         { status: 404 },
       );
-    }
-
-    // Check if we're in demo mode (Stripe not configured)
-    if (isStripeDemo()) {
-      console.log("Stripe not configured, returning demo success URL");
-      return NextResponse.json({
-        url: `${request.nextUrl.origin}/fundraiser/${campaign.slug}?success=true&demo=true`,
-      });
     }
 
     // Calculate total amount
@@ -139,36 +130,13 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Create checkout session
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ["card"],
-      line_items: [
-        {
-          price_data: {
-            currency: "usd",
-            product_data: {
-              name: `${campaign.title} - Square Donation`,
-              description: `Donation for ${squares.length} square(s): ${squareKeys.join(", ")}`,
-            },
-            unit_amount: Math.round(totalAmount * 100), // Convert to cents
-          },
-          quantity: 1,
-        },
-      ],
-      mode: "payment",
-      success_url: `${request.nextUrl.origin}/fundraiser/${campaign.slug}?success=true&transaction_id=${transactionId}`,
-      cancel_url: `${request.nextUrl.origin}/fundraiser/${campaign.slug}?canceled=true&transaction_id=${transactionId}`,
-      customer_email: donorEmail,
-      metadata: {
-        campaign_id: campaignId,
-        transaction_id: transactionId,
-        square_ids: JSON.stringify(squareKeys),
-        donor_name: donorName || "",
-        anonymous: anonymous ? "true" : "false",
-      },
+    // Return success URL for PayPal or other payment processing
+    return NextResponse.json({
+      url: `${request.nextUrl.origin}/fundraiser/${campaign.slug}?success=true&transaction_id=${transactionId}`,
+      transactionId: transactionId,
+      totalAmount: totalAmount,
+      squares: squares,
     });
-
-    return NextResponse.json({ url: session.url });
   } catch (error) {
     console.error("Checkout session creation error:", error);
     return NextResponse.json(
