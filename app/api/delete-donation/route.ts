@@ -57,9 +57,62 @@ export async function DELETE(request: NextRequest) {
     // Strategy: Look for donation in multiple places
     // 1. Check transactions table with multiple ID formats
     // 2. Check squares table for direct square claims
+    // 3. Check if this is actually a square ID that needs to be looked up differently
 
     console.log("[DELETE-DONATION] Looking up transaction:", transactionId);
     console.log("[DELETE-DONATION] Transaction ID type:", typeof transactionId);
+
+    // First, let's check if this ID exists in squares table as a claimed square
+    // The donation might be showing a square ID instead of a transaction ID
+    const { data: squareByClaimedBy, error: squareByClaimedByError } =
+      await supabase
+        .from("squares")
+        .select("*")
+        .eq("claimed_by", transactionId)
+        .maybeSingle();
+
+    if (squareByClaimedBy) {
+      console.log(
+        "[DELETE-DONATION] Found square by claimed_by field:",
+        squareByClaimedBy.id,
+      );
+      // This is a square that was claimed, reset it
+      const { error: resetError } = await supabase
+        .from("squares")
+        .update({
+          claimed_by: null,
+          donor_name: null,
+          payment_status: "pending",
+          payment_type: "stripe",
+          claimed_at: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", squareByClaimedBy.id);
+
+      if (resetError) {
+        console.error("[DELETE-DONATION] Error resetting square:", resetError);
+        return NextResponse.json(
+          {
+            error: "Failed to delete donation",
+            details: resetError.message,
+          },
+          { status: 500 },
+        );
+      }
+
+      console.log("[DELETE-DONATION] Successfully reset square by claimed_by");
+      return NextResponse.json({
+        success: true,
+        message: "Donation deleted successfully",
+      });
+    }
+
+    if (squareByClaimedByError && squareByClaimedByError.code !== "PGRST116") {
+      console.error(
+        "[DELETE-DONATION] Error checking claimed_by:",
+        squareByClaimedByError,
+      );
+    }
 
     // Try multiple approaches to find the transaction
     let transaction: any = null;
@@ -207,13 +260,12 @@ export async function DELETE(request: NextRequest) {
         console.log("[DELETE-DONATION] Parsed square IDs:", squareIds);
 
         // Update squares by number instead of ID for better reliability
-        const { error: squareUpdateError } = await supabase
+        const { error: squareUpdateError, data: updatedSquare } = await supabase
           .from("squares")
           .update({
             claimed_by: null,
             donor_name: null,
             payment_status: "pending",
-            payment_type: "stripe",
             claimed_at: null,
             updated_at: new Date().toISOString(),
           })
@@ -398,13 +450,13 @@ export async function DELETE(request: NextRequest) {
       const { data: sampleTransactions, error: sampleTransError } =
         await supabase
           .from("transactions")
-          .select("id, campaign_id, donor_name")
-          .limit(3);
+          .select("id, campaign_id, donor_name, stripe_payment_intent_id")
+          .limit(5);
 
       const { data: sampleSquares, error: sampleSquareError } = await supabase
         .from("squares")
-        .select("id, campaign_id, claimed_by")
-        .limit(3);
+        .select("id, campaign_id, claimed_by, donor_name, payment_status")
+        .limit(5);
 
       console.log("[DELETE-DONATION] Sample data in database:", {
         sampleTransactions: sampleTransactions?.map((t) => ({
@@ -437,6 +489,8 @@ export async function DELETE(request: NextRequest) {
             sampleSquareIds: sampleSquares?.map((s) => ({
               id: s.id,
               type: typeof s.id,
+              claimed_by: s.claimed_by,
+              donor_name: s.donor_name,
             })),
           },
         },
@@ -479,7 +533,6 @@ export async function DELETE(request: NextRequest) {
         claimed_by: null,
         donor_name: null,
         payment_status: "pending",
-        payment_type: "stripe",
         claimed_at: null,
         updated_at: new Date().toISOString(),
       })

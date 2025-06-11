@@ -14,9 +14,6 @@ const roboto = Roboto({
   variable: "--font-roboto",
 });
 
-// Note: metadata export is not supported in client components
-// Move metadata to a separate server component if needed
-
 export default function RootLayout({
   children,
 }: Readonly<{
