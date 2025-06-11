@@ -204,7 +204,7 @@ export async function DELETE(request: NextRequest) {
         } catch (e) {
           console.log(
             "[DELETE-DONATION] Failed to parse JSON, splitting by comma:",
-            e.message,
+            e instanceof Error ? e.message : String(e),
           );
           squareIds = squareIds
             .split(",")
