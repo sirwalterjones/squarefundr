@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
+import Head from "next/head";
 import GridOverlay from "@/components/GridOverlay";
 import PaymentModal from "@/components/PaymentModal";
 import {
@@ -243,6 +244,20 @@ export default function FundraiserPage() {
       url: window.location.href,
     };
 
+    // Add image to share data if supported
+    if (campaign?.image_url) {
+      try {
+        const response = await fetch(campaign.image_url);
+        const blob = await response.blob();
+        const file = new File([blob], "campaign-image.jpg", {
+          type: blob.type,
+        });
+        (shareData as any).files = [file];
+      } catch (error) {
+        console.log("Could not include image in share:", error);
+      }
+    }
+
     try {
       if (navigator.share) {
         await navigator.share(shareData);
@@ -254,6 +269,43 @@ export default function FundraiserPage() {
       }
     } catch (error) {
       console.error("Share failed:", error);
+    }
+  };
+
+  const handleShareFacebook = () => {
+    const url = encodeURIComponent(window.location.href);
+    const text = encodeURIComponent(
+      campaign?.title || "Support this fundraiser",
+    );
+    const image = encodeURIComponent(campaign?.image_url || "");
+    const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${url}&quote=${text}&picture=${image}`;
+    window.open(facebookUrl, "_blank", "width=600,height=400");
+  };
+
+  const handleShareInstagram = () => {
+    // Instagram doesn't have direct URL sharing, so we copy the link and show instructions
+    navigator.clipboard
+      .writeText(window.location.href)
+      .then(() => {
+        setShareMessage(
+          "Link copied! Open Instagram and paste in your story or post.",
+        );
+        setTimeout(() => setShareMessage(""), 5000);
+      })
+      .catch(() => {
+        setShareMessage("Unable to copy link. Please copy the URL manually.");
+        setTimeout(() => setShareMessage(""), 3000);
+      });
+  };
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setShareMessage("Link copied to clipboard!");
+      setTimeout(() => setShareMessage(""), 3000);
+    } catch (error) {
+      setShareMessage("Unable to copy link. Please copy the URL manually.");
+      setTimeout(() => setShareMessage(""), 3000);
     }
   };
 
@@ -291,77 +343,188 @@ export default function FundraiserPage() {
   const totalValue = selectedSquares.reduce((sum, s) => sum + s.value, 0);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Hero Section */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="container-responsive py-4 md:py-8">
-          <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
-            {/* Campaign Info - 35% on desktop, full width on mobile */}
-            <div className="lg:w-[35%] order-2 lg:order-1">
-              <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-3 md:mb-4">
-                {campaign.title}
-              </h1>
-              <p className="text-base md:text-lg text-gray-600 mb-4 md:mb-6">
-                {campaign.description}
-              </p>
+    <>
+      <Head>
+        <title>{campaign?.title || "Fundraiser"}</title>
+        <meta
+          name="description"
+          content={campaign?.description || "Support this fundraiser"}
+        />
+        <meta
+          property="og:title"
+          content={campaign?.title || "Support this fundraiser"}
+        />
+        <meta
+          property="og:description"
+          content={campaign?.description || "Help us reach our goal!"}
+        />
+        <meta property="og:image" content={campaign?.image_url || ""} />
+        <meta
+          property="og:url"
+          content={typeof window !== "undefined" ? window.location.href : ""}
+        />
+        <meta property="og:type" content="website" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta
+          name="twitter:title"
+          content={campaign?.title || "Support this fundraiser"}
+        />
+        <meta
+          name="twitter:description"
+          content={campaign?.description || "Help us reach our goal!"}
+        />
+        <meta name="twitter:image" content={campaign?.image_url || ""} />
+      </Head>
+      <div className="min-h-screen bg-gray-50">
+        {/* Hero Section */}
+        <div className="bg-white border-b border-gray-200">
+          <div className="container-responsive py-4 md:py-8">
+            <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
+              {/* Campaign Info - 35% on desktop, full width on mobile */}
+              <div className="lg:w-[35%] order-2 lg:order-1">
+                <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-3 md:mb-4">
+                  {campaign.title}
+                </h1>
+                <p className="text-base md:text-lg text-gray-600 mb-4 md:mb-6">
+                  {campaign.description}
+                </p>
 
-              {/* Progress Stats */}
-              <div className="grid grid-cols-3 gap-2 md:gap-4 mb-4 md:mb-6">
-                <div className="text-center p-2 md:p-4 bg-blue-50 rounded-lg">
-                  <div className="flex items-center justify-center mb-1 md:mb-2">
-                    <Target className="w-4 h-4 md:w-5 md:h-5 text-blue-600" />
+                {/* Progress Stats */}
+                <div className="grid grid-cols-3 gap-2 md:gap-4 mb-4 md:mb-6">
+                  <div className="text-center p-2 md:p-4 bg-blue-50 rounded-lg">
+                    <div className="flex items-center justify-center mb-1 md:mb-2">
+                      <Target className="w-4 h-4 md:w-5 md:h-5 text-blue-600" />
+                    </div>
+                    <div className="text-lg md:text-2xl font-bold text-blue-600">
+                      {claimedSquares}
+                    </div>
+                    <div className="text-xs md:text-sm text-gray-600">
+                      of {totalSquares} squares
+                    </div>
                   </div>
-                  <div className="text-lg md:text-2xl font-bold text-blue-600">
-                    {claimedSquares}
+                  <div className="text-center p-2 md:p-4 bg-green-50 rounded-lg">
+                    <div className="flex items-center justify-center mb-1 md:mb-2">
+                      <Heart className="w-4 h-4 md:w-5 md:h-5 text-green-600" />
+                    </div>
+                    <div className="text-lg md:text-2xl font-bold text-green-600">
+                      ${totalRaised}
+                    </div>
+                    <div className="text-xs md:text-sm text-gray-600">
+                      raised so far
+                    </div>
                   </div>
-                  <div className="text-xs md:text-sm text-gray-600">
-                    of {totalSquares} squares
+                  <div className="text-center p-2 md:p-4 bg-purple-50 rounded-lg">
+                    <div className="flex items-center justify-center mb-1 md:mb-2">
+                      <Users className="w-4 h-4 md:w-5 md:h-5 text-purple-600" />
+                    </div>
+                    <div className="text-lg md:text-2xl font-bold text-purple-600">
+                      {Math.round((claimedSquares / totalSquares) * 100)}%
+                    </div>
+                    <div className="text-xs md:text-sm text-gray-600">
+                      complete
+                    </div>
                   </div>
                 </div>
-                <div className="text-center p-2 md:p-4 bg-green-50 rounded-lg">
-                  <div className="flex items-center justify-center mb-1 md:mb-2">
-                    <Heart className="w-4 h-4 md:w-5 md:h-5 text-green-600" />
-                  </div>
-                  <div className="text-lg md:text-2xl font-bold text-green-600">
-                    ${totalRaised}
-                  </div>
-                  <div className="text-xs md:text-sm text-gray-600">
-                    raised so far
+
+                {/* Share Buttons */}
+                <div className="mb-4">
+                  <h3 className="text-sm font-medium text-gray-700 mb-2">
+                    Share this campaign:
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={handleShareFacebook}
+                      className="flex items-center space-x-2 bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                    >
+                      <svg
+                        className="w-4 h-4"
+                        fill="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+                      </svg>
+                      <span>Facebook</span>
+                    </button>
+
+                    <button
+                      onClick={handleShareInstagram}
+                      className="flex items-center space-x-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white px-3 py-2 rounded-lg hover:from-purple-600 hover:to-pink-600 transition-colors text-sm"
+                    >
+                      <svg
+                        className="w-4 h-4"
+                        fill="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" />
+                      </svg>
+                      <span>Instagram</span>
+                    </button>
+
+                    <button
+                      onClick={handleCopyLink}
+                      className="flex items-center space-x-2 bg-gray-600 text-white px-3 py-2 rounded-lg hover:bg-gray-700 transition-colors text-sm"
+                    >
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                        />
+                      </svg>
+                      <span>Copy Link</span>
+                    </button>
+
+                    <button
+                      onClick={handleShare}
+                      className="flex items-center space-x-2 text-blue-600 hover:text-blue-700 transition-colors px-3 py-2 border border-blue-600 rounded-lg text-sm"
+                    >
+                      <Share2 className="w-4 h-4" />
+                      <span>More</span>
+                    </button>
                   </div>
                 </div>
-                <div className="text-center p-2 md:p-4 bg-purple-50 rounded-lg">
-                  <div className="flex items-center justify-center mb-1 md:mb-2">
-                    <Users className="w-4 h-4 md:w-5 md:h-5 text-purple-600" />
-                  </div>
-                  <div className="text-lg md:text-2xl font-bold text-purple-600">
-                    {Math.round((claimedSquares / totalSquares) * 100)}%
-                  </div>
-                  <div className="text-xs md:text-sm text-gray-600">
-                    complete
-                  </div>
-                </div>
-              </div>
+                {shareMessage && (
+                  <p className="text-green-600 text-sm mt-2">{shareMessage}</p>
+                )}
 
-              {/* Share Button */}
-              <button
-                onClick={handleShare}
-                className="flex items-center space-x-2 text-blue-600 hover:text-blue-700 transition-colors mb-4"
-              >
-                <Share2 className="w-4 h-4" />
-                <span className="text-sm md:text-base">
-                  Share this campaign
-                </span>
-              </button>
-              {shareMessage && (
-                <p className="text-green-600 text-sm mt-2">{shareMessage}</p>
-              )}
+                {/* Success Message */}
+                {successMessage && (
+                  <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg animate-fade-in">
+                    <div className="flex items-center">
+                      <svg
+                        className="w-5 h-5 text-green-600 mr-2"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M5 13l4 4L19 7"
+                        />
+                      </svg>
+                      <p className="text-green-800 font-medium">
+                        {successMessage}
+                      </p>
+                    </div>
+                  </div>
+                )}
 
-              {/* Success Message */}
-              {successMessage && (
-                <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg animate-fade-in">
-                  <div className="flex items-center">
+                {/* Demo Settings Button */}
+                {slug === "team-championship-fund" && (
+                  <button
+                    onClick={() => setShowDemoSettings(!showDemoSettings)}
+                    className="flex items-center space-x-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors mb-4 text-sm md:text-base"
+                  >
                     <svg
-                      className="w-5 h-5 text-green-600 mr-2"
+                      className="w-4 h-4"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -370,466 +533,446 @@ export default function FundraiserPage() {
                         strokeLinecap="round"
                         strokeLinejoin="round"
                         strokeWidth={2}
-                        d="M5 13l4 4L19 7"
+                        d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                      />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
                       />
                     </svg>
-                    <p className="text-green-800 font-medium">
-                      {successMessage}
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* Demo Settings Button */}
-              {slug === "team-championship-fund" && (
-                <button
-                  onClick={() => setShowDemoSettings(!showDemoSettings)}
-                  className="flex items-center space-x-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors mb-4 text-sm md:text-base"
-                >
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-                    />
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                    />
-                  </svg>
-                  <span>Customize Demo</span>
-                </button>
-              )}
-
-              {/* Legend */}
-              <div className="mt-4 md:mt-6 p-3 md:p-4 bg-gray-50 rounded-lg">
-                <h3 className="font-semibold text-gray-900 mb-2 text-sm md:text-base">
-                  Square Legend:
-                </h3>
-                <div className="space-y-2 text-xs md:text-sm">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-4 h-4 bg-white bg-opacity-30 border border-white rounded"></div>
-                    <span className="text-gray-700">Available to claim</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-4 h-4 bg-blue-500 bg-opacity-60 border border-blue-600 rounded"></div>
-                    <span className="text-gray-700">Selected for donation</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-4 h-4 bg-red-500 bg-opacity-60 border border-red-600 rounded"></div>
-                    <span className="text-gray-700">Already claimed</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Grid Area - 65% on desktop, full width on mobile */}
-            <div className="lg:w-[65%] order-1 lg:order-2">
-              <div className="relative w-full">
-                <GridOverlay
-                  campaign={campaign}
-                  squares={squares}
-                  selectedSquares={selectedSquares}
-                  onSquareSelect={handleSquareSelect}
-                  onSquareDeselect={handleSquareDeselect}
-                  imageUrl={campaign.image_url}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Debug info */}
-      {selectedSquares.length > 0 && (
-        <div className="fixed top-4 right-4 bg-yellow-100 p-2 rounded text-xs z-50">
-          Selected: {selectedSquares.length} squares
-          <br />
-          {selectedSquares.map((s) => `${s.row},${s.col}`).join(", ")}
-        </div>
-      )}
-
-      {/* Selection Summary & Donate */}
-      {selectedSquares.length > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50 animate-slide-up">
-          <div className="container-responsive py-3 md:py-4">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-              <div className="text-center sm:text-left">
-                <p className="font-semibold text-gray-900 text-sm md:text-base">
-                  {selectedSquares.length} square
-                  {selectedSquares.length !== 1 ? "s" : ""} selected
-                </p>
-                <p className="text-xs md:text-sm text-gray-600">
-                  Total: {formatPrice(totalValue)}
-                </p>
-              </div>
-              <div className="flex space-x-2 md:space-x-3">
-                <button
-                  onClick={() => setSelectedSquares([])}
-                  className="px-3 md:px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm md:text-base"
-                >
-                  Clear
-                </button>
-                <button
-                  onClick={() => setIsPaymentModalOpen(true)}
-                  className="px-4 md:px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold text-sm md:text-base"
-                >
-                  Donate {formatPrice(totalValue)}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* How it Works */}
-      <div className="container-responsive py-12">
-        <div className="text-center mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">
-            How it Works
-          </h2>
-          <p className="text-gray-600 max-w-2xl mx-auto">
-            Select squares on the image above to support this campaign. Each
-            square has a different value, and once claimed, your support helps
-            reach the fundraising goal.
-          </p>
-        </div>
-
-        <div className="grid md:grid-cols-3 gap-6">
-          <div className="text-center p-6 bg-white rounded-xl shadow-sm border border-gray-100">
-            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-              <span className="text-2xl font-bold text-blue-600">1</span>
-            </div>
-            <h3 className="font-semibold text-gray-900 mb-2">Select Squares</h3>
-            <p className="text-sm text-gray-600">
-              Click on available squares in the grid above. Each square shows
-              its value.
-            </p>
-          </div>
-
-          <div className="text-center p-6 bg-white rounded-xl shadow-sm border border-gray-100">
-            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-              <span className="text-2xl font-bold text-blue-600">2</span>
-            </div>
-            <h3 className="font-semibold text-gray-900 mb-2">Make Payment</h3>
-            <p className="text-sm text-gray-600">
-              Complete your donation securely with your preferred payment
-              method.
-            </p>
-          </div>
-
-          <div className="text-center p-6 bg-white rounded-xl shadow-sm border border-gray-100">
-            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-              <span className="text-2xl font-bold text-blue-600">3</span>
-            </div>
-            <h3 className="font-semibold text-gray-900 mb-2">
-              Support the Cause
-            </h3>
-            <p className="text-sm text-gray-600">
-              Your squares are claimed and your donation helps reach the
-              fundraising goal!
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Payment Modal */}
-      {campaign && (
-        <PaymentModal
-          isOpen={isPaymentModalOpen}
-          onClose={() => setIsPaymentModalOpen(false)}
-          selectedSquares={selectedSquares}
-          campaign={campaign}
-          onSuccess={handlePaymentSuccess}
-          isDemoMode={slug === "team-championship-fund"}
-        />
-      )}
-
-      {/* Demo Settings Modal */}
-      {showDemoSettings && slug === "team-championship-fund" && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-bold text-gray-900">
-                  Customize Demo
-                </h2>
-                <button
-                  onClick={() => setShowDemoSettings(false)}
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
-                >
-                  <svg
-                    className="w-6 h-6"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
-                </button>
-              </div>
-
-              <div className="space-y-6">
-                {/* Campaign Info */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Campaign Title
-                  </label>
-                  <input
-                    type="text"
-                    value={demoConfig.title}
-                    onChange={(e) =>
-                      setDemoConfig((prev) => ({
-                        ...prev,
-                        title: e.target.value,
-                      }))
-                    }
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Description
-                  </label>
-                  <textarea
-                    value={demoConfig.description}
-                    onChange={(e) =>
-                      setDemoConfig((prev) => ({
-                        ...prev,
-                        description: e.target.value,
-                      }))
-                    }
-                    rows={3}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                  />
-                </div>
-
-                {/* Image Selection */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Campaign Image
-                  </label>
-                  <div className="space-y-3">
-                    {/* Preset Options */}
-                    <div className="grid grid-cols-2 gap-2">
-                      {[
-                        {
-                          name: "Baseball",
-                          url: "/images/baseball.jpg",
-                          title: "Baseball Team Championship Fund",
-                          description:
-                            "Help our high school baseball team make it to the state championship! We need funds for new equipment, uniforms, travel expenses, and tournament fees. Every square you purchase brings us closer to our championship dreams and supports our student athletes.",
-                        },
-                        {
-                          name: "Football",
-                          url: "https://images.unsplash.com/photo-1566577739112-5180d4bf9390?w=800&h=600&fit=crop",
-                          title: "Football Team Championship Fund",
-                          description:
-                            "Help our high school football team reach the state championship! We need funds for new equipment, travel expenses, and tournament fees. Every square you purchase brings us closer to our goal and supports our student athletes in their pursuit of excellence.",
-                        },
-                        {
-                          name: "Basketball",
-                          url: "https://images.unsplash.com/photo-1546519638-68e109498ffc?w=800&h=600&fit=crop",
-                          title: "Basketball Team Championship Fund",
-                          description:
-                            "Help our varsity basketball team compete in the state tournament! We need funds for new uniforms, equipment, and travel costs. Every square you purchase helps our athletes reach their full potential and represent our school with pride.",
-                        },
-                        {
-                          name: "Soccer",
-                          url: "https://images.unsplash.com/photo-1553778263-73a83bab9b0c?w=800&h=600&fit=crop",
-                          title: "Soccer Team Championship Fund",
-                          description:
-                            "Support our soccer team as they work toward the regional championship! We need funds for equipment, field fees, and tournament travel. Your contribution helps our dedicated student athletes pursue their championship goals.",
-                        },
-                      ].map((preset) => (
-                        <button
-                          key={preset.name}
-                          onClick={() =>
-                            setDemoConfig((prev) => ({
-                              ...prev,
-                              imageUrl: preset.url,
-                              title: preset.title,
-                              description: preset.description,
-                            }))
-                          }
-                          className={`p-2 rounded-lg border text-xs font-medium transition-colors ${
-                            demoConfig.imageUrl === preset.url
-                              ? "bg-blue-50 border-blue-500 text-blue-700"
-                              : "bg-gray-50 border-gray-300 text-gray-700 hover:bg-gray-100"
-                          }`}
-                        >
-                          {preset.name}
-                        </button>
-                      ))}
-                    </div>
-
-                    {/* Custom URL Input */}
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">
-                        Or enter custom image URL:
-                      </label>
-                      <input
-                        type="url"
-                        value={demoConfig.imageUrl}
-                        onChange={(e) =>
-                          setDemoConfig((prev) => ({
-                            ...prev,
-                            imageUrl: e.target.value,
-                          }))
-                        }
-                        placeholder="https://example.com/image.jpg"
-                        className="w-full p-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Grid Dimensions */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Rows
-                    </label>
-                    <input
-                      type="number"
-                      min="3"
-                      max="20"
-                      value={demoConfig.rows}
-                      onChange={(e) =>
-                        setDemoConfig((prev) => ({
-                          ...prev,
-                          rows: parseInt(e.target.value) || 3,
-                        }))
-                      }
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Columns
-                    </label>
-                    <input
-                      type="number"
-                      min="3"
-                      max="20"
-                      value={demoConfig.columns}
-                      onChange={(e) =>
-                        setDemoConfig((prev) => ({
-                          ...prev,
-                          columns: parseInt(e.target.value) || 3,
-                        }))
-                      }
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                    />
-                  </div>
-                </div>
-
-                {/* Pricing Type */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Pricing Type
-                  </label>
-                  <select
-                    value={demoConfig.pricingType}
-                    onChange={(e) =>
-                      setDemoConfig((prev) => ({
-                        ...prev,
-                        pricingType: e.target.value as PricingType,
-                      }))
-                    }
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                  >
-                    <option value="fixed">Fixed Price</option>
-                    <option value="sequential">Sequential Pricing</option>
-                  </select>
-                </div>
-
-                {/* Pricing Settings */}
-                {demoConfig.pricingType === "fixed" ? (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Price per Square ($)
-                    </label>
-                    <input
-                      type="number"
-                      min="1"
-                      value={demoConfig.fixedPrice}
-                      onChange={(e) =>
-                        setDemoConfig((prev) => ({
-                          ...prev,
-                          fixedPrice: parseInt(e.target.value) || 1,
-                        }))
-                      }
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                    />
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Starting Price ($)
-                      </label>
-                      <input
-                        type="number"
-                        min="1"
-                        value={demoConfig.sequentialStart}
-                        onChange={(e) =>
-                          setDemoConfig((prev) => ({
-                            ...prev,
-                            sequentialStart: parseInt(e.target.value) || 1,
-                          }))
-                        }
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Increment ($)
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        value={demoConfig.sequentialIncrement}
-                        onChange={(e) =>
-                          setDemoConfig((prev) => ({
-                            ...prev,
-                            sequentialIncrement: parseInt(e.target.value) || 0,
-                          }))
-                        }
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                      />
-                    </div>
-                  </div>
+                    <span>Customize Demo</span>
+                  </button>
                 )}
 
-                {/* Apply Button */}
-                <div className="pt-4">
+                {/* Legend */}
+                <div className="mt-4 md:mt-6 p-3 md:p-4 bg-gray-50 rounded-lg">
+                  <h3 className="font-semibold text-gray-900 mb-2 text-sm md:text-base">
+                    Square Legend:
+                  </h3>
+                  <div className="space-y-2 text-xs md:text-sm">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-4 h-4 bg-white bg-opacity-30 border border-white rounded"></div>
+                      <span className="text-gray-700">Available to claim</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-4 h-4 bg-blue-500 bg-opacity-60 border border-blue-600 rounded"></div>
+                      <span className="text-gray-700">
+                        Selected for donation
+                      </span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-4 h-4 bg-red-500 bg-opacity-60 border border-red-600 rounded"></div>
+                      <span className="text-gray-700">Already claimed</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Grid Area - 65% on desktop, full width on mobile */}
+              <div className="lg:w-[65%] order-1 lg:order-2">
+                <div className="relative w-full">
+                  <GridOverlay
+                    campaign={campaign}
+                    squares={squares}
+                    selectedSquares={selectedSquares}
+                    onSquareSelect={handleSquareSelect}
+                    onSquareDeselect={handleSquareDeselect}
+                    imageUrl={campaign.image_url}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Debug info */}
+        {selectedSquares.length > 0 && (
+          <div className="fixed top-4 right-4 bg-yellow-100 p-2 rounded text-xs z-50">
+            Selected: {selectedSquares.length} squares
+            <br />
+            {selectedSquares.map((s) => `${s.row},${s.col}`).join(", ")}
+          </div>
+        )}
+
+        {/* Selection Summary & Donate */}
+        {selectedSquares.length > 0 && (
+          <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50 animate-slide-up">
+            <div className="container-responsive py-3 md:py-4">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div className="text-center sm:text-left">
+                  <p className="font-semibold text-gray-900 text-sm md:text-base">
+                    {selectedSquares.length} square
+                    {selectedSquares.length !== 1 ? "s" : ""} selected
+                  </p>
+                  <p className="text-xs md:text-sm text-gray-600">
+                    Total: {formatPrice(totalValue)}
+                  </p>
+                </div>
+                <div className="flex space-x-2 md:space-x-3">
                   <button
-                    onClick={() => setShowDemoSettings(false)}
-                    className="w-full bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+                    onClick={() => setSelectedSquares([])}
+                    className="px-3 md:px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm md:text-base"
                   >
-                    Apply Changes
+                    Clear
+                  </button>
+                  <button
+                    onClick={() => setIsPaymentModalOpen(true)}
+                    className="px-4 md:px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold text-sm md:text-base"
+                  >
+                    Donate {formatPrice(totalValue)}
                   </button>
                 </div>
               </div>
             </div>
           </div>
+        )}
+
+        {/* How it Works */}
+        <div className="container-responsive py-12">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">
+              How it Works
+            </h2>
+            <p className="text-gray-600 max-w-2xl mx-auto">
+              Select squares on the image above to support this campaign. Each
+              square has a different value, and once claimed, your support helps
+              reach the fundraising goal.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-6">
+            <div className="text-center p-6 bg-white rounded-xl shadow-sm border border-gray-100">
+              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                <span className="text-2xl font-bold text-blue-600">1</span>
+              </div>
+              <h3 className="font-semibold text-gray-900 mb-2">
+                Select Squares
+              </h3>
+              <p className="text-sm text-gray-600">
+                Click on available squares in the grid above. Each square shows
+                its value.
+              </p>
+            </div>
+
+            <div className="text-center p-6 bg-white rounded-xl shadow-sm border border-gray-100">
+              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                <span className="text-2xl font-bold text-blue-600">2</span>
+              </div>
+              <h3 className="font-semibold text-gray-900 mb-2">Make Payment</h3>
+              <p className="text-sm text-gray-600">
+                Complete your donation securely with your preferred payment
+                method.
+              </p>
+            </div>
+
+            <div className="text-center p-6 bg-white rounded-xl shadow-sm border border-gray-100">
+              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                <span className="text-2xl font-bold text-blue-600">3</span>
+              </div>
+              <h3 className="font-semibold text-gray-900 mb-2">
+                Support the Cause
+              </h3>
+              <p className="text-sm text-gray-600">
+                Your squares are claimed and your donation helps reach the
+                fundraising goal!
+              </p>
+            </div>
+          </div>
         </div>
-      )}
-    </div>
+
+        {/* Payment Modal */}
+        {campaign && (
+          <PaymentModal
+            isOpen={isPaymentModalOpen}
+            onClose={() => setIsPaymentModalOpen(false)}
+            selectedSquares={selectedSquares}
+            campaign={campaign}
+            onSuccess={handlePaymentSuccess}
+            isDemoMode={slug === "team-championship-fund"}
+          />
+        )}
+
+        {/* Demo Settings Modal */}
+        {showDemoSettings && slug === "team-championship-fund" && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-xl font-bold text-gray-900">
+                    Customize Demo
+                  </h2>
+                  <button
+                    onClick={() => setShowDemoSettings(false)}
+                    className="text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    <svg
+                      className="w-6 h-6"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </button>
+                </div>
+
+                <div className="space-y-6">
+                  {/* Campaign Info */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Campaign Title
+                    </label>
+                    <input
+                      type="text"
+                      value={demoConfig.title}
+                      onChange={(e) =>
+                        setDemoConfig((prev) => ({
+                          ...prev,
+                          title: e.target.value,
+                        }))
+                      }
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Description
+                    </label>
+                    <textarea
+                      value={demoConfig.description}
+                      onChange={(e) =>
+                        setDemoConfig((prev) => ({
+                          ...prev,
+                          description: e.target.value,
+                        }))
+                      }
+                      rows={3}
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                    />
+                  </div>
+
+                  {/* Image Selection */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Campaign Image
+                    </label>
+                    <div className="space-y-3">
+                      {/* Preset Options */}
+                      <div className="grid grid-cols-2 gap-2">
+                        {[
+                          {
+                            name: "Baseball",
+                            url: "/images/baseball.jpg",
+                            title: "Baseball Team Championship Fund",
+                            description:
+                              "Help our high school baseball team make it to the state championship! We need funds for new equipment, uniforms, travel expenses, and tournament fees. Every square you purchase brings us closer to our championship dreams and supports our student athletes.",
+                          },
+                          {
+                            name: "Football",
+                            url: "https://images.unsplash.com/photo-1566577739112-5180d4bf9390?w=800&h=600&fit=crop",
+                            title: "Football Team Championship Fund",
+                            description:
+                              "Help our high school football team reach the state championship! We need funds for new equipment, travel expenses, and tournament fees. Every square you purchase brings us closer to our goal and supports our student athletes in their pursuit of excellence.",
+                          },
+                          {
+                            name: "Basketball",
+                            url: "https://images.unsplash.com/photo-1546519638-68e109498ffc?w=800&h=600&fit=crop",
+                            title: "Basketball Team Championship Fund",
+                            description:
+                              "Help our varsity basketball team compete in the state tournament! We need funds for new uniforms, equipment, and travel costs. Every square you purchase helps our athletes reach their full potential and represent our school with pride.",
+                          },
+                          {
+                            name: "Soccer",
+                            url: "https://images.unsplash.com/photo-1553778263-73a83bab9b0c?w=800&h=600&fit=crop",
+                            title: "Soccer Team Championship Fund",
+                            description:
+                              "Support our soccer team as they work toward the regional championship! We need funds for equipment, field fees, and tournament travel. Your contribution helps our dedicated student athletes pursue their championship goals.",
+                          },
+                        ].map((preset) => (
+                          <button
+                            key={preset.name}
+                            onClick={() =>
+                              setDemoConfig((prev) => ({
+                                ...prev,
+                                imageUrl: preset.url,
+                                title: preset.title,
+                                description: preset.description,
+                              }))
+                            }
+                            className={`p-2 rounded-lg border text-xs font-medium transition-colors ${
+                              demoConfig.imageUrl === preset.url
+                                ? "bg-blue-50 border-blue-500 text-blue-700"
+                                : "bg-gray-50 border-gray-300 text-gray-700 hover:bg-gray-100"
+                            }`}
+                          >
+                            {preset.name}
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Custom URL Input */}
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                          Or enter custom image URL:
+                        </label>
+                        <input
+                          type="url"
+                          value={demoConfig.imageUrl}
+                          onChange={(e) =>
+                            setDemoConfig((prev) => ({
+                              ...prev,
+                              imageUrl: e.target.value,
+                            }))
+                          }
+                          placeholder="https://example.com/image.jpg"
+                          className="w-full p-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Grid Dimensions */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Rows
+                      </label>
+                      <input
+                        type="number"
+                        min="3"
+                        max="20"
+                        value={demoConfig.rows}
+                        onChange={(e) =>
+                          setDemoConfig((prev) => ({
+                            ...prev,
+                            rows: parseInt(e.target.value) || 3,
+                          }))
+                        }
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Columns
+                      </label>
+                      <input
+                        type="number"
+                        min="3"
+                        max="20"
+                        value={demoConfig.columns}
+                        onChange={(e) =>
+                          setDemoConfig((prev) => ({
+                            ...prev,
+                            columns: parseInt(e.target.value) || 3,
+                          }))
+                        }
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Pricing Type */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Pricing Type
+                    </label>
+                    <select
+                      value={demoConfig.pricingType}
+                      onChange={(e) =>
+                        setDemoConfig((prev) => ({
+                          ...prev,
+                          pricingType: e.target.value as PricingType,
+                        }))
+                      }
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                    >
+                      <option value="fixed">Fixed Price</option>
+                      <option value="sequential">Sequential Pricing</option>
+                    </select>
+                  </div>
+
+                  {/* Pricing Settings */}
+                  {demoConfig.pricingType === "fixed" ? (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Price per Square ($)
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={demoConfig.fixedPrice}
+                        onChange={(e) =>
+                          setDemoConfig((prev) => ({
+                            ...prev,
+                            fixedPrice: parseInt(e.target.value) || 1,
+                          }))
+                        }
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                      />
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Starting Price ($)
+                        </label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={demoConfig.sequentialStart}
+                          onChange={(e) =>
+                            setDemoConfig((prev) => ({
+                              ...prev,
+                              sequentialStart: parseInt(e.target.value) || 1,
+                            }))
+                          }
+                          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Increment ($)
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={demoConfig.sequentialIncrement}
+                          onChange={(e) =>
+                            setDemoConfig((prev) => ({
+                              ...prev,
+                              sequentialIncrement:
+                                parseInt(e.target.value) || 0,
+                            }))
+                          }
+                          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Apply Button */}
+                  <div className="pt-4">
+                    <button
+                      onClick={() => setShowDemoSettings(false)}
+                      className="w-full bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+                    >
+                      Apply Changes
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </>
   );
 }
