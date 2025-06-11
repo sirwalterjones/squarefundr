@@ -223,10 +223,16 @@ export default function FundraiserPage() {
     setSelectedSquares([]);
     setIsPaymentModalOpen(false);
 
-    // Show success message
-    setSuccessMessage(
-      "Thank you for your donation! Your squares have been claimed.",
-    );
+    // Show appropriate success message based on demo mode
+    if (slug === "team-championship-fund") {
+      setSuccessMessage(
+        "Demo Campaign - Start Yours Now! Link to Create Campaign.",
+      );
+    } else {
+      setSuccessMessage(
+        "Thank you for your donation! Your squares have been claimed.",
+      );
+    }
     setTimeout(() => setSuccessMessage(""), 5000);
   };
 
@@ -543,6 +549,7 @@ export default function FundraiserPage() {
           selectedSquares={selectedSquares}
           campaign={campaign}
           onSuccess={handlePaymentSuccess}
+          isDemoMode={slug === "team-championship-fund"}
         />
       )}
 
