@@ -2,7 +2,7 @@ export interface User {
   id: string;
   email: string;
   stripe_id?: string;
-  role: 'user' | 'admin';
+  role: "user" | "admin";
   created_at: string;
 }
 
@@ -14,13 +14,16 @@ export interface Campaign {
   image_url: string;
   rows: number;
   columns: number;
-  pricing_type: 'fixed' | 'sequential' | 'manual';
+  pricing_type: "fixed" | "sequential" | "manual";
   price_data: PriceData;
   public_url: string;
   slug: string;
   created_at: string;
   paid_to_admin: boolean;
   is_active: boolean;
+  paypal_account_id?: string;
+  paypal_email?: string;
+  paypal_onboarding_complete?: boolean;
 }
 
 export interface Square {
@@ -32,25 +35,25 @@ export interface Square {
   value: number;
   claimed_by?: string;
   donor_name?: string;
-  payment_status: 'pending' | 'completed' | 'failed';
-  payment_type: 'stripe' | 'cash';
+  payment_status: "pending" | "completed" | "failed";
+  payment_type: "stripe" | "paypal" | "cash";
   claimed_at?: string;
 }
 
 export interface Transaction {
   id: string;
   campaign_id: string;
-  square_ids: string[];
+  square_ids: string; // JSON string format
   total: number;
-  payment_method: 'stripe' | 'cash';
+  payment_method: "stripe" | "paypal" | "cash";
   donor_email?: string;
   donor_name?: string;
-  status: 'pending' | 'completed' | 'failed' | 'refunded';
-  stripe_payment_intent_id?: string;
+  status: "pending" | "completed" | "failed" | "refunded";
+  paypal_order_id?: string;
   timestamp: string;
 }
 
-export type PricingType = 'fixed' | 'sequential' | 'manual';
+export type PricingType = "fixed" | "sequential" | "manual";
 
 export interface PriceData {
   fixed?: number;
@@ -76,9 +79,8 @@ export interface GridConfig {
 }
 
 export interface DonorInfo {
-  email?: string;
-  name?: string;
-  anonymous?: boolean;
+  email: string;
+  name: string;
 }
 
 export interface PaymentModalProps {
@@ -96,5 +98,3 @@ export interface SquareProps {
   onClick: () => void;
   campaign: Campaign;
 }
-
-

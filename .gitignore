@@ -36,6 +36,11 @@ yarn-error.log*
 # vercel
 .vercel
 
+# tempo
+node_modules
+**/tempobook/dynamic/
+**/tempobook/storyboards/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

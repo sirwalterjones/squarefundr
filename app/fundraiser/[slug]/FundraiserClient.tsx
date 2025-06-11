@@ -1,47 +1,82 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Campaign, Square, SelectedSquare } from '@/types';
-import GridOverlay from '@/components/GridOverlay';
-import PaymentModal from '@/components/PaymentModal';
-import { formatPrice, calculateTotalPrice } from '@/utils/pricingUtils';
-import { supabase } from '@/lib/supabaseClient';
+import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import { Campaign, Square, SelectedSquare } from "@/types";
+import GridOverlay from "@/components/GridOverlay";
+import PaymentModal from "@/components/PaymentModal";
+import { formatPrice, calculateTotalPrice } from "@/utils/pricingUtils";
+import { supabase } from "@/lib/supabaseClient";
 
 interface FundraiserClientProps {
   campaign: Campaign;
   squares: Square[];
 }
 
-export default function FundraiserClient({ campaign, squares: initialSquares }: FundraiserClientProps) {
+export default function FundraiserClient({
+  campaign,
+  squares: initialSquares,
+}: FundraiserClientProps) {
   const [squares, setSquares] = useState<Square[]>(initialSquares);
   const [selectedSquares, setSelectedSquares] = useState<SelectedSquare[]>([]);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Check for success/error messages from URL params
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const success = urlParams.get("success");
+    const canceled = urlParams.get("canceled");
+    const demo = urlParams.get("demo");
+
+    if (success === "true") {
+      if (demo === "true") {
+        setSuccessMessage(
+          "Demo payment completed! In production, squares would be saved to the database.",
+        );
+      } else {
+        setSuccessMessage(
+          "Payment successful! Your squares have been reserved.",
+        );
+      }
+      // Clear URL params
+      window.history.replaceState({}, "", window.location.pathname);
+      // Auto-hide success message after 5 seconds
+      setTimeout(() => setSuccessMessage(null), 5000);
+    } else if (canceled === "true") {
+      setErrorMessage("Payment was canceled. Your squares were not reserved.");
+      // Clear URL params
+      window.history.replaceState({}, "", window.location.pathname);
+      // Auto-hide error message after 5 seconds
+      setTimeout(() => setErrorMessage(null), 5000);
+    }
+  }, []);
 
   // Real-time subscription to squares updates
   useEffect(() => {
     const channel = supabase
-      .channel('squares-changes')
+      .channel("squares-changes")
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: '*',
-          schema: 'public',
-          table: 'squares',
+          event: "*",
+          schema: "public",
+          table: "squares",
           filter: `campaign_id=eq.${campaign.id}`,
         },
         (payload) => {
-          if (payload.eventType === 'UPDATE') {
-            setSquares(prev => 
-              prev.map(square => 
-                square.id === payload.new.id 
+          if (payload.eventType === "UPDATE") {
+            setSquares((prev) =>
+              prev.map((square) =>
+                square.id === payload.new.id
                   ? { ...square, ...payload.new }
-                  : square
-              )
+                  : square,
+              ),
             );
           }
-        }
+        },
       )
       .subscribe();
 
@@ -51,12 +86,12 @@ export default function FundraiserClient({ campaign, squares: initialSquares }: 
   }, [campaign.id]);
 
   const handleSquareSelect = (square: SelectedSquare) => {
-    setSelectedSquares(prev => [...prev, square]);
+    setSelectedSquares((prev) => [...prev, square]);
   };
 
   const handleSquareDeselect = (square: SelectedSquare) => {
-    setSelectedSquares(prev => 
-      prev.filter(s => !(s.row === square.row && s.col === square.col))
+    setSelectedSquares((prev) =>
+      prev.filter((s) => !(s.row === square.row && s.col === square.col)),
     );
   };
 
@@ -65,34 +100,93 @@ export default function FundraiserClient({ campaign, squares: initialSquares }: 
     setIsLoading(true);
     try {
       const { data: updatedSquares } = await supabase
-        .from('squares')
-        .select('*')
-        .eq('campaign_id', campaign.id)
-        .order('number');
+        .from("squares")
+        .select("*")
+        .eq("campaign_id", campaign.id)
+        .order("number");
 
       if (updatedSquares) {
         setSquares(updatedSquares);
       }
-      
+
       setSelectedSquares([]);
+      setSuccessMessage(
+        "Squares claimed successfully! Payment arrangement confirmed.",
+      );
+      // Auto-hide success message after 5 seconds
+      setTimeout(() => setSuccessMessage(null), 5000);
     } catch (error) {
-      console.error('Error refreshing squares:', error);
+      console.error("Error refreshing squares:", error);
+      setErrorMessage("Error refreshing squares. Please refresh the page.");
+      setTimeout(() => setErrorMessage(null), 5000);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const totalSelected = calculateTotalPrice(selectedSquares, campaign.pricing_type, campaign.price_data);
-  const claimedSquares = squares.filter(s => s.claimed_by).length;
-  const totalSquares = squares.length;
+  const totalSelected = calculateTotalPrice(
+    selectedSquares,
+    campaign.pricing_type,
+    campaign.price_data,
+  );
+  const claimedSquares = squares.filter((s) => s.claimed_by).length;
+  const totalSquares = campaign.rows * campaign.columns; // Use campaign configuration, not squares array length
   const progressPercentage = (claimedSquares / totalSquares) * 100;
 
+  // Debug logging
+  console.log("FundraiserClient Debug:", {
+    campaignRows: campaign.rows,
+    campaignColumns: campaign.columns,
+    totalSquares,
+    squaresLength: squares.length,
+    claimedSquares,
+  });
+
   const totalRaised = squares
-    .filter(s => s.payment_status === 'completed')
+    .filter((s) => s.payment_status === "completed")
     .reduce((sum, s) => sum + s.value, 0);
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Success/Error Messages */}
+      {successMessage && (
+        <motion.div
+          initial={{ opacity: 0, y: -50 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -50 }}
+          className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg max-w-md text-center"
+        >
+          <div className="flex items-center justify-between">
+            <span>{successMessage}</span>
+            <button
+              onClick={() => setSuccessMessage(null)}
+              className="ml-4 text-white hover:text-gray-200"
+            >
+              ×
+            </button>
+          </div>
+        </motion.div>
+      )}
+
+      {errorMessage && (
+        <motion.div
+          initial={{ opacity: 0, y: -50 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -50 }}
+          className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg max-w-md text-center"
+        >
+          <div className="flex items-center justify-between">
+            <span>{errorMessage}</span>
+            <button
+              onClick={() => setErrorMessage(null)}
+              className="ml-4 text-white hover:text-gray-200"
+            >
+              ×
+            </button>
+          </div>
+        </motion.div>
+      )}
+
       <div className="container-responsive py-8">
         {/* Campaign Header */}
         <div className="mb-8">
@@ -100,27 +194,33 @@ export default function FundraiserClient({ campaign, squares: initialSquares }: 
             {campaign.title}
           </h1>
           {campaign.description && (
-            <p className="text-lg text-gray-600 mb-6">
-              {campaign.description}
-            </p>
+            <p className="text-lg text-gray-600 mb-6">{campaign.description}</p>
           )}
-          
+
           {/* Progress Stats */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <div className="bg-white rounded-lg p-4 text-center">
-              <div className="text-2xl font-bold text-blue-600">{claimedSquares}</div>
+              <div className="text-2xl font-bold text-blue-600">
+                {claimedSquares}
+              </div>
               <div className="text-sm text-gray-600">Squares Claimed</div>
             </div>
             <div className="bg-white rounded-lg p-4 text-center">
-              <div className="text-2xl font-bold text-gray-900">{totalSquares}</div>
+              <div className="text-2xl font-bold text-gray-900">
+                {totalSquares}
+              </div>
               <div className="text-sm text-gray-600">Total Squares</div>
             </div>
             <div className="bg-white rounded-lg p-4 text-center">
-              <div className="text-2xl font-bold text-green-600">{formatPrice(totalRaised)}</div>
+              <div className="text-2xl font-bold text-green-600">
+                {formatPrice(totalRaised)}
+              </div>
               <div className="text-sm text-gray-600">Raised</div>
             </div>
             <div className="bg-white rounded-lg p-4 text-center">
-              <div className="text-2xl font-bold text-gray-900">{Math.round(progressPercentage)}%</div>
+              <div className="text-2xl font-bold text-gray-900">
+                {Math.round(progressPercentage)}%
+              </div>
               <div className="text-sm text-gray-600">Complete</div>
             </div>
           </div>
@@ -145,9 +245,10 @@ export default function FundraiserClient({ campaign, squares: initialSquares }: 
                 Select Your Squares
               </h2>
               <p className="text-gray-600 mb-6">
-                Click on available squares to select them for donation. Selected squares will be highlighted.
+                Click on available squares to select them for donation. Selected
+                squares will be highlighted.
               </p>
-              
+
               {isLoading ? (
                 <div className="flex items-center justify-center h-64">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -172,7 +273,7 @@ export default function FundraiserClient({ campaign, squares: initialSquares }: 
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
                 Your Selection
               </h3>
-              
+
               {selectedSquares.length === 0 ? (
                 <p className="text-gray-500 text-center py-8">
                   No squares selected yet
@@ -186,25 +287,29 @@ export default function FundraiserClient({ campaign, squares: initialSquares }: 
                         className="flex justify-between items-center text-sm"
                       >
                         <span>Square #{square.number}</span>
-                        <span className="font-medium">{formatPrice(square.value)}</span>
+                        <span className="font-medium">
+                          {formatPrice(square.value)}
+                        </span>
                       </div>
                     ))}
                   </div>
-                  
+
                   <div className="border-t border-gray-200 pt-4">
                     <div className="flex justify-between items-center font-semibold">
                       <span>Total ({selectedSquares.length} squares)</span>
-                      <span className="text-lg text-blue-600">{formatPrice(totalSelected)}</span>
+                      <span className="text-lg text-blue-600">
+                        {formatPrice(totalSelected)}
+                      </span>
                     </div>
                   </div>
-                  
+
                   <button
                     onClick={() => setIsPaymentModalOpen(true)}
                     className="w-full btn-primary"
                   >
                     Donate {formatPrice(totalSelected)}
                   </button>
-                  
+
                   <button
                     onClick={() => setSelectedSquares([])}
                     className="w-full btn-outline"
@@ -248,17 +353,33 @@ export default function FundraiserClient({ campaign, squares: initialSquares }: 
                 Pricing
               </h3>
               <div className="text-sm text-gray-600">
-                {campaign.pricing_type === 'fixed' && (
-                  <p>All squares: <span className="font-medium text-blue-600">{formatPrice(campaign.price_data.fixed || 0)}</span></p>
-                )}
-                {campaign.pricing_type === 'sequential' && campaign.price_data.sequential && (
+                {campaign.pricing_type === "fixed" && (
                   <p>
-                    Starting at <span className="font-medium text-blue-600">{formatPrice(campaign.price_data.sequential.start)}</span>, 
-                    increasing by <span className="font-medium">{formatPrice(campaign.price_data.sequential.increment)}</span> per square
+                    All squares:{" "}
+                    <span className="font-medium text-blue-600">
+                      {formatPrice(campaign.price_data.fixed || 0)}
+                    </span>
                   </p>
                 )}
-                {campaign.pricing_type === 'manual' && (
-                  <p>Each square has individual pricing - hover over squares to see prices</p>
+                {campaign.pricing_type === "sequential" &&
+                  campaign.price_data.sequential && (
+                    <p>
+                      Starting at{" "}
+                      <span className="font-medium text-blue-600">
+                        {formatPrice(campaign.price_data.sequential.start)}
+                      </span>
+                      , increasing by{" "}
+                      <span className="font-medium">
+                        {formatPrice(campaign.price_data.sequential.increment)}
+                      </span>{" "}
+                      per square
+                    </p>
+                  )}
+                {campaign.pricing_type === "manual" && (
+                  <p>
+                    Each square has individual pricing - hover over squares to
+                    see prices
+                  </p>
                 )}
               </div>
             </div>
@@ -276,4 +397,4 @@ export default function FundraiserClient({ campaign, squares: initialSquares }: 
       />
     </div>
   );
-} 
+}

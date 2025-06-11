@@ -1,34 +1,42 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
-import GridOverlay from '@/components/GridOverlay';
-import PaymentModal from '@/components/PaymentModal';
-import { Campaign, Square as SquareType, SelectedSquare, PricingType } from '@/types';
-import { formatPrice } from '@/utils/pricingUtils';
-import { Share2, Heart, Users, Target } from 'lucide-react';
+import { useState, useEffect } from "react";
+import { useParams } from "next/navigation";
+import GridOverlay from "@/components/GridOverlay";
+import PaymentModal from "@/components/PaymentModal";
+import {
+  Campaign,
+  Square as SquareType,
+  SelectedSquare,
+  PricingType,
+} from "@/types";
+import { formatPrice } from "@/utils/pricingUtils";
+import { Share2, Heart, Users, Target } from "lucide-react";
 
 export default function FundraiserPage() {
   const params = useParams();
   const slug = params?.slug as string;
-  
+
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [squares, setSquares] = useState<SquareType[]>([]);
   const [selectedSquares, setSelectedSquares] = useState<SelectedSquare[]>([]);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [shareMessage, setShareMessage] = useState('');
+  const [shareMessage, setShareMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   const [showDemoSettings, setShowDemoSettings] = useState(false);
   const [demoConfig, setDemoConfig] = useState({
     rows: 10,
     columns: 10,
-    pricingType: 'sequential' as PricingType,
+    pricingType: "sequential" as PricingType,
     fixedPrice: 10,
     sequentialStart: 5,
     sequentialIncrement: 2,
-    title: 'Baseball Team Championship Fund',
-    description: 'Help our high school baseball team make it to the state championship! We need funds for new equipment, uniforms, travel expenses, and tournament fees. Every square you purchase brings us closer to our championship dreams and supports our student athletes.',
-    imageUrl: 'https://images.unsplash.com/photo-1566577739112-5180d4bf9390?w=800&h=600&fit=crop'
+    title: "Football Team Championship Fund",
+    description:
+      "Help our high school football team reach the state championship! We need funds for new equipment, travel expenses, and tournament fees. Every square you purchase brings us closer to our goal and supports our student athletes in their pursuit of excellence.",
+    imageUrl:
+      "https://images.unsplash.com/photo-1566577739112-5180d4bf9390?w=800&h=600&fit=crop",
   });
 
   // Demo campaign data - in production this would come from Supabase
@@ -36,42 +44,50 @@ export default function FundraiserPage() {
     const loadCampaign = async () => {
       try {
         // Simulate API call delay
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
+        await new Promise((resolve) => setTimeout(resolve, 500));
+
         // Check if this is the demo slug
-        if (slug === 'team-championship-fund') {
+        if (slug === "team-championship-fund") {
           // Demo campaign data
           const demoCampaign: Campaign = {
-            id: 'demo-campaign-1',
+            id: "demo-campaign-1",
             title: demoConfig.title,
             description: demoConfig.description,
             image_url: demoConfig.imageUrl,
             rows: demoConfig.rows,
             columns: demoConfig.columns,
             pricing_type: demoConfig.pricingType,
-            price_data: demoConfig.pricingType === 'fixed' 
-              ? { fixed: demoConfig.fixedPrice }
-              : { sequential: { start: demoConfig.sequentialStart, increment: demoConfig.sequentialIncrement } },
-            user_id: 'campaign-owner',
+            price_data:
+              demoConfig.pricingType === "fixed"
+                ? { fixed: demoConfig.fixedPrice }
+                : {
+                    sequential: {
+                      start: demoConfig.sequentialStart,
+                      increment: demoConfig.sequentialIncrement,
+                    },
+                  },
+            user_id: "campaign-owner",
             created_at: new Date().toISOString(),
             slug: slug,
             public_url: `${window.location.origin}/fundraiser/${slug}`,
             paid_to_admin: true,
-            is_active: true
+            is_active: true,
           };
 
           // Generate squares with some already claimed
           const demoSquares: SquareType[] = [];
           for (let row = 0; row < demoCampaign.rows; row++) {
             for (let col = 0; col < demoCampaign.columns; col++) {
-              const number = (row * demoCampaign.columns) + col + 1;
-              const value = demoConfig.pricingType === 'fixed' 
-                ? demoConfig.fixedPrice 
-                : demoConfig.sequentialStart + (number - 1) * demoConfig.sequentialIncrement;
-              
+              const number = row * demoCampaign.columns + col + 1;
+              const value =
+                demoConfig.pricingType === "fixed"
+                  ? demoConfig.fixedPrice
+                  : demoConfig.sequentialStart +
+                    (number - 1) * demoConfig.sequentialIncrement;
+
               // Randomly claim some squares for demo
               const isClaimed = Math.random() < 0.15; // 15% claimed
-              
+
               demoSquares.push({
                 id: `square-${number}`,
                 campaign_id: demoCampaign.id,
@@ -81,9 +97,9 @@ export default function FundraiserPage() {
                 value,
                 claimed_by: isClaimed ? `donor-${number}` : undefined,
                 donor_name: isClaimed ? `Supporter ${number}` : undefined,
-                payment_status: isClaimed ? 'completed' : 'pending',
-                payment_type: 'stripe',
-                claimed_at: isClaimed ? new Date().toISOString() : undefined
+                payment_status: isClaimed ? "completed" : "pending",
+                payment_type: "paypal",
+                claimed_at: isClaimed ? new Date().toISOString() : undefined,
               });
             }
           }
@@ -93,17 +109,34 @@ export default function FundraiserPage() {
         } else {
           // Load real campaign from database
           const response = await fetch(`/api/campaigns/${slug}`);
-          
+
           if (!response.ok) {
-            throw new Error('Campaign not found');
+            throw new Error("Campaign not found");
           }
-          
-          const { campaign: realCampaign, squares: realSquares } = await response.json();
+
+          const { campaign: realCampaign, squares: realSquares } =
+            await response.json();
+
+          // Debug: Log the real campaign data
+          console.log("Real campaign loaded:", {
+            id: realCampaign.id,
+            title: realCampaign.title,
+            rows: realCampaign.rows,
+            columns: realCampaign.columns,
+            expectedTotalSquares: realCampaign.rows * realCampaign.columns,
+            actualSquaresReceived: realSquares.length,
+            pricingType: realCampaign.pricing_type,
+            priceData: realCampaign.price_data,
+          });
+
+          // Debug: Log first few squares from API
+          console.log("First 5 squares from API:", realSquares.slice(0, 5));
+
           setCampaign(realCampaign);
           setSquares(realSquares);
         }
       } catch (error) {
-        console.error('Failed to load campaign:', error);
+        console.error("Failed to load campaign:", error);
         setCampaign(null);
       } finally {
         setLoading(false);
@@ -116,18 +149,34 @@ export default function FundraiserPage() {
   }, [slug, demoConfig]);
 
   const handleSquareSelect = (square: SelectedSquare) => {
-    setSelectedSquares(prev => [...prev, square]);
+    console.log("handleSquareSelect called:", square);
+    setSelectedSquares((prev) => {
+      const newSelection = [...prev, square];
+      console.log(
+        "New selectedSquares after select:",
+        newSelection.map((s) => `${s.row},${s.col}`),
+      );
+      return newSelection;
+    });
   };
 
   const handleSquareDeselect = (square: SelectedSquare) => {
-    setSelectedSquares(prev => 
-      prev.filter(s => !(s.row === square.row && s.col === square.col))
-    );
+    console.log("handleSquareDeselect called:", square);
+    setSelectedSquares((prev) => {
+      const newSelection = prev.filter(
+        (s) => !(s.row === square.row && s.col === square.col),
+      );
+      console.log(
+        "New selectedSquares after deselect:",
+        newSelection.map((s) => `${s.row},${s.col}`),
+      );
+      return newSelection;
+    });
   };
 
   const handleDonate = () => {
     if (selectedSquares.length === 0) {
-      alert('Please select at least one square to donate');
+      alert("Please select at least one square to donate");
       return;
     }
     setIsPaymentModalOpen(true);
@@ -135,34 +184,37 @@ export default function FundraiserPage() {
 
   const handlePaymentSuccess = () => {
     // For demo campaigns, update state locally
-    if (slug === 'team-championship-fund') {
-      const claimedSquareIds = selectedSquares.map(s => `${s.row}-${s.col}`);
-      
-      setSquares(prev => prev.map(square => {
-        const squareId = `${square.row}-${square.col}`;
-        if (claimedSquareIds.includes(squareId)) {
-          return {
-            ...square,
-            claimed_by: 'new-donor',
-            donor_name: 'Anonymous Supporter',
-            payment_status: 'completed' as const,
-            claimed_at: new Date().toISOString()
-          };
-        }
-        return square;
-      }));
+    if (slug === "team-championship-fund") {
+      const claimedSquareIds = selectedSquares.map((s) => `${s.row}-${s.col}`);
+
+      setSquares((prev) =>
+        prev.map((square) => {
+          const squareId = `${square.row}-${square.col}`;
+          if (claimedSquareIds.includes(squareId)) {
+            return {
+              ...square,
+              claimed_by: "new-donor",
+              donor_name: "Anonymous Supporter",
+              payment_status: "completed" as const,
+              claimed_at: new Date().toISOString(),
+            };
+          }
+          return square;
+        }),
+      );
     } else {
       // For real campaigns, reload data from database
       const loadUpdatedData = async () => {
         try {
           const response = await fetch(`/api/campaigns/${slug}`);
           if (response.ok) {
-            const { campaign: updatedCampaign, squares: updatedSquares } = await response.json();
+            const { campaign: updatedCampaign, squares: updatedSquares } =
+              await response.json();
             setCampaign(updatedCampaign);
             setSquares(updatedSquares);
           }
         } catch (error) {
-          console.error('Error refreshing campaign data:', error);
+          console.error("Error refreshing campaign data:", error);
         }
       };
       loadUpdatedData();
@@ -170,15 +222,18 @@ export default function FundraiserPage() {
 
     setSelectedSquares([]);
     setIsPaymentModalOpen(false);
-    
+
     // Show success message
-    alert('Thank you for your donation! Your squares have been claimed.');
+    setSuccessMessage(
+      "Thank you for your donation! Your squares have been claimed.",
+    );
+    setTimeout(() => setSuccessMessage(""), 5000);
   };
 
   const handleShare = async () => {
     const shareData = {
-      title: campaign?.title || 'Support this fundraiser',
-      text: campaign?.description || 'Help us reach our goal!',
+      title: campaign?.title || "Support this fundraiser",
+      text: campaign?.description || "Help us reach our goal!",
       url: window.location.href,
     };
 
@@ -188,11 +243,11 @@ export default function FundraiserPage() {
       } else {
         // Fallback: copy to clipboard
         await navigator.clipboard.writeText(window.location.href);
-        setShareMessage('Link copied to clipboard!');
-        setTimeout(() => setShareMessage(''), 3000);
+        setShareMessage("Link copied to clipboard!");
+        setTimeout(() => setShareMessage(""), 3000);
       }
     } catch (error) {
-      console.error('Share failed:', error);
+      console.error("Share failed:", error);
     }
   };
 
@@ -211,16 +266,22 @@ export default function FundraiserPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Campaign Not Found</h1>
-          <p className="text-gray-600">The fundraiser you're looking for doesn't exist or has been removed.</p>
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">
+            Campaign Not Found
+          </h1>
+          <p className="text-gray-600">
+            The fundraiser you're looking for doesn't exist or has been removed.
+          </p>
         </div>
       </div>
     );
   }
 
   const totalSquares = campaign.rows * campaign.columns;
-  const claimedSquares = squares.filter(s => s.claimed_by).length;
-  const totalRaised = squares.filter(s => s.claimed_by).reduce((sum, s) => sum + s.value, 0);
+  const claimedSquares = squares.filter((s) => s.claimed_by).length;
+  const totalRaised = squares
+    .filter((s) => s.claimed_by)
+    .reduce((sum, s) => sum + s.value, 0);
   const totalValue = selectedSquares.reduce((sum, s) => sum + s.value, 0);
 
   return (
@@ -237,29 +298,41 @@ export default function FundraiserPage() {
               <p className="text-base md:text-lg text-gray-600 mb-4 md:mb-6">
                 {campaign.description}
               </p>
-              
+
               {/* Progress Stats */}
               <div className="grid grid-cols-3 gap-2 md:gap-4 mb-4 md:mb-6">
                 <div className="text-center p-2 md:p-4 bg-blue-50 rounded-lg">
                   <div className="flex items-center justify-center mb-1 md:mb-2">
                     <Target className="w-4 h-4 md:w-5 md:h-5 text-blue-600" />
                   </div>
-                  <div className="text-lg md:text-2xl font-bold text-blue-600">{claimedSquares}</div>
-                  <div className="text-xs md:text-sm text-gray-600">of {totalSquares} squares</div>
+                  <div className="text-lg md:text-2xl font-bold text-blue-600">
+                    {claimedSquares}
+                  </div>
+                  <div className="text-xs md:text-sm text-gray-600">
+                    of {totalSquares} squares
+                  </div>
                 </div>
                 <div className="text-center p-2 md:p-4 bg-green-50 rounded-lg">
                   <div className="flex items-center justify-center mb-1 md:mb-2">
                     <Heart className="w-4 h-4 md:w-5 md:h-5 text-green-600" />
                   </div>
-                  <div className="text-lg md:text-2xl font-bold text-green-600">${totalRaised}</div>
-                  <div className="text-xs md:text-sm text-gray-600">raised so far</div>
+                  <div className="text-lg md:text-2xl font-bold text-green-600">
+                    ${totalRaised}
+                  </div>
+                  <div className="text-xs md:text-sm text-gray-600">
+                    raised so far
+                  </div>
                 </div>
                 <div className="text-center p-2 md:p-4 bg-purple-50 rounded-lg">
                   <div className="flex items-center justify-center mb-1 md:mb-2">
                     <Users className="w-4 h-4 md:w-5 md:h-5 text-purple-600" />
                   </div>
-                  <div className="text-lg md:text-2xl font-bold text-purple-600">{Math.round((claimedSquares / totalSquares) * 100)}%</div>
-                  <div className="text-xs md:text-sm text-gray-600">complete</div>
+                  <div className="text-lg md:text-2xl font-bold text-purple-600">
+                    {Math.round((claimedSquares / totalSquares) * 100)}%
+                  </div>
+                  <div className="text-xs md:text-sm text-gray-600">
+                    complete
+                  </div>
                 </div>
               </div>
 
@@ -269,21 +342,62 @@ export default function FundraiserPage() {
                 className="flex items-center space-x-2 text-blue-600 hover:text-blue-700 transition-colors mb-4"
               >
                 <Share2 className="w-4 h-4" />
-                <span className="text-sm md:text-base">Share this campaign</span>
+                <span className="text-sm md:text-base">
+                  Share this campaign
+                </span>
               </button>
               {shareMessage && (
                 <p className="text-green-600 text-sm mt-2">{shareMessage}</p>
               )}
 
+              {/* Success Message */}
+              {successMessage && (
+                <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg animate-fade-in">
+                  <div className="flex items-center">
+                    <svg
+                      className="w-5 h-5 text-green-600 mr-2"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M5 13l4 4L19 7"
+                      />
+                    </svg>
+                    <p className="text-green-800 font-medium">
+                      {successMessage}
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* Demo Settings Button */}
-              {slug === 'team-championship-fund' && (
+              {slug === "team-championship-fund" && (
                 <button
                   onClick={() => setShowDemoSettings(!showDemoSettings)}
                   className="flex items-center space-x-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors mb-4 text-sm md:text-base"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                    />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                    />
                   </svg>
                   <span>Customize Demo</span>
                 </button>
@@ -291,7 +405,9 @@ export default function FundraiserPage() {
 
               {/* Legend */}
               <div className="mt-4 md:mt-6 p-3 md:p-4 bg-gray-50 rounded-lg">
-                <h3 className="font-semibold text-gray-900 mb-2 text-sm md:text-base">Square Legend:</h3>
+                <h3 className="font-semibold text-gray-900 mb-2 text-sm md:text-base">
+                  Square Legend:
+                </h3>
                 <div className="space-y-2 text-xs md:text-sm">
                   <div className="flex items-center space-x-2">
                     <div className="w-4 h-4 bg-white bg-opacity-30 border border-white rounded"></div>
@@ -326,6 +442,15 @@ export default function FundraiserPage() {
         </div>
       </div>
 
+      {/* Debug info */}
+      {selectedSquares.length > 0 && (
+        <div className="fixed top-4 right-4 bg-yellow-100 p-2 rounded text-xs z-50">
+          Selected: {selectedSquares.length} squares
+          <br />
+          {selectedSquares.map((s) => `${s.row},${s.col}`).join(", ")}
+        </div>
+      )}
+
       {/* Selection Summary & Donate */}
       {selectedSquares.length > 0 && (
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50 animate-slide-up">
@@ -333,7 +458,8 @@ export default function FundraiserPage() {
             <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
               <div className="text-center sm:text-left">
                 <p className="font-semibold text-gray-900 text-sm md:text-base">
-                  {selectedSquares.length} square{selectedSquares.length !== 1 ? 's' : ''} selected
+                  {selectedSquares.length} square
+                  {selectedSquares.length !== 1 ? "s" : ""} selected
                 </p>
                 <p className="text-xs md:text-sm text-gray-600">
                   Total: {formatPrice(totalValue)}
@@ -361,9 +487,13 @@ export default function FundraiserPage() {
       {/* How it Works */}
       <div className="container-responsive py-12">
         <div className="text-center mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">How it Works</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">
+            How it Works
+          </h2>
           <p className="text-gray-600 max-w-2xl mx-auto">
-            Select squares on the image above to support this campaign. Each square has a different value, and once claimed, your support helps reach the fundraising goal.
+            Select squares on the image above to support this campaign. Each
+            square has a different value, and once claimed, your support helps
+            reach the fundraising goal.
           </p>
         </div>
 
@@ -374,7 +504,8 @@ export default function FundraiserPage() {
             </div>
             <h3 className="font-semibold text-gray-900 mb-2">Select Squares</h3>
             <p className="text-sm text-gray-600">
-              Click on available squares in the grid above. Each square shows its value.
+              Click on available squares in the grid above. Each square shows
+              its value.
             </p>
           </div>
 
@@ -384,7 +515,8 @@ export default function FundraiserPage() {
             </div>
             <h3 className="font-semibold text-gray-900 mb-2">Make Payment</h3>
             <p className="text-sm text-gray-600">
-              Complete your donation securely with your preferred payment method.
+              Complete your donation securely with your preferred payment
+              method.
             </p>
           </div>
 
@@ -392,9 +524,12 @@ export default function FundraiserPage() {
             <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-4">
               <span className="text-2xl font-bold text-blue-600">3</span>
             </div>
-            <h3 className="font-semibold text-gray-900 mb-2">Support the Cause</h3>
+            <h3 className="font-semibold text-gray-900 mb-2">
+              Support the Cause
+            </h3>
             <p className="text-sm text-gray-600">
-              Your squares are claimed and your donation helps reach the fundraising goal!
+              Your squares are claimed and your donation helps reach the
+              fundraising goal!
             </p>
           </div>
         </div>
@@ -412,18 +547,30 @@ export default function FundraiserPage() {
       )}
 
       {/* Demo Settings Modal */}
-      {showDemoSettings && slug === 'team-championship-fund' && (
+      {showDemoSettings && slug === "team-championship-fund" && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-bold text-gray-900">Customize Demo</h2>
+                <h2 className="text-xl font-bold text-gray-900">
+                  Customize Demo
+                </h2>
                 <button
                   onClick={() => setShowDemoSettings(false)}
                   className="text-gray-400 hover:text-gray-600 transition-colors"
                 >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  <svg
+                    className="w-6 h-6"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
                   </svg>
                 </button>
               </div>
@@ -431,20 +578,34 @@ export default function FundraiserPage() {
               <div className="space-y-6">
                 {/* Campaign Info */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Campaign Title</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Campaign Title
+                  </label>
                   <input
                     type="text"
                     value={demoConfig.title}
-                    onChange={(e) => setDemoConfig(prev => ({ ...prev, title: e.target.value }))}
+                    onChange={(e) =>
+                      setDemoConfig((prev) => ({
+                        ...prev,
+                        title: e.target.value,
+                      }))
+                    }
                     className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Description
+                  </label>
                   <textarea
                     value={demoConfig.description}
-                    onChange={(e) => setDemoConfig(prev => ({ ...prev, description: e.target.value }))}
+                    onChange={(e) =>
+                      setDemoConfig((prev) => ({
+                        ...prev,
+                        description: e.target.value,
+                      }))
+                    }
                     rows={3}
                     className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
                   />
@@ -452,62 +613,77 @@ export default function FundraiserPage() {
 
                 {/* Image Selection */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Campaign Image</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Campaign Image
+                  </label>
                   <div className="space-y-3">
                     {/* Preset Options */}
                     <div className="grid grid-cols-2 gap-2">
                       {[
-                        { 
-                          name: 'Baseball', 
-                          url: 'https://images.unsplash.com/photo-1566577739112-5180d4bf9390?w=800&h=600&fit=crop',
-                          title: 'Baseball Team Championship Fund',
-                          description: 'Help our high school baseball team make it to the state championship! We need funds for new equipment, uniforms, travel expenses, and tournament fees. Every square you purchase brings us closer to our championship dreams and supports our student athletes.'
+                        {
+                          name: "Baseball",
+                          url: "/images/baseball.jpg",
+                          title: "Baseball Team Championship Fund",
+                          description:
+                            "Help our high school baseball team make it to the state championship! We need funds for new equipment, uniforms, travel expenses, and tournament fees. Every square you purchase brings us closer to our championship dreams and supports our student athletes.",
                         },
-                        { 
-                          name: 'Football', 
-                          url: 'https://images.unsplash.com/photo-1551698618-1dfe5d97d256?w=800&h=600&fit=crop',
-                          title: 'Football Team Championship Fund',
-                          description: 'Help our high school football team reach the state championship! We need funds for new equipment, travel expenses, and tournament fees. Every square you purchase brings us closer to our goal and supports our student athletes in their pursuit of excellence.'
+                        {
+                          name: "Football",
+                          url: "https://images.unsplash.com/photo-1566577739112-5180d4bf9390?w=800&h=600&fit=crop",
+                          title: "Football Team Championship Fund",
+                          description:
+                            "Help our high school football team reach the state championship! We need funds for new equipment, travel expenses, and tournament fees. Every square you purchase brings us closer to our goal and supports our student athletes in their pursuit of excellence.",
                         },
-                        { 
-                          name: 'Basketball', 
-                          url: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=800&h=600&fit=crop',
-                          title: 'Basketball Team Championship Fund',
-                          description: 'Help our varsity basketball team compete in the state tournament! We need funds for new uniforms, equipment, and travel costs. Every square you purchase helps our athletes reach their full potential and represent our school with pride.'
+                        {
+                          name: "Basketball",
+                          url: "https://images.unsplash.com/photo-1546519638-68e109498ffc?w=800&h=600&fit=crop",
+                          title: "Basketball Team Championship Fund",
+                          description:
+                            "Help our varsity basketball team compete in the state tournament! We need funds for new uniforms, equipment, and travel costs. Every square you purchase helps our athletes reach their full potential and represent our school with pride.",
                         },
-                        { 
-                          name: 'Soccer', 
-                          url: 'https://images.unsplash.com/photo-1553778263-73a83bab9b0c?w=800&h=600&fit=crop',
-                          title: 'Soccer Team Championship Fund',
-                          description: 'Support our soccer team as they work toward the regional championship! We need funds for equipment, field fees, and tournament travel. Your contribution helps our dedicated student athletes pursue their championship goals.'
-                        }
+                        {
+                          name: "Soccer",
+                          url: "https://images.unsplash.com/photo-1553778263-73a83bab9b0c?w=800&h=600&fit=crop",
+                          title: "Soccer Team Championship Fund",
+                          description:
+                            "Support our soccer team as they work toward the regional championship! We need funds for equipment, field fees, and tournament travel. Your contribution helps our dedicated student athletes pursue their championship goals.",
+                        },
                       ].map((preset) => (
                         <button
                           key={preset.name}
-                          onClick={() => setDemoConfig(prev => ({ 
-                            ...prev, 
-                            imageUrl: preset.url,
-                            title: preset.title,
-                            description: preset.description
-                          }))}
+                          onClick={() =>
+                            setDemoConfig((prev) => ({
+                              ...prev,
+                              imageUrl: preset.url,
+                              title: preset.title,
+                              description: preset.description,
+                            }))
+                          }
                           className={`p-2 rounded-lg border text-xs font-medium transition-colors ${
                             demoConfig.imageUrl === preset.url
-                              ? 'bg-blue-50 border-blue-500 text-blue-700'
-                              : 'bg-gray-50 border-gray-300 text-gray-700 hover:bg-gray-100'
+                              ? "bg-blue-50 border-blue-500 text-blue-700"
+                              : "bg-gray-50 border-gray-300 text-gray-700 hover:bg-gray-100"
                           }`}
                         >
                           {preset.name}
                         </button>
                       ))}
                     </div>
-                    
+
                     {/* Custom URL Input */}
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Or enter custom image URL:</label>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Or enter custom image URL:
+                      </label>
                       <input
                         type="url"
                         value={demoConfig.imageUrl}
-                        onChange={(e) => setDemoConfig(prev => ({ ...prev, imageUrl: e.target.value }))}
+                        onChange={(e) =>
+                          setDemoConfig((prev) => ({
+                            ...prev,
+                            imageUrl: e.target.value,
+                          }))
+                        }
                         placeholder="https://example.com/image.jpg"
                         className="w-full p-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
                       />
@@ -518,24 +694,38 @@ export default function FundraiserPage() {
                 {/* Grid Dimensions */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Rows</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Rows
+                    </label>
                     <input
                       type="number"
                       min="3"
                       max="20"
                       value={demoConfig.rows}
-                      onChange={(e) => setDemoConfig(prev => ({ ...prev, rows: parseInt(e.target.value) || 3 }))}
+                      onChange={(e) =>
+                        setDemoConfig((prev) => ({
+                          ...prev,
+                          rows: parseInt(e.target.value) || 3,
+                        }))
+                      }
                       className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Columns</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Columns
+                    </label>
                     <input
                       type="number"
                       min="3"
                       max="20"
                       value={demoConfig.columns}
-                      onChange={(e) => setDemoConfig(prev => ({ ...prev, columns: parseInt(e.target.value) || 3 }))}
+                      onChange={(e) =>
+                        setDemoConfig((prev) => ({
+                          ...prev,
+                          columns: parseInt(e.target.value) || 3,
+                        }))
+                      }
                       className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
                     />
                   </div>
@@ -543,10 +733,17 @@ export default function FundraiserPage() {
 
                 {/* Pricing Type */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Pricing Type</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Pricing Type
+                  </label>
                   <select
                     value={demoConfig.pricingType}
-                    onChange={(e) => setDemoConfig(prev => ({ ...prev, pricingType: e.target.value as PricingType }))}
+                    onChange={(e) =>
+                      setDemoConfig((prev) => ({
+                        ...prev,
+                        pricingType: e.target.value as PricingType,
+                      }))
+                    }
                     className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
                   >
                     <option value="fixed">Fixed Price</option>
@@ -555,36 +752,57 @@ export default function FundraiserPage() {
                 </div>
 
                 {/* Pricing Settings */}
-                {demoConfig.pricingType === 'fixed' ? (
+                {demoConfig.pricingType === "fixed" ? (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Price per Square ($)</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Price per Square ($)
+                    </label>
                     <input
                       type="number"
                       min="1"
                       value={demoConfig.fixedPrice}
-                      onChange={(e) => setDemoConfig(prev => ({ ...prev, fixedPrice: parseInt(e.target.value) || 1 }))}
+                      onChange={(e) =>
+                        setDemoConfig((prev) => ({
+                          ...prev,
+                          fixedPrice: parseInt(e.target.value) || 1,
+                        }))
+                      }
                       className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
                     />
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Starting Price ($)</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Starting Price ($)
+                      </label>
                       <input
                         type="number"
                         min="1"
                         value={demoConfig.sequentialStart}
-                        onChange={(e) => setDemoConfig(prev => ({ ...prev, sequentialStart: parseInt(e.target.value) || 1 }))}
+                        onChange={(e) =>
+                          setDemoConfig((prev) => ({
+                            ...prev,
+                            sequentialStart: parseInt(e.target.value) || 1,
+                          }))
+                        }
                         className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Increment ($)</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Increment ($)
+                      </label>
                       <input
                         type="number"
                         min="0"
                         value={demoConfig.sequentialIncrement}
-                        onChange={(e) => setDemoConfig(prev => ({ ...prev, sequentialIncrement: parseInt(e.target.value) || 0 }))}
+                        onChange={(e) =>
+                          setDemoConfig((prev) => ({
+                            ...prev,
+                            sequentialIncrement: parseInt(e.target.value) || 0,
+                          }))
+                        }
                         className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
                       />
                     </div>
@@ -607,4 +825,4 @@ export default function FundraiserPage() {
       )}
     </div>
   );
-} 
+}

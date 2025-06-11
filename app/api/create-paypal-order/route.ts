@@ -1,14 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabaseServer";
-import { stripe, isStripeDemo } from "@/lib/stripe";
+import { createPayPalOrder, isPayPalDemo } from "@/lib/paypal";
 import { SelectedSquare } from "@/types";
+import { v4 as uuidv4 } from "uuid";
 
 export async function POST(request: NextRequest) {
   try {
-    const { campaignId, squares, donorEmail, donorName, anonymous } =
-      await request.json();
+    const { campaignId, squares, donorEmail, donorName } = await request.json();
 
-    if (!campaignId || !squares || squares.length === 0) {
+    if (
+      !campaignId ||
+      !squares ||
+      squares.length === 0 ||
+      !donorEmail ||
+      !donorName
+    ) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 },
@@ -31,12 +37,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if we're in demo mode (Stripe not configured)
-    if (isStripeDemo()) {
-      console.log("Stripe not configured, returning demo success URL");
-      return NextResponse.json({
-        url: `${request.nextUrl.origin}/fundraiser/${campaign.slug}?success=true&demo=true`,
-      });
+    // Check if campaign has PayPal email configured
+    if (!campaign.paypal_email) {
+      return NextResponse.json(
+        { error: "Campaign owner has not set up PayPal payments yet" },
+        { status: 400 },
+      );
     }
 
     // Calculate total amount
@@ -45,7 +51,7 @@ export async function POST(request: NextRequest) {
       0,
     );
 
-    // Check if squares are still available before creating transaction
+    // Check if squares are still available and get their UUIDs
     const squareKeys = squares.map((s: SelectedSquare) => `${s.row},${s.col}`);
     const { data: existingSquares, error: squareError } = await supabase
       .from("squares")
@@ -82,30 +88,56 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create transaction record before creating checkout session
-    const transactionId = require("uuid").v4();
+    // Get the actual square UUIDs for the transaction
+    const squareUUIDs = existingSquares?.map((square) => square.id) || [];
+
+    // Create transaction record
+    const transactionId = uuidv4();
+
+    console.log("Creating transaction with data:", {
+      id: transactionId,
+      campaign_id: campaignId,
+      square_ids: squareUUIDs,
+      total: totalAmount,
+      payment_method: "paypal",
+      donor_email: donorEmail,
+      donor_name: donorName,
+      status: "pending",
+      timestamp: new Date().toISOString(),
+    });
 
     const { error: transactionError } = await supabase
       .from("transactions")
       .insert({
         id: transactionId,
         campaign_id: campaignId,
-        square_ids: squareKeys,
+        square_ids: squareUUIDs,
         total: totalAmount,
         payment_method: "paypal",
-        donor_email: donorEmail || null,
-        donor_name: anonymous ? null : donorName,
+        donor_email: donorEmail,
+        donor_name: donorName,
         status: "pending",
         timestamp: new Date().toISOString(),
       });
 
     if (transactionError) {
-      console.error("Transaction creation error:", transactionError);
+      console.error("Transaction creation error details:", {
+        error: transactionError,
+        message: transactionError.message,
+        details: transactionError.details,
+        hint: transactionError.hint,
+        code: transactionError.code,
+      });
       return NextResponse.json(
-        { error: "Failed to create transaction record" },
+        {
+          error: "Failed to create transaction record",
+          details: transactionError.message || "Unknown database error",
+        },
         { status: 500 },
       );
     }
+
+    console.log("Transaction created successfully with ID:", transactionId);
 
     // Reserve squares temporarily during checkout
     const squareUpdates = squares.map((square: SelectedSquare) => ({
@@ -113,7 +145,7 @@ export async function POST(request: NextRequest) {
       row: square.row,
       col: square.col,
       claimed_by: `temp_${transactionId}`,
-      donor_name: anonymous ? null : donorName,
+      donor_name: donorName,
       payment_status: "pending" as const,
       payment_type: "paypal" as const,
       claimed_at: new Date().toISOString(),
@@ -139,40 +171,40 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Create checkout session
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ["card"],
-      line_items: [
-        {
-          price_data: {
-            currency: "usd",
-            product_data: {
-              name: `${campaign.title} - Square Donation`,
-              description: `Donation for ${squares.length} square(s): ${squareKeys.join(", ")}`,
-            },
-            unit_amount: Math.round(totalAmount * 100), // Convert to cents
-          },
-          quantity: 1,
-        },
-      ],
-      mode: "payment",
-      success_url: `${request.nextUrl.origin}/fundraiser/${campaign.slug}?success=true&transaction_id=${transactionId}`,
-      cancel_url: `${request.nextUrl.origin}/fundraiser/${campaign.slug}?canceled=true&transaction_id=${transactionId}`,
-      customer_email: donorEmail,
-      metadata: {
-        campaign_id: campaignId,
-        transaction_id: transactionId,
-        square_ids: JSON.stringify(squareKeys),
-        donor_name: donorName || "",
-        anonymous: anonymous ? "true" : "false",
-      },
-    });
+    // Create PayPal payment link for personal account
+    const returnUrl = `${request.nextUrl.origin}/api/paypal-success?transaction_id=${transactionId}`;
+    const cancelUrl = `${request.nextUrl.origin}/fundraiser/${campaign.slug}?canceled=true&transaction_id=${transactionId}`;
 
-    return NextResponse.json({ url: session.url });
+    const paypalOrder = await createPayPalOrder(
+      totalAmount,
+      "USD",
+      campaignId,
+      squareKeys,
+      returnUrl,
+      cancelUrl,
+      campaign.paypal_email, // Direct payment to campaign owner's PayPal
+    );
+
+    // Find approval URL
+    const approvalUrl = paypalOrder.links?.find(
+      (link: any) => link.rel === "approve",
+    )?.href;
+
+    if (!approvalUrl) {
+      throw new Error("No approval URL found in PayPal response");
+    }
+
+    // Store PayPal order ID in transaction
+    await supabase
+      .from("transactions")
+      .update({ paypal_order_id: paypalOrder.id })
+      .eq("id", transactionId);
+
+    return NextResponse.json({ approvalUrl });
   } catch (error) {
-    console.error("Checkout session creation error:", error);
+    console.error("PayPal order creation error:", error);
     return NextResponse.json(
-      { error: "Failed to create checkout session" },
+      { error: "Failed to create PayPal order" },
       { status: 500 },
     );
   }

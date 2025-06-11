@@ -1,27 +1,34 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { supabase, isDemoMode } from '@/lib/supabaseClient';
-import { User } from '@supabase/supabase-js';
-import ImageUploader from '@/components/ImageUploader';
-import { PricingType, PriceData } from '@/types';
-import { formatPrice, validatePriceData, isValidGridSize } from '@/utils/pricingUtils';
-import { generateSlug } from '@/utils/slugGenerator';
-import Link from 'next/link';
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { supabase, isDemoMode } from "@/lib/supabaseClient";
+import { User } from "@supabase/supabase-js";
+import ImageUploader from "@/components/ImageUploader";
+import { PricingType, PriceData } from "@/types";
+import {
+  formatPrice,
+  validatePriceData,
+  isValidGridSize,
+} from "@/utils/pricingUtils";
+import { generateSlug } from "@/utils/slugGenerator";
+import Link from "next/link";
 
 const campaignSchema = z.object({
-  title: z.string().min(1, 'Campaign title is required').max(100, 'Title too long'),
-  description: z.string().max(500, 'Description too long').optional(),
-  rows: z.number().min(2, 'Minimum 2 rows').max(50, 'Maximum 50 rows'),
-  columns: z.number().min(2, 'Minimum 2 columns').max(50, 'Maximum 50 columns'),
-  pricing_type: z.enum(['fixed', 'sequential', 'manual']),
-  fixed_price: z.number().min(0.01, 'Minimum $0.01').optional(),
-  sequential_start: z.number().min(0.01, 'Minimum $0.01').optional(),
-  sequential_increment: z.number().min(0, 'Cannot be negative').optional(),
+  title: z
+    .string()
+    .min(1, "Campaign title is required")
+    .max(100, "Title too long"),
+  description: z.string().max(500, "Description too long").optional(),
+  rows: z.number().min(2, "Minimum 2 rows").max(50, "Maximum 50 rows"),
+  columns: z.number().min(2, "Minimum 2 columns").max(50, "Maximum 50 columns"),
+  pricing_type: z.enum(["fixed", "sequential", "manual"]),
+  fixed_price: z.number().min(0.01, "Minimum $0.01").optional(),
+  sequential_start: z.number().min(0.01, "Minimum $0.01").optional(),
+  sequential_increment: z.number().min(0, "Cannot be negative").optional(),
 });
 
 type CampaignFormData = z.infer<typeof campaignSchema>;
@@ -32,19 +39,24 @@ export default function CreateCampaignPage() {
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadedImage, setUploadedImage] = useState<File | null>(null);
-  const [imageUrl, setImageUrl] = useState<string>('');
+  const [imageUrl, setImageUrl] = useState<string>("");
   const [isUploading, setIsUploading] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
-  const [errorMessage, setErrorMessage] = useState<string>('');
+  const [errorMessage, setErrorMessage] = useState<string>("");
   const [successData, setSuccessData] = useState<{
     campaign: {
       id: string;
       slug: string;
       publicUrl: string;
       title: string;
-    }
+    };
   } | null>(null);
-  const [copyMessage, setCopyMessage] = useState('');
+  const [showPayPalSetup, setShowPayPalSetup] = useState(false);
+  const [paypalBusinessName, setPaypalBusinessName] = useState("");
+  const [isSettingUpPayPal, setIsSettingUpPayPal] = useState(false);
+  const [copyMessage, setCopyMessage] = useState("");
+  const [isPayPalConfigured, setIsPayPalConfigured] = useState(true);
+  const [successMessage, setSuccessMessage] = useState("");
 
   const {
     register,
@@ -52,17 +64,17 @@ export default function CreateCampaignPage() {
     formState: { errors },
     watch,
     setValue,
-    getValues
+    getValues,
   } = useForm<CampaignFormData>({
     resolver: zodResolver(campaignSchema),
     defaultValues: {
       rows: 10,
       columns: 10,
-      pricing_type: 'fixed',
+      pricing_type: "fixed",
       fixed_price: 5,
       sequential_start: 1,
       sequential_increment: 1,
-    }
+    },
   });
 
   const watchedValues = watch();
@@ -74,8 +86,8 @@ export default function CreateCampaignPage() {
         if (isDemoMode()) {
           // In demo mode, create a mock user
           const mockUser = {
-            id: 'demo-user-' + Date.now(),
-            email: 'demo@example.com',
+            id: "demo-user-" + Date.now(),
+            email: "demo@example.com",
             created_at: new Date().toISOString(),
           } as User;
           setUser(mockUser);
@@ -83,22 +95,38 @@ export default function CreateCampaignPage() {
           return;
         }
 
-        const { data: { user } } = await supabase.auth.getUser();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
         if (!user) {
           // Not authenticated - redirect to auth page
-          router.push('/auth');
+          router.push("/auth");
           return;
         }
 
         setUser(user);
         setLoading(false);
       } catch (error) {
-        console.error('Auth error:', error);
-        router.push('/auth');
+        console.error("Auth error:", error);
+        router.push("/auth");
+      }
+    };
+
+    const checkPayPalConfig = async () => {
+      try {
+        // Check if PayPal is configured using the dedicated endpoint
+        const response = await fetch("/api/paypal-config-check");
+        const data = await response.json();
+
+        setIsPayPalConfigured(data.configured);
+      } catch (error) {
+        console.error("Error checking PayPal config:", error);
+        setIsPayPalConfigured(false);
       }
     };
 
     checkAuth();
+    checkPayPalConfig();
   }, [router]);
 
   const handleImageUpload = async (file: File, url: string) => {
@@ -107,11 +135,11 @@ export default function CreateCampaignPage() {
       // Use the storage URL or data URL which persists across sessions
       setImageUrl(url);
       setUploadedImage(file);
-      
-      console.log('Image processed:', file.name, file.size, 'URL:', url);
+
+      console.log("Image processed:", file.name, file.size, "URL:", url);
     } catch (error) {
-      console.error('Upload error:', error);
-      alert('Failed to upload image. Please try again.');
+      console.error("Upload error:", error);
+      alert("Failed to upload image. Please try again.");
     } finally {
       setIsUploading(false);
     }
@@ -119,16 +147,16 @@ export default function CreateCampaignPage() {
 
   const generatePriceData = (formData: CampaignFormData): PriceData => {
     switch (formData.pricing_type) {
-      case 'fixed':
+      case "fixed":
         return { fixed: formData.fixed_price };
-      case 'sequential':
+      case "sequential":
         return {
           sequential: {
             start: formData.sequential_start || 1,
             increment: formData.sequential_increment || 1,
-          }
+          },
         };
-      case 'manual':
+      case "manual":
         // For now, initialize with fixed pricing that user can edit later
         const manualPrices: { [key: string]: number } = {};
         for (let row = 0; row < formData.rows; row++) {
@@ -144,15 +172,15 @@ export default function CreateCampaignPage() {
 
   const onSubmit = async (data: CampaignFormData) => {
     // Clear any previous errors
-    setErrorMessage('');
+    setErrorMessage("");
 
     if (!imageUrl) {
-      setErrorMessage('Please upload an image first');
+      setErrorMessage("Please upload an image first");
       return;
     }
 
     if (!user) {
-      setErrorMessage('You must be logged in to create a campaign');
+      setErrorMessage("You must be logged in to create a campaign");
       return;
     }
 
@@ -161,10 +189,10 @@ export default function CreateCampaignPage() {
       const priceData = generatePriceData(data);
 
       // Create campaign via API
-      const response = await fetch('/api/create-campaign', {
-        method: 'POST',
+      const response = await fetch("/api/create-campaign", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           title: data.title,
@@ -179,17 +207,21 @@ export default function CreateCampaignPage() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create campaign');
+        throw new Error(errorData.error || "Failed to create campaign");
       }
 
       const result = await response.json();
-      
+
       // Show success state
       setSuccessData(result);
-      
+
+      // Show PayPal setup option
+      setShowPayPalSetup(true);
     } catch (error) {
-      console.error('Campaign creation error:', error);
-      setErrorMessage(`Failed to create campaign: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error("Campaign creation error:", error);
+      setErrorMessage(
+        `Failed to create campaign: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -197,22 +229,22 @@ export default function CreateCampaignPage() {
 
   const handleCopyLink = async () => {
     if (!successData) return;
-    
+
     try {
       await navigator.clipboard.writeText(successData.campaign.publicUrl);
-      setCopyMessage('Link copied to clipboard!');
-      setTimeout(() => setCopyMessage(''), 3000);
+      setCopyMessage("Link copied to clipboard!");
+      setTimeout(() => setCopyMessage(""), 3000);
     } catch (error) {
-      console.error('Failed to copy:', error);
+      console.error("Failed to copy:", error);
     }
   };
 
   const handleShare = async () => {
     if (!successData) return;
-    
+
     const shareData = {
       title: `Support: ${successData.campaign.title}`,
-      text: 'Check out this interactive fundraising campaign!',
+      text: "Check out this interactive fundraising campaign!",
       url: successData.campaign.publicUrl,
     };
 
@@ -223,8 +255,68 @@ export default function CreateCampaignPage() {
         handleCopyLink();
       }
     } catch (error) {
-      console.error('Share failed:', error);
+      console.error("Share failed:", error);
     }
+  };
+
+  const handlePayPalSetup = async () => {
+    if (!isPayPalConfigured) {
+      setErrorMessage(
+        "PayPal is not configured on this platform. Please contact support to enable PayPal integration.",
+      );
+      return;
+    }
+
+    if (!successData || !paypalBusinessName.trim()) {
+      setErrorMessage("Please enter your PayPal email address");
+      return;
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(paypalBusinessName.trim())) {
+      setErrorMessage("Please enter a valid email address");
+      return;
+    }
+
+    setIsSettingUpPayPal(true);
+    try {
+      const response = await fetch("/api/create-paypal-connect-account", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: paypalBusinessName.trim(),
+          campaignId: successData.campaign.id,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to connect PayPal account");
+      }
+
+      const result = await response.json();
+
+      setSuccessMessage(
+        "PayPal account connected successfully! You can now receive donations.",
+      );
+
+      // Hide PayPal setup after success
+      setShowPayPalSetup(false);
+    } catch (error) {
+      console.error("PayPal setup error:", error);
+      setErrorMessage(
+        `Failed to connect PayPal: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
+    } finally {
+      setIsSettingUpPayPal(false);
+    }
+  };
+
+  const skipPayPalSetup = () => {
+    setShowPayPalSetup(false);
   };
 
   if (loading) {
@@ -246,8 +338,18 @@ export default function CreateCampaignPage() {
           <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
             {/* Success Icon */}
             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              <svg
+                className="w-8 h-8 text-green-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 13l4 4L19 7"
+                />
               </svg>
             </div>
 
@@ -256,7 +358,8 @@ export default function CreateCampaignPage() {
               🎉 Campaign Created!
             </h1>
             <p className="text-gray-600 mb-8">
-              Your fundraising campaign "{successData.campaign.title}" is now live and ready to receive donations.
+              Your fundraising campaign "{successData.campaign.title}" is now
+              live and ready to receive donations.
             </p>
 
             {/* Campaign URL */}
@@ -274,8 +377,18 @@ export default function CreateCampaignPage() {
                   className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                   title="Copy link"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                    />
                   </svg>
                 </button>
               </div>
@@ -292,13 +405,23 @@ export default function CreateCampaignPage() {
               >
                 View Your Campaign
               </Link>
-              
+
               <button
                 onClick={handleShare}
                 className="w-full border-2 border-blue-600 text-blue-600 py-3 rounded-xl font-semibold hover:bg-blue-600 hover:text-white transition-all duration-200 flex items-center justify-center space-x-2"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z"
+                  />
                 </svg>
                 <span>Share Campaign</span>
               </button>
@@ -307,7 +430,7 @@ export default function CreateCampaignPage() {
                 onClick={() => {
                   setSuccessData(null);
                   setCurrentStep(1);
-                  setImageUrl('');
+                  setImageUrl("");
                   setUploadedImage(null);
                 }}
                 className="w-full text-gray-600 hover:text-gray-900 py-3 rounded-xl font-medium transition-colors"
@@ -316,13 +439,181 @@ export default function CreateCampaignPage() {
               </button>
             </div>
 
+            {/* PayPal Setup Section */}
+            {showPayPalSetup && (
+              <div className="mt-8 p-6 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-start">
+                  <div className="flex-shrink-0">
+                    <svg
+                      className="h-6 w-6 text-blue-600"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"
+                      />
+                    </svg>
+                  </div>
+                  <div className="ml-3 flex-1">
+                    <h3 className="text-lg font-medium text-blue-800 mb-2">
+                      Set Up PayPal Payments
+                    </h3>
+
+                    {!isPayPalConfigured ? (
+                      <div className="p-4 bg-red-50 border border-red-200 rounded-lg mb-4">
+                        <div className="flex items-start">
+                          <div className="flex-shrink-0">
+                            <svg
+                              className="h-5 w-5 text-red-400"
+                              viewBox="0 0 20 20"
+                              fill="currentColor"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                                clipRule="evenodd"
+                              />
+                            </svg>
+                          </div>
+                          <div className="ml-3">
+                            <h4 className="text-sm font-medium text-red-800">
+                              PayPal Not Available
+                            </h4>
+                            <p className="text-sm text-red-700 mt-1">
+                              PayPal integration is not configured on this
+                              platform. Please contact support to enable PayPal
+                              payment processing.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <p className="text-sm text-blue-700 mb-4">
+                          Enter your PayPal email to receive donations directly.
+                          Supporters will be redirected to PayPal to send
+                          payments to your account.
+                        </p>
+
+                        <div className="mb-4">
+                          <label className="block text-sm font-medium text-blue-800 mb-2">
+                            Your PayPal Email Address
+                          </label>
+                          <input
+                            type="email"
+                            value={paypalBusinessName}
+                            onChange={(e) =>
+                              setPaypalBusinessName(e.target.value)
+                            }
+                            placeholder="Enter your PayPal email address"
+                            className="w-full px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          />
+                          <p className="text-xs text-blue-600 mt-1">
+                            Donations will be sent directly to this PayPal email
+                            address
+                          </p>
+                        </div>
+
+                        <div className="p-3 bg-green-50 border border-green-200 rounded-lg mb-4">
+                          <div className="flex items-start">
+                            <div className="flex-shrink-0">
+                              <svg
+                                className="h-4 w-4 text-green-400 mt-0.5"
+                                viewBox="0 0 20 20"
+                                fill="currentColor"
+                              >
+                                <path
+                                  fillRule="evenodd"
+                                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                  clipRule="evenodd"
+                                />
+                              </svg>
+                            </div>
+                            <div className="ml-2">
+                              <p className="text-xs text-green-700">
+                                <strong>Personal accounts welcome!</strong> You
+                                can use your existing personal PayPal account -
+                                no business account required.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex space-x-3">
+                          <button
+                            onClick={handlePayPalSetup}
+                            disabled={
+                              isSettingUpPayPal ||
+                              !paypalBusinessName.trim() ||
+                              !isPayPalConfigured
+                            }
+                            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                          >
+                            {isSettingUpPayPal ? (
+                              <>
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                <span>Setting up...</span>
+                              </>
+                            ) : (
+                              <>
+                                <svg
+                                  className="w-4 h-4"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M13 10V3L4 14h7v7l9-11h-7z"
+                                  />
+                                </svg>
+                                <span>Connect PayPal</span>
+                              </>
+                            )}
+                          </button>
+
+                          <button
+                            onClick={skipPayPalSetup}
+                            className="text-blue-700 hover:text-blue-800 px-4 py-2 rounded-lg border border-blue-300 hover:bg-blue-100 transition-colors"
+                          >
+                            Skip for Now
+                          </button>
+                        </div>
+
+                        <p className="text-xs text-blue-600 mt-3">
+                          You can set up PayPal payments later from your
+                          dashboard
+                        </p>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Next Steps */}
             <div className="mt-8 p-4 bg-blue-50 rounded-lg text-left">
               <h3 className="font-semibold text-blue-900 mb-2">Next Steps:</h3>
               <ul className="text-sm text-blue-800 space-y-1">
-                <li>• Share your campaign link with supporters</li>
+                <li>
+                  •{" "}
+                  {showPayPalSetup
+                    ? "Set up PayPal to receive donations"
+                    : "Share your campaign link with supporters"}
+                </li>
                 <li>• Monitor progress from your dashboard</li>
-                <li>• Funds are transferred after each donation</li>
+                <li>
+                  •{" "}
+                  {showPayPalSetup
+                    ? "Funds will be transferred to your PayPal account"
+                    : "Set up payment processing to receive donations"}
+                </li>
               </ul>
             </div>
           </div>
@@ -335,8 +626,12 @@ export default function CreateCampaignPage() {
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="container-responsive max-w-4xl">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Create New Campaign</h1>
-          <p className="text-gray-600">Set up your interactive fundraising campaign in a few simple steps.</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            Create New Campaign
+          </h1>
+          <p className="text-gray-600">
+            Set up your interactive fundraising campaign in a few simple steps.
+          </p>
         </div>
 
         {/* Demo Mode Notice */}
@@ -344,20 +639,50 @@ export default function CreateCampaignPage() {
           <div className="mb-8 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
             <div className="flex items-start">
               <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                <svg
+                  className="h-5 w-5 text-yellow-400"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                    clipRule="evenodd"
+                  />
                 </svg>
               </div>
               <div className="ml-3">
-                <h3 className="text-sm font-medium text-yellow-800">Demo Mode</h3>
+                <h3 className="text-sm font-medium text-yellow-800">
+                  Demo Mode
+                </h3>
                 <div className="mt-2 text-sm text-yellow-700">
-                  <p>You're running in demo mode. To create real campaigns and connect to a database, you need to:</p>
+                  <p>
+                    You're running in demo mode. To create real campaigns and
+                    connect to a database, you need to:
+                  </p>
                   <ol className="mt-2 ml-4 list-decimal space-y-1">
-                    <li>Create a <a href="https://supabase.com" target="_blank" className="font-medium underline">Supabase account</a></li>
-                    <li>Create a <code className="bg-yellow-100 px-1 rounded">.env.local</code> file in your project root</li>
+                    <li>
+                      Create a{" "}
+                      <a
+                        href="https://supabase.com"
+                        target="_blank"
+                        className="font-medium underline"
+                      >
+                        Supabase account
+                      </a>
+                    </li>
+                    <li>
+                      Create a{" "}
+                      <code className="bg-yellow-100 px-1 rounded">
+                        .env.local
+                      </code>{" "}
+                      file in your project root
+                    </li>
                     <li>Add your Supabase credentials to the file</li>
                   </ol>
-                  <p className="mt-2">For now, you can explore the demo functionality.</p>
+                  <p className="mt-2">
+                    For now, you can explore the demo functionality.
+                  </p>
                 </div>
               </div>
             </div>
@@ -371,14 +696,16 @@ export default function CreateCampaignPage() {
               <div key={step} className="flex items-center">
                 <div
                   className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium mr-3 ${
-                    currentStep >= step ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'
+                    currentStep >= step
+                      ? "bg-blue-600 text-white"
+                      : "bg-gray-200 text-gray-600"
                   }`}
                 >
                   {step}
                 </div>
                 <div
                   className={`h-0.5 flex-1 ${
-                    currentStep > step ? 'bg-blue-600' : 'bg-gray-200'
+                    currentStep > step ? "bg-blue-600" : "bg-gray-200"
                   }`}
                 />
               </div>
@@ -397,8 +724,16 @@ export default function CreateCampaignPage() {
             <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
               <div className="flex items-start">
                 <div className="flex-shrink-0">
-                  <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  <svg
+                    className="h-5 w-5 text-red-400"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                      clipRule="evenodd"
+                    />
                   </svg>
                 </div>
                 <div className="ml-3 flex-1">
@@ -406,7 +741,7 @@ export default function CreateCampaignPage() {
                   <p className="text-sm text-red-700 mt-1">{errorMessage}</p>
                   <button
                     type="button"
-                    onClick={() => setErrorMessage('')}
+                    onClick={() => setErrorMessage("")}
                     className="text-red-600 hover:text-red-800 text-sm font-medium mt-2"
                   >
                     Dismiss
@@ -419,20 +754,24 @@ export default function CreateCampaignPage() {
           {/* Step 1: Campaign Details */}
           {currentStep === 1 && (
             <div className="card space-y-6">
-              <h2 className="text-xl font-semibold text-gray-900">Campaign Details</h2>
-              
+              <h2 className="text-xl font-semibold text-gray-900">
+                Campaign Details
+              </h2>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Campaign Title *
                 </label>
                 <input
-                  {...register('title')}
+                  {...register("title")}
                   type="text"
                   className="input-field"
                   placeholder="Enter your campaign title"
                 />
                 {errors.title && (
-                  <p className="text-red-600 text-sm mt-1">{errors.title.message}</p>
+                  <p className="text-red-600 text-sm mt-1">
+                    {errors.title.message}
+                  </p>
                 )}
               </div>
 
@@ -441,13 +780,15 @@ export default function CreateCampaignPage() {
                   Description (Optional)
                 </label>
                 <textarea
-                  {...register('description')}
+                  {...register("description")}
                   rows={3}
                   className="input-field"
                   placeholder="Describe your campaign and what you're raising funds for"
                 />
                 {errors.description && (
-                  <p className="text-red-600 text-sm mt-1">{errors.description.message}</p>
+                  <p className="text-red-600 text-sm mt-1">
+                    {errors.description.message}
+                  </p>
                 )}
               </div>
 
@@ -477,22 +818,26 @@ export default function CreateCampaignPage() {
           {/* Step 2: Grid Setup */}
           {currentStep === 2 && (
             <div className="card space-y-6">
-              <h2 className="text-xl font-semibold text-gray-900">Grid Configuration</h2>
-              
+              <h2 className="text-xl font-semibold text-gray-900">
+                Grid Configuration
+              </h2>
+
               <div className="grid md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Rows
                   </label>
                   <input
-                    {...register('rows', { valueAsNumber: true })}
+                    {...register("rows", { valueAsNumber: true })}
                     type="number"
                     min="2"
                     max="50"
                     className="input-field"
                   />
                   {errors.rows && (
-                    <p className="text-red-600 text-sm mt-1">{errors.rows.message}</p>
+                    <p className="text-red-600 text-sm mt-1">
+                      {errors.rows.message}
+                    </p>
                   )}
                 </div>
 
@@ -501,21 +846,24 @@ export default function CreateCampaignPage() {
                     Columns
                   </label>
                   <input
-                    {...register('columns', { valueAsNumber: true })}
+                    {...register("columns", { valueAsNumber: true })}
                     type="number"
                     min="2"
                     max="50"
                     className="input-field"
                   />
                   {errors.columns && (
-                    <p className="text-red-600 text-sm mt-1">{errors.columns.message}</p>
+                    <p className="text-red-600 text-sm mt-1">
+                      {errors.columns.message}
+                    </p>
                   )}
                 </div>
               </div>
 
               <div className="p-4 bg-gray-50 rounded-lg">
                 <p className="text-sm text-gray-600">
-                  Total squares: <span className="font-medium">{totalSquares}</span>
+                  Total squares:{" "}
+                  <span className="font-medium">{totalSquares}</span>
                 </p>
               </div>
 
@@ -526,41 +874,47 @@ export default function CreateCampaignPage() {
                 <div className="space-y-3">
                   <label className="flex items-center">
                     <input
-                      {...register('pricing_type')}
+                      {...register("pricing_type")}
                       type="radio"
                       value="fixed"
                       className="h-4 w-4 text-blue-600 focus:ring-blue-600 border-gray-300"
                     />
-                    <span className="ml-2 text-sm text-gray-700">Fixed price per square</span>
+                    <span className="ml-2 text-sm text-gray-700">
+                      Fixed price per square
+                    </span>
                   </label>
                   <label className="flex items-center">
                     <input
-                      {...register('pricing_type')}
+                      {...register("pricing_type")}
                       type="radio"
                       value="sequential"
                       className="h-4 w-4 text-blue-600 focus:ring-blue-600 border-gray-300"
                     />
-                    <span className="ml-2 text-sm text-gray-700">Sequential pricing (increases per square)</span>
+                    <span className="ml-2 text-sm text-gray-700">
+                      Sequential pricing (increases per square)
+                    </span>
                   </label>
                   <label className="flex items-center">
                     <input
-                      {...register('pricing_type')}
+                      {...register("pricing_type")}
                       type="radio"
                       value="manual"
                       className="h-4 w-4 text-blue-600 focus:ring-blue-600 border-gray-300"
                     />
-                    <span className="ml-2 text-sm text-gray-700">Manual pricing (set each square individually)</span>
+                    <span className="ml-2 text-sm text-gray-700">
+                      Manual pricing (set each square individually)
+                    </span>
                   </label>
                 </div>
               </div>
 
-              {watchedValues.pricing_type === 'fixed' && (
+              {watchedValues.pricing_type === "fixed" && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Price per square
                   </label>
                   <input
-                    {...register('fixed_price', { valueAsNumber: true })}
+                    {...register("fixed_price", { valueAsNumber: true })}
                     type="number"
                     step="0.01"
                     min="0.01"
@@ -568,19 +922,21 @@ export default function CreateCampaignPage() {
                     placeholder="5.00"
                   />
                   {errors.fixed_price && (
-                    <p className="text-red-600 text-sm mt-1">{errors.fixed_price.message}</p>
+                    <p className="text-red-600 text-sm mt-1">
+                      {errors.fixed_price.message}
+                    </p>
                   )}
                 </div>
               )}
 
-              {watchedValues.pricing_type === 'sequential' && (
+              {watchedValues.pricing_type === "sequential" && (
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Starting price
                     </label>
                     <input
-                      {...register('sequential_start', { valueAsNumber: true })}
+                      {...register("sequential_start", { valueAsNumber: true })}
                       type="number"
                       step="0.01"
                       min="0.01"
@@ -588,7 +944,9 @@ export default function CreateCampaignPage() {
                       placeholder="1.00"
                     />
                     {errors.sequential_start && (
-                      <p className="text-red-600 text-sm mt-1">{errors.sequential_start.message}</p>
+                      <p className="text-red-600 text-sm mt-1">
+                        {errors.sequential_start.message}
+                      </p>
                     )}
                   </div>
                   <div>
@@ -596,7 +954,9 @@ export default function CreateCampaignPage() {
                       Increment per square
                     </label>
                     <input
-                      {...register('sequential_increment', { valueAsNumber: true })}
+                      {...register("sequential_increment", {
+                        valueAsNumber: true,
+                      })}
                       type="number"
                       step="0.01"
                       min="0"
@@ -604,7 +964,9 @@ export default function CreateCampaignPage() {
                       placeholder="1.00"
                     />
                     {errors.sequential_increment && (
-                      <p className="text-red-600 text-sm mt-1">{errors.sequential_increment.message}</p>
+                      <p className="text-red-600 text-sm mt-1">
+                        {errors.sequential_increment.message}
+                      </p>
                     )}
                   </div>
                 </div>
@@ -632,11 +994,15 @@ export default function CreateCampaignPage() {
           {/* Step 3: Review & Launch */}
           {currentStep === 3 && (
             <div className="card space-y-6">
-              <h2 className="text-xl font-semibold text-gray-900">Review & Launch</h2>
-              
+              <h2 className="text-xl font-semibold text-gray-900">
+                Review & Launch
+              </h2>
+
               <div className="grid md:grid-cols-2 gap-8">
                 <div>
-                  <h3 className="font-medium text-gray-900 mb-4">Campaign Summary</h3>
+                  <h3 className="font-medium text-gray-900 mb-4">
+                    Campaign Summary
+                  </h3>
                   <dl className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <dt className="text-gray-600">Title:</dt>
@@ -644,7 +1010,9 @@ export default function CreateCampaignPage() {
                     </div>
                     <div className="flex justify-between">
                       <dt className="text-gray-600">Grid size:</dt>
-                      <dd className="font-medium">{watchedValues.rows} × {watchedValues.columns}</dd>
+                      <dd className="font-medium">
+                        {watchedValues.rows} × {watchedValues.columns}
+                      </dd>
                     </div>
                     <div className="flex justify-between">
                       <dt className="text-gray-600">Total squares:</dt>
@@ -652,19 +1020,25 @@ export default function CreateCampaignPage() {
                     </div>
                     <div className="flex justify-between">
                       <dt className="text-gray-600">Pricing:</dt>
-                      <dd className="font-medium capitalize">{watchedValues.pricing_type}</dd>
+                      <dd className="font-medium capitalize">
+                        {watchedValues.pricing_type}
+                      </dd>
                     </div>
-                    {watchedValues.pricing_type === 'fixed' && (
+                    {watchedValues.pricing_type === "fixed" && (
                       <div className="flex justify-between">
                         <dt className="text-gray-600">Price per square:</dt>
-                        <dd className="font-medium">{formatPrice(watchedValues.fixed_price || 0)}</dd>
+                        <dd className="font-medium">
+                          {formatPrice(watchedValues.fixed_price || 0)}
+                        </dd>
                       </div>
                     )}
                   </dl>
                 </div>
 
                 <div>
-                  <h3 className="font-medium text-gray-900 mb-4">Campaign Preview</h3>
+                  <h3 className="font-medium text-gray-900 mb-4">
+                    Campaign Preview
+                  </h3>
                   {imageUrl && (
                     <div className="relative">
                       <img
@@ -674,8 +1048,12 @@ export default function CreateCampaignPage() {
                       />
                       <div className="absolute inset-0 bg-black/20 rounded-lg flex items-center justify-center">
                         <div className="text-white text-center">
-                          <div className="text-sm font-medium">{totalSquares} squares</div>
-                          <div className="text-xs">Grid overlay will appear here</div>
+                          <div className="text-sm font-medium">
+                            {totalSquares} squares
+                          </div>
+                          <div className="text-xs">
+                            Grid overlay will appear here
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -684,12 +1062,21 @@ export default function CreateCampaignPage() {
               </div>
 
               <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <h4 className="font-medium text-yellow-800 mb-2">Before you launch:</h4>
+                <h4 className="font-medium text-yellow-800 mb-2">
+                  Before you launch:
+                </h4>
                 <ul className="text-sm text-yellow-700 space-y-1">
                   <li>• A one-time setup fee of $10 will be charged</li>
-                  <li>• Your campaign will be live immediately after payment</li>
-                  <li>• You can edit pricing and details from your dashboard</li>
-                  <li>• Funds will be transferred to your account after each donation</li>
+                  <li>
+                    • Your campaign will be live immediately after payment
+                  </li>
+                  <li>
+                    • You can edit pricing and details from your dashboard
+                  </li>
+                  <li>
+                    • Funds will be transferred to your account after each
+                    donation
+                  </li>
                 </ul>
               </div>
 
@@ -712,7 +1099,7 @@ export default function CreateCampaignPage() {
                       Creating Campaign...
                     </div>
                   ) : (
-                    'Launch Campaign ($10)'
+                    "Launch Campaign ($10)"
                   )}
                 </button>
               </div>
@@ -722,4 +1109,4 @@ export default function CreateCampaignPage() {
       </div>
     </div>
   );
-} 
+}
