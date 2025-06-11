@@ -102,8 +102,8 @@ export default async function DashboardPage() {
         .rpc("get_campaign_stats", { campaign_id: campaign.id })
         .single();
 
-      // Fallback to individual queries if RPC doesn't exist
-      if (!stats) {
+      // Fallback to individual queries if RPC doesn't exist or returns empty object
+      if (!stats || !stats.hasOwnProperty("total_squares")) {
         const { data: squares } = await supabase
           .from("squares")
           .select("claimed_by, payment_status, value")
@@ -134,13 +134,16 @@ export default async function DashboardPage() {
       return {
         ...campaign,
         stats: {
-          totalSquares: stats.total_squares || campaign.rows * campaign.columns,
-          claimedSquares: stats.claimed_squares || 0,
-          completedSquares: stats.completed_squares || 0,
-          totalRaised: stats.total_raised || 0,
+          totalSquares:
+            (stats as any).total_squares || campaign.rows * campaign.columns,
+          claimedSquares: (stats as any).claimed_squares || 0,
+          completedSquares: (stats as any).completed_squares || 0,
+          totalRaised: (stats as any).total_raised || 0,
           progressPercentage:
-            stats.total_squares > 0
-              ? (stats.claimed_squares / stats.total_squares) * 100
+            (stats as any).total_squares > 0
+              ? ((stats as any).claimed_squares /
+                  (stats as any).total_squares) *
+                100
               : 0,
         },
       };
