@@ -44,15 +44,19 @@ export async function GET(request: NextRequest) {
         .eq("id", transactionId);
 
       // Update squares to mark as completed and remove temp prefix
-      await supabase
+      const { error: squareUpdateError } = await supabase
         .from("squares")
         .update({
-          claimed_by: transaction.donor_email,
+          claimed_by: transaction.donor_email || "anonymous",
           donor_name: transaction.donor_name,
           payment_status: "completed",
           claimed_at: new Date().toISOString(),
         })
         .eq("claimed_by", `temp_${transactionId}`);
+
+      if (squareUpdateError) {
+        console.error("Error updating squares:", squareUpdateError);
+      }
 
       // Redirect to success page
       const campaignSlug = transaction.campaigns?.slug || "unknown";
@@ -73,7 +77,7 @@ export async function GET(request: NextRequest) {
         .eq("id", transactionId);
 
       // Release temporarily reserved squares
-      await supabase
+      const { error: releaseSquareError } = await supabase
         .from("squares")
         .update({
           claimed_by: null,
@@ -83,6 +87,10 @@ export async function GET(request: NextRequest) {
           claimed_at: null,
         })
         .eq("claimed_by", `temp_${transactionId}`);
+
+      if (releaseSquareError) {
+        console.error("Error releasing squares:", releaseSquareError);
+      }
 
       const campaignSlug = transaction.campaigns?.slug || "unknown";
       return NextResponse.redirect(

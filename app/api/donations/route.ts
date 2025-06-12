@@ -165,6 +165,14 @@ export async function GET(request: NextRequest) {
           campaign: campaign,
         };
 
+        console.log("Processing PayPal transaction:", {
+          id: donation.id,
+          payment_method: donation.payment_method,
+          status: donation.status,
+          total: donation.total,
+          paypal_order_id: donation.paypal_order_id,
+        });
+
         console.log("Created donation object:", {
           id: donation.id,
           total: donation.total,
