@@ -358,7 +358,16 @@ export default function FundraiserPage() {
           property="og:description"
           content={campaign?.description || "Help us reach our goal!"}
         />
-        <meta property="og:image" content={campaign?.image_url || ""} />
+        <meta
+          property="og:image"
+          content={
+            campaign?.image_url
+              ? campaign.image_url.startsWith("http")
+                ? campaign.image_url
+                : `${typeof window !== "undefined" ? window.location.origin : "https://vibrant-lalande2-fd784.view-3.tempo-dev.app"}${campaign.image_url}`
+              : ""
+          }
+        />
         <meta
           property="og:url"
           content={typeof window !== "undefined" ? window.location.href : ""}
@@ -373,7 +382,16 @@ export default function FundraiserPage() {
           name="twitter:description"
           content={campaign?.description || "Help us reach our goal!"}
         />
-        <meta name="twitter:image" content={campaign?.image_url || ""} />
+        <meta
+          name="twitter:image"
+          content={
+            campaign?.image_url
+              ? campaign.image_url.startsWith("http")
+                ? campaign.image_url
+                : `${typeof window !== "undefined" ? window.location.origin : "https://vibrant-lalande2-fd784.view-3.tempo-dev.app"}${campaign.image_url}`
+              : ""
+          }
+        />
       </Head>
       <div className="min-h-screen bg-gray-50">
         {/* Hero Section */}
