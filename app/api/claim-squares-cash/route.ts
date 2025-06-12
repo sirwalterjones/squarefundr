@@ -107,23 +107,26 @@ export async function POST(request: NextRequest) {
       .upsert(squareUpdates, { onConflict: "campaign_id,row,col" })
       .select("id, number");
 
+    console.log("Upsert result:", { upsertedSquares, upsertError });
+
     if (upsertError) {
+      console.error("Upsert error details:", upsertError);
       return NextResponse.json(
-        { error: "Failed to update squares" },
+        { error: `Failed to update squares: ${upsertError.message}` },
         { status: 500 },
       );
     }
 
     // Create transaction
     const transactionId = uuidv4();
-    const squareNumbers = upsertedSquares?.map((s) => s.number) || [];
+    const squareIds = upsertedSquares?.map((s) => s.id) || [];
 
     const { error: transactionError } = await supabase
       .from("transactions")
       .insert({
         id: transactionId,
         campaign_id: campaignId,
-        square_ids: JSON.stringify(squareNumbers),
+        square_ids: JSON.stringify(squareIds),
         total: totalAmount,
         payment_method: "cash",
         donor_email: donorEmail,
