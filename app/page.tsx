@@ -1,8 +1,81 @@
 "use client";
 
 import Link from "next/link";
+import GridOverlay from "@/components/GridOverlay";
+import { Campaign, Square, SelectedSquare } from "@/types";
+import { useState } from "react";
 
 export default function HomePage() {
+  const [selectedSquares, setSelectedSquares] = useState<SelectedSquare[]>([]);
+
+  // Mock campaign data for the interactive demo
+  const mockCampaign: Campaign = {
+    id: "demo-campaign",
+    user_id: "demo-user",
+    title: "Football Team Championship Fund",
+    description: "Help our team reach the championship!",
+    image_url:
+      "https://images.unsplash.com/photo-1566577739112-5180d4bf9390?w=800&h=600&fit=crop&auto=format",
+    rows: 8,
+    columns: 10,
+    pricing_type: "sequential",
+    price_data: {
+      sequential: {
+        start: 5,
+        increment: 5,
+      },
+    },
+    public_url: "demo-url",
+    slug: "demo-slug",
+    created_at: new Date().toISOString(),
+    paid_to_admin: false,
+    is_active: true,
+  };
+
+  // Mock squares data with some pre-claimed squares
+  const mockSquares: Square[] = Array.from({ length: 80 }, (_, index) => {
+    const row = Math.floor(index / 10);
+    const col = index % 10;
+    const number = index + 1;
+    const isClaimed = index < 12; // First 12 squares are claimed
+
+    return {
+      id: `square-${index}`,
+      campaign_id: "demo-campaign",
+      row,
+      col,
+      number,
+      value: 5 + index * 5,
+      claimed_by: isClaimed ? `donor-${index}` : undefined,
+      donor_name: isClaimed ? `Donor ${index + 1}` : undefined,
+      payment_status: isClaimed ? "completed" : "pending",
+      payment_type: "stripe",
+      claimed_at: isClaimed ? new Date().toISOString() : undefined,
+    };
+  });
+
+  // Visual-only handlers (for demo purposes only)
+  const handleSquareSelect = (square: SelectedSquare) => {
+    setSelectedSquares((prev) => {
+      // Don't select if already claimed
+      const existingSquare = mockSquares.find(
+        (s) => s.number === square.number,
+      );
+      if (existingSquare?.claimed_by) return prev;
+
+      // Don't select if already selected
+      if (prev.find((s) => s.number === square.number)) return prev;
+
+      return [...prev, square];
+    });
+  };
+
+  const handleSquareDeselect = (square: SelectedSquare) => {
+    setSelectedSquares((prev) =>
+      prev.filter((s) => s.number !== square.number),
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       {/* Hero Section */}
@@ -38,77 +111,60 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Visual Example */}
-            <div className="relative max-w-md mx-auto bg-white rounded-xl shadow-lg overflow-hidden">
+            {/* Interactive Visual Example */}
+            <div className="relative max-w-2xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden">
               <div className="relative">
-                {/* Sports Image */}
-                <img
-                  src="https://images.unsplash.com/photo-1566577739112-5180d4bf9390?w=400&h=300&fit=crop&auto=format"
-                  alt="Football Field - Fundraising Example"
-                  className="w-full h-64 object-cover"
+                <GridOverlay
+                  campaign={mockCampaign}
+                  squares={mockSquares}
+                  selectedSquares={selectedSquares}
+                  onSquareSelect={handleSquareSelect}
+                  onSquareDeselect={handleSquareDeselect}
+                  imageUrl={mockCampaign.image_url}
                 />
 
-                {/* Grid Overlay Demo */}
-                <div className="absolute inset-0 grid grid-cols-10 grid-rows-8 gap-1 p-2">
-                  {/* Sample squares */}
-                  {Array.from({ length: 80 }, (_, i) => (
-                    <div
-                      key={i}
-                      className={`
-                        rounded-sm border transition-all duration-200 flex items-center justify-center text-xs font-bold
-                        ${
-                          i < 12
-                            ? "bg-red-500 bg-opacity-60 border-red-400 text-white" // Claimed squares
-                            : i < 20
-                              ? "bg-blue-500 bg-opacity-60 border-blue-400 text-white" // Selected squares
-                              : "bg-white bg-opacity-20 border-white border-opacity-30 text-white hover:bg-opacity-30 cursor-pointer"
-                        }
-                      `}
-                      style={{ textShadow: "0 1px 2px rgba(0,0,0,0.5)" }}
-                    >
-                      {i + 1}
-                    </div>
-                  ))}
-                </div>
-
                 {/* Demo Legend */}
-                <div className="absolute bottom-2 left-2 right-2 bg-black bg-opacity-75 rounded-lg p-2 text-xs text-white">
+                <div className="absolute bottom-4 left-4 right-4 bg-black bg-opacity-75 rounded-lg p-3 text-sm text-white">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className="flex items-center space-x-1">
-                        <div className="w-3 h-3 bg-red-500 rounded"></div>
+                    <div className="flex items-center space-x-4">
+                      <div className="flex items-center space-x-2">
+                        <div className="w-4 h-4 bg-red-500 rounded"></div>
                         <span>Claimed</span>
                       </div>
-                      <div className="flex items-center space-x-1">
-                        <div className="w-3 h-3 bg-blue-500 rounded"></div>
+                      <div className="flex items-center space-x-2">
+                        <div className="w-4 h-4 bg-blue-500 rounded"></div>
                         <span>Selected</span>
                       </div>
-                      <div className="flex items-center space-x-1">
-                        <div className="w-3 h-3 bg-white bg-opacity-40 rounded"></div>
+                      <div className="flex items-center space-x-2">
+                        <div className="w-4 h-4 bg-white bg-opacity-40 rounded"></div>
                         <span>Available</span>
                       </div>
                     </div>
-                    <span className="font-semibold">$5-$50</span>
+                    <span className="font-semibold">$5-$400</span>
                   </div>
                 </div>
               </div>
 
-              <div className="p-4">
-                <h3 className="font-bold text-gray-900 mb-2">
+              <div className="p-6">
+                <h3 className="font-bold text-gray-900 mb-3 text-lg">
                   Football Team Championship Fund
                 </h3>
-                <div className="flex items-center justify-between text-sm text-gray-600">
+                <div className="flex items-center justify-between text-sm text-gray-600 mb-3">
                   <span>12/80 squares claimed</span>
-                  <span className="font-semibold text-green-600">
-                    $340 raised
+                  <span className="font-semibold text-green-600 text-lg">
+                    $2,340 raised
                   </span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                <div className="w-full bg-gray-200 rounded-full h-3">
                   <div
-                    className="bg-green-500 h-2 rounded-full"
+                    className="bg-green-500 h-3 rounded-full transition-all duration-300"
                     style={{ width: "15%" }}
                   ></div>
                 </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  ✨ Try hovering over the squares above! (Demo only - no actual
+                  purchases)
+                </p>
               </div>
             </div>
           </div>
