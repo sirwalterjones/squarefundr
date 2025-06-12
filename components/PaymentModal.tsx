@@ -4,6 +4,10 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { PaymentModalProps, DonorInfo } from "@/types";
 import { formatPrice, calculateTotalPrice } from "@/utils/pricingUtils";
+import {
+  generatePDFReceipt,
+  createReceiptData,
+} from "@/utils/receiptGenerator";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -32,6 +36,8 @@ export default function PaymentModal({
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [showReceiptDownload, setShowReceiptDownload] = useState(false);
+  const [receiptData, setReceiptData] = useState<any>(null);
 
   const {
     register,
@@ -104,14 +110,28 @@ export default function PaymentModal({
       const result = await response.json();
 
       if (response.ok) {
+        // Create receipt data for cash payments
+        const receipt = createReceiptData(
+          campaign,
+          selectedSquares,
+          data.name,
+          data.email,
+          "cash",
+          result.transactionId,
+        );
+        setReceiptData(receipt);
         setShowSuccess(true);
+        setShowReceiptDownload(true);
+
         // Close modal after showing success message
         setTimeout(() => {
           onSuccess();
           onClose();
           reset();
           setShowSuccess(false);
-        }, 2000);
+          setShowReceiptDownload(false);
+          setReceiptData(null);
+        }, 5000);
       } else {
         throw new Error(result.error || "Failed to claim squares");
       }
@@ -306,9 +326,30 @@ export default function PaymentModal({
                     <h4 className="text-lg font-medium text-green-900 mb-1">
                       Success!
                     </h4>
-                    <p className="text-sm text-green-700">
+                    <p className="text-sm text-green-700 mb-3">
                       Your squares have been successfully claimed.
                     </p>
+                    {showReceiptDownload && receiptData && (
+                      <button
+                        onClick={() => generatePDFReceipt(receiptData)}
+                        className="inline-flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium"
+                      >
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                          />
+                        </svg>
+                        <span>Download Receipt</span>
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>

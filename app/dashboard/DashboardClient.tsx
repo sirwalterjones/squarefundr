@@ -7,6 +7,11 @@ import { User } from "@supabase/supabase-js";
 import { Campaign } from "@/types";
 import { formatPrice } from "@/utils/pricingUtils";
 import EditDonationModal from "@/components/EditDonationModal";
+import {
+  generatePDFReceipt,
+  createReceiptData,
+} from "@/utils/receiptGenerator";
+import { SelectedSquare } from "@/types";
 
 interface CampaignWithStats extends Campaign {
   stats: {
@@ -332,6 +337,49 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
       setSortDirection("desc");
     } else {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    }
+  };
+
+  const downloadReceipt = (donation: any) => {
+    try {
+      // Find the campaign for this donation
+      const campaign =
+        campaigns.find((c) => c.id === donation.campaign_id) ||
+        donation.campaign;
+
+      if (!campaign) {
+        alert("Campaign information not found for this donation.");
+        return;
+      }
+
+      // Convert square_ids to SelectedSquare format
+      const squareIds = Array.isArray(donation.square_ids)
+        ? donation.square_ids
+        : [];
+      const squares: SelectedSquare[] = squareIds.map(
+        (id: string, index: number) => ({
+          row: Math.floor(index / campaign.columns),
+          col: index % campaign.columns,
+          number: index + 1,
+          value: donation.total / squareIds.length, // Distribute total evenly across squares
+        }),
+      );
+
+      // Create receipt data
+      const receiptData = createReceiptData(
+        campaign,
+        squares,
+        donation.donor_name || "Anonymous",
+        donation.donor_email || "No email provided",
+        donation.payment_method === "paypal" ? "paypal" : "cash",
+        donation.id,
+      );
+
+      // Generate and download PDF
+      generatePDFReceipt(receiptData);
+    } catch (error) {
+      console.error("Error generating receipt:", error);
+      alert("Failed to generate receipt. Please try again.");
     }
   };
 
@@ -966,6 +1014,13 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
                             data-label="Actions"
                           >
                             <div className="flex items-center justify-end space-x-2">
+                              <button
+                                onClick={() => downloadReceipt(donation)}
+                                className="text-purple-600 hover:text-purple-700 px-2 py-1 text-xs border border-purple-300 rounded hover:bg-purple-50 transition-colors"
+                                title="Download Receipt"
+                              >
+                                Receipt
+                              </button>
                               <button
                                 onClick={() => editDonation(donation)}
                                 className="text-blue-600 hover:text-blue-700 px-2 py-1 text-xs border border-blue-300 rounded hover:bg-blue-50 transition-colors"

@@ -92,7 +92,7 @@ export async function GET(request: NextRequest) {
 
     // Create campaign lookup map
     const campaignMap = new Map();
-    const campaignIds = [];
+    const campaignIds: string[] = [];
 
     for (const campaign of userCampaigns) {
       campaignMap.set(campaign.id, campaign);
@@ -131,7 +131,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Process the transactions into donations
-    const donations = [];
+    const donations: any[] = [];
 
     for (const transaction of transactions || []) {
       try {

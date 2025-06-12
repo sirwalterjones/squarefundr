@@ -6,6 +6,10 @@ import { Campaign, Square, SelectedSquare } from "@/types";
 import GridOverlay from "@/components/GridOverlay";
 import PaymentModal from "@/components/PaymentModal";
 import { formatPrice, calculateTotalPrice } from "@/utils/pricingUtils";
+import {
+  generatePDFReceipt,
+  createReceiptData,
+} from "@/utils/receiptGenerator";
 import { supabase } from "@/lib/supabaseClient";
 
 interface FundraiserClientProps {
@@ -23,6 +27,8 @@ export default function FundraiserClient({
   const [isLoading, setIsLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showReceiptButton, setShowReceiptButton] = useState(false);
+  const [lastReceiptData, setLastReceiptData] = useState<any>(null);
 
   // Check if this is a demo campaign
   const isDemoMode = campaign.slug === "team-championship-fund";
@@ -33,6 +39,13 @@ export default function FundraiserClient({
     const success = urlParams.get("success");
     const canceled = urlParams.get("canceled");
     const demo = urlParams.get("demo");
+    const donorName = urlParams.get("donor_name");
+    const donorEmail = urlParams.get("donor_email");
+    const transactionId = urlParams.get("transaction_id");
+    const paymentMethod = urlParams.get("payment_method") as
+      | "paypal"
+      | "cash"
+      | null;
 
     if (success === "true") {
       if (demo === "true" || isDemoMode) {
@@ -43,11 +56,30 @@ export default function FundraiserClient({
         setSuccessMessage(
           "Payment successful! Your squares have been reserved.",
         );
+
+        // If we have receipt data from URL params, prepare receipt download
+        if (donorName && donorEmail && paymentMethod && transactionId) {
+          // We'll need to get the squares data from the transaction
+          // For now, we'll show a generic receipt button
+          setShowReceiptButton(true);
+
+          // Store receipt data for later use
+          setLastReceiptData({
+            donorName,
+            donorEmail,
+            paymentMethod,
+            transactionId,
+          });
+        }
       }
       // Clear URL params
       window.history.replaceState({}, "", window.location.pathname);
-      // Auto-hide success message after 5 seconds
-      setTimeout(() => setSuccessMessage(null), 5000);
+      // Auto-hide success message after 8 seconds to give time for receipt download
+      setTimeout(() => {
+        setSuccessMessage(null);
+        setShowReceiptButton(false);
+        setLastReceiptData(null);
+      }, 8000);
     } else if (canceled === "true") {
       setErrorMessage("Payment was canceled. Your squares were not reserved.");
       // Clear URL params
@@ -212,14 +244,52 @@ export default function FundraiserClient({
           exit={{ opacity: 0, y: -50 }}
           className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg max-w-md text-center"
         >
-          <div className="flex items-center justify-between">
-            <span>{successMessage}</span>
-            <button
-              onClick={() => setSuccessMessage(null)}
-              className="ml-4 text-white hover:text-gray-200"
-            >
-              ×
-            </button>
+          <div className="flex flex-col items-center space-y-3">
+            <div className="flex items-center justify-between w-full">
+              <span>{successMessage}</span>
+              <button
+                onClick={() => {
+                  setSuccessMessage(null);
+                  setShowReceiptButton(false);
+                  setLastReceiptData(null);
+                }}
+                className="ml-4 text-white hover:text-gray-200"
+              >
+                ×
+              </button>
+            </div>
+            {showReceiptButton && lastReceiptData && (
+              <button
+                onClick={() => {
+                  // Create receipt with available data
+                  const receipt = createReceiptData(
+                    campaign,
+                    selectedSquares.length > 0 ? selectedSquares : [], // Use selected squares or empty array
+                    lastReceiptData.donorName,
+                    lastReceiptData.donorEmail,
+                    lastReceiptData.paymentMethod,
+                    lastReceiptData.transactionId,
+                  );
+                  generatePDFReceipt(receipt);
+                }}
+                className="inline-flex items-center space-x-2 bg-white text-green-600 hover:bg-gray-100 px-4 py-2 rounded-lg transition-colors text-sm font-medium border border-green-600"
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
+                </svg>
+                <span>Download Receipt</span>
+              </button>
+            )}
           </div>
         </motion.div>
       )}
