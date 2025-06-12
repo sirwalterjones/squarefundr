@@ -24,6 +24,7 @@ export default function GridOverlay({
   imageUrl,
 }: GridOverlayProps) {
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
   const isSquareSelected = (row: number, col: number) => {
     const isSelected = selectedSquares.some(
@@ -40,7 +41,28 @@ export default function GridOverlay({
   };
 
   const isSquareAvailable = (square: SquareType) => {
-    return !square.claimed_by && square.payment_status !== "completed";
+    // A square is available if:
+    // 1. It has no claimed_by value (null or undefined)
+    // 2. AND payment_status is not "completed"
+    // 3. AND claimed_by doesn't start with "temp_" (temporary reservations)
+    const isNotClaimed = !square.claimed_by || square.claimed_by === null;
+    const isNotCompleted = square.payment_status !== "completed";
+    const isNotTempReserved = !square.claimed_by?.startsWith("temp_");
+
+    const available = isNotClaimed && isNotCompleted && isNotTempReserved;
+
+    // Debug logging for claimed squares
+    if (!available) {
+      console.log(`Square ${square.number} is NOT available:`, {
+        claimed_by: square.claimed_by,
+        payment_status: square.payment_status,
+        donor_name: square.donor_name,
+        payment_type: square.payment_type,
+        claimed_at: square.claimed_at,
+      });
+    }
+
+    return available;
   };
 
   const handleSquareClick = (
@@ -128,7 +150,23 @@ export default function GridOverlay({
           src={imageUrl}
           alt={campaign.title}
           className="w-full h-auto block"
-          onLoad={() => setImageLoaded(true)}
+          onLoad={() => {
+            console.log("Image loaded successfully:", imageUrl);
+            setImageLoaded(true);
+            setImageError(false);
+          }}
+          onError={(e) => {
+            console.error("Image failed to load:", imageUrl);
+            setImageError(true);
+            setImageLoaded(false);
+            // Try to load a fallback image
+            const fallbackUrl =
+              "https://images.unsplash.com/photo-1566577739112-5180d4bf9390?w=800&h=600&fit=crop&auto=format";
+            if (e.currentTarget.src !== fallbackUrl) {
+              console.log("Trying fallback image:", fallbackUrl);
+              e.currentTarget.src = fallbackUrl;
+            }
+          }}
           style={{ display: "block" }}
         />
 
@@ -276,9 +314,18 @@ export default function GridOverlay({
           </motion.div>
         )}
 
-        {!imageLoaded && (
+        {!imageLoaded && !imageError && (
           <div className="absolute inset-0 bg-gray-100 rounded-lg flex items-center justify-center">
             <div className="text-gray-500">Loading image...</div>
+          </div>
+        )}
+
+        {imageError && (
+          <div className="absolute inset-0 bg-gray-200 rounded-lg flex items-center justify-center">
+            <div className="text-gray-600 text-center">
+              <div className="mb-2">Image failed to load</div>
+              <div className="text-sm text-gray-500">Using fallback image</div>
+            </div>
           </div>
         )}
       </div>

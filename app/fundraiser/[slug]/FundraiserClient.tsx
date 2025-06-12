@@ -172,7 +172,29 @@ export default function FundraiserClient({
     campaign.pricing_type,
     campaign.price_data,
   );
-  const claimedSquares = squares.filter((s) => s.claimed_by).length;
+  // Count squares that are actually claimed (not temp reservations)
+  const claimedSquares = squares.filter(
+    (s) =>
+      s.claimed_by &&
+      !s.claimed_by.startsWith("temp_") &&
+      s.payment_status === "completed",
+  ).length;
+
+  // Debug logging for claimed squares count
+  console.log("Claimed squares calculation:", {
+    totalSquares: squares.length,
+    claimedSquares,
+    completedSquares: squares.filter((s) => s.payment_status === "completed")
+      .length,
+    paypalSquares: squares.filter(
+      (s) => s.payment_type === "paypal" && s.payment_status === "completed",
+    ).length,
+    cashSquares: squares.filter(
+      (s) => s.payment_type === "cash" && s.payment_status === "completed",
+    ).length,
+    tempSquares: squares.filter((s) => s.claimed_by?.startsWith("temp_"))
+      .length,
+  });
   const totalSquares = campaign.rows * campaign.columns; // Use campaign configuration, not squares array length
   const progressPercentage = (claimedSquares / totalSquares) * 100;
 

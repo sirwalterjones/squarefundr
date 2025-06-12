@@ -165,13 +165,20 @@ export async function GET(request: NextRequest) {
           campaign: campaign,
         };
 
-        console.log("Processing PayPal transaction:", {
-          id: donation.id,
-          payment_method: donation.payment_method,
-          status: donation.status,
-          total: donation.total,
-          paypal_order_id: donation.paypal_order_id,
-        });
+        // Enhanced logging for PayPal transactions
+        if (transaction.payment_method === "paypal") {
+          console.log("Processing PayPal transaction:", {
+            id: donation.id,
+            payment_method: donation.payment_method,
+            status: donation.status,
+            total: donation.total,
+            paypal_order_id: donation.paypal_order_id,
+            donor_name: donation.donor_name,
+            donor_email: donation.donor_email,
+            timestamp: donation.timestamp,
+            square_ids: donation.square_ids,
+          });
+        }
 
         console.log("Created donation object:", {
           id: donation.id,

@@ -12,10 +12,9 @@ export default function HomePage() {
   const mockCampaign: Campaign = {
     id: "demo-campaign",
     user_id: "demo-user",
-    title: "Football Team Championship Fund",
+    title: "Baseball Team Championship Fund",
     description: "Help our team reach the championship!",
-    image_url:
-      "https://images.unsplash.com/photo-1566577739112-5180d4bf9390?w=800&h=600&fit=crop&auto=format",
+    image_url: "/images/baseball.jpg",
     rows: 8,
     columns: 10,
     pricing_type: "sequential",
@@ -120,7 +119,7 @@ export default function HomePage() {
                   selectedSquares={selectedSquares}
                   onSquareSelect={handleSquareSelect}
                   onSquareDeselect={handleSquareDeselect}
-                  imageUrl={mockCampaign.image_url}
+                  imageUrl={mockCampaign.image_url || "/images/baseball.jpg"}
                 />
 
                 {/* Demo Legend */}
@@ -147,7 +146,7 @@ export default function HomePage() {
 
               <div className="p-6">
                 <h3 className="font-bold text-gray-900 mb-3 text-lg">
-                  Football Team Championship Fund
+                  Baseball Team Championship Fund
                 </h3>
                 <div className="flex items-center justify-between text-sm text-gray-600 mb-3">
                   <span>12/80 squares claimed</span>

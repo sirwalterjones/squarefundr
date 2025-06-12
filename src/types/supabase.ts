@@ -210,6 +210,7 @@ export type Database = {
           donor_name: string | null
           id: string
           payment_method: string
+          paypal_order_id: string | null
           square_ids: string[]
           status: string
           stripe_payment_intent_id: string | null
@@ -222,6 +223,7 @@ export type Database = {
           donor_name?: string | null
           id?: string
           payment_method: string
+          paypal_order_id?: string | null
           square_ids: string[]
           status?: string
           stripe_payment_intent_id?: string | null
@@ -234,6 +236,7 @@ export type Database = {
           donor_name?: string | null
           id?: string
           payment_method?: string
+          paypal_order_id?: string | null
           square_ids?: string[]
           status?: string
           stripe_payment_intent_id?: string | null

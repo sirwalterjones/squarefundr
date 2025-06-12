@@ -172,8 +172,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Create PayPal payment link for personal account
-    const returnUrl = `${request.nextUrl.origin}/api/paypal-success?transaction_id=${transactionId}&donor_name=${encodeURIComponent(donorName)}&donor_email=${encodeURIComponent(donorEmail)}`;
-    const cancelUrl = `${request.nextUrl.origin}/fundraiser/${campaign.slug}?canceled=true&transaction_id=${transactionId}`;
+    const baseUrl = request.nextUrl.origin.includes("localhost")
+      ? "https://vibrant-lalande2-fd784.view-3.tempo-dev.app"
+      : request.nextUrl.origin;
+    const returnUrl = `${baseUrl}/api/paypal-success?transaction_id=${transactionId}&donor_name=${encodeURIComponent(donorName)}&donor_email=${encodeURIComponent(donorEmail)}`;
+    const cancelUrl = `${baseUrl}/fundraiser/${campaign.slug}?canceled=true&transaction_id=${transactionId}`;
 
     const paypalOrder = await createPayPalOrder(
       totalAmount,
