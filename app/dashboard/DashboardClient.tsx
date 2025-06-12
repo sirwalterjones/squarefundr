@@ -530,8 +530,6 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
                 <Link href="/create" className="btn-primary text-center">
                   Create New Campaign
                 </Link>
-                <button className="btn-outline">View Analytics</button>
-                <button className="btn-outline">Export Data</button>
               </div>
             </div>
 
@@ -662,9 +660,9 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
                       animate={{ opacity: 1, y: 0 }}
                       className="p-6 hover:bg-gray-50 transition-colors"
                     >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-4">
-                          <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
+                        <div className="flex items-start space-x-4">
+                          <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
                             {campaign.image_url ? (
                               <img
                                 src={campaign.image_url}
@@ -682,7 +680,7 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
                               className={`w-full h-full flex items-center justify-center text-gray-400 ${campaign.image_url ? "hidden" : ""}`}
                             >
                               <svg
-                                className="w-8 h-8"
+                                className="w-6 h-6 sm:w-8 sm:h-8"
                                 fill="none"
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"
@@ -696,17 +694,17 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
                               </svg>
                             </div>
                           </div>
-                          <div>
-                            <h3 className="text-lg font-medium text-gray-900">
+                          <div className="flex-1 min-w-0">
+                            <h3 className="text-base sm:text-lg font-medium text-gray-900 truncate">
                               {campaign.title}
                             </h3>
-                            <p className="text-sm text-gray-600 mb-2">
+                            <p className="text-xs sm:text-sm text-gray-600 mb-2">
                               Created{" "}
                               {new Date(
                                 campaign.created_at,
                               ).toLocaleDateString()}
                             </p>
-                            <div className="flex items-center space-x-4 text-sm">
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4 space-y-1 sm:space-y-0 text-xs sm:text-sm">
                               <span className="text-gray-600">
                                 {campaign.stats.claimedSquares}/
                                 {campaign.stats.totalSquares} squares
@@ -715,7 +713,7 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
                                 {formatPrice(campaign.stats.totalRaised)} raised
                               </span>
                               <span
-                                className={`px-2 py-1 rounded-full text-xs ${campaign.is_active ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}`}
+                                className={`px-2 py-1 rounded-full text-xs w-fit ${campaign.is_active ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}`}
                               >
                                 {campaign.is_active ? "Active" : "Inactive"}
                               </span>
@@ -723,39 +721,41 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
                           </div>
                         </div>
 
-                        <div className="flex items-center space-x-3">
-                          <button
-                            onClick={() => {
-                              setSelectedTab("donations");
-                              loadDonations(campaign.id);
-                            }}
-                            className="btn-outline"
-                          >
-                            View Donations
-                          </button>
-                          <Link
-                            href={`/fundraiser/${campaign.slug}`}
-                            className="btn-outline"
-                            target="_blank"
-                          >
-                            View Public
-                          </Link>
-                          <Link
-                            href={`/edit/${campaign.id}`}
-                            className="btn-secondary"
-                          >
-                            Edit
-                          </Link>
-                          <button
-                            onClick={() =>
-                              showDeleteCampaignConfirmation(campaign)
-                            }
-                            className="px-3 py-2 text-red-600 hover:text-red-700 border border-red-300 rounded-lg hover:bg-red-50 transition-colors text-sm"
-                          >
-                            Delete
-                          </button>
-                          <div className="text-right">
-                            <div className="text-2xl font-bold text-gray-900">
+                        <div className="flex flex-col lg:flex-row lg:items-center space-y-3 lg:space-y-0 lg:space-x-3">
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              onClick={() => {
+                                setSelectedTab("donations");
+                                loadDonations(campaign.id);
+                              }}
+                              className="px-3 py-2 text-xs sm:text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex-1 sm:flex-none whitespace-nowrap"
+                            >
+                              Donations
+                            </button>
+                            <Link
+                              href={`/fundraiser/${campaign.slug}`}
+                              className="px-3 py-2 text-xs sm:text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex-1 sm:flex-none whitespace-nowrap text-center"
+                              target="_blank"
+                            >
+                              View Public
+                            </Link>
+                            <Link
+                              href={`/edit/${campaign.id}`}
+                              className="px-3 py-2 text-xs sm:text-sm bg-gray-100 text-gray-900 rounded-lg hover:bg-gray-200 transition-colors flex-1 sm:flex-none whitespace-nowrap text-center"
+                            >
+                              Edit
+                            </Link>
+                            <button
+                              onClick={() =>
+                                showDeleteCampaignConfirmation(campaign)
+                              }
+                              className="px-3 py-2 text-xs sm:text-sm text-red-600 hover:text-red-700 border border-red-300 rounded-lg hover:bg-red-50 transition-colors flex-1 sm:flex-none whitespace-nowrap"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                          <div className="text-center lg:text-right lg:ml-4">
+                            <div className="text-xl sm:text-2xl font-bold text-gray-900">
                               {Math.round(campaign.stats.progressPercentage)}%
                             </div>
                             <div className="text-xs text-gray-600">
