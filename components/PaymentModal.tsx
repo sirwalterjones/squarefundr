@@ -31,6 +31,7 @@ export default function PaymentModal({
   );
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   const {
     register,
@@ -103,9 +104,14 @@ export default function PaymentModal({
       const result = await response.json();
 
       if (response.ok) {
-        onSuccess();
-        onClose();
-        reset();
+        setShowSuccess(true);
+        // Close modal after showing success message
+        setTimeout(() => {
+          onSuccess();
+          onClose();
+          reset();
+          setShowSuccess(false);
+        }, 2000);
       } else {
         throw new Error(result.error || "Failed to claim squares");
       }
@@ -276,6 +282,37 @@ export default function PaymentModal({
                 </button>
               </div>
             </div>
+
+            {/* Success Message */}
+            {showSuccess && (
+              <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex items-center justify-center space-x-3">
+                  <div className="flex-shrink-0">
+                    <svg
+                      className="w-6 h-6 text-green-600"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M5 13l4 4L19 7"
+                      />
+                    </svg>
+                  </div>
+                  <div className="text-center">
+                    <h4 className="text-lg font-medium text-green-900 mb-1">
+                      Success!
+                    </h4>
+                    <p className="text-sm text-green-700">
+                      Your squares have been successfully claimed.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Error Message */}
             {error && (

@@ -378,30 +378,36 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
           <p className="text-gray-600">Welcome back, {user.email}</p>
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            <div className="text-2xl font-bold text-green-600">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
+          <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
+            <div className="text-lg sm:text-2xl font-bold text-green-600">
               {formatPrice(totalRaised)}
             </div>
-            <div className="text-sm text-gray-600">Total Raised</div>
+            <div className="text-xs sm:text-sm text-gray-600">Total Raised</div>
           </div>
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            <div className="text-2xl font-bold text-blue-600">
+          <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
+            <div className="text-lg sm:text-2xl font-bold text-blue-600">
               {totalCampaigns}
             </div>
-            <div className="text-sm text-gray-600">Total Campaigns</div>
+            <div className="text-xs sm:text-sm text-gray-600">
+              Total Campaigns
+            </div>
           </div>
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            <div className="text-2xl font-bold text-blue-600">
+          <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
+            <div className="text-lg sm:text-2xl font-bold text-blue-600">
               {activeCampaigns}
             </div>
-            <div className="text-sm text-gray-600">Active Campaigns</div>
+            <div className="text-xs sm:text-sm text-gray-600">
+              Active Campaigns
+            </div>
           </div>
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            <div className="text-2xl font-bold text-purple-600">
+          <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
+            <div className="text-lg sm:text-2xl font-bold text-purple-600">
               {totalSquaresClaimed}
             </div>
-            <div className="text-sm text-gray-600">Squares Claimed</div>
+            <div className="text-xs sm:text-sm text-gray-600">
+              Squares Claimed
+            </div>
           </div>
         </div>
 
@@ -807,11 +813,11 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
+                  <table className="mobile-table min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                       <tr>
                         <th
-                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                          className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                           onClick={() => handleSort("donor_name")}
                         >
                           <div className="flex items-center space-x-1">
@@ -820,7 +826,7 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
                           </div>
                         </th>
                         <th
-                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                          className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                           onClick={() => handleSort("campaign")}
                         >
                           <div className="flex items-center space-x-1">
@@ -829,7 +835,7 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
                           </div>
                         </th>
                         <th
-                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                          className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                           onClick={() => handleSort("total")}
                         >
                           <div className="flex items-center space-x-1">
@@ -837,11 +843,11 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
                             <SortIcon field="total" />
                           </div>
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Squares
                         </th>
                         <th
-                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                          className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                           onClick={() => handleSort("status")}
                         >
                           <div className="flex items-center space-x-1">
@@ -850,7 +856,7 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
                           </div>
                         </th>
                         <th
-                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                          className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                           onClick={() => handleSort("payment_method")}
                         >
                           <div className="flex items-center space-x-1">
@@ -859,7 +865,7 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
                           </div>
                         </th>
                         <th
-                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                          className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                           onClick={() => handleSort("timestamp")}
                         >
                           <div className="flex items-center space-x-1">
@@ -867,7 +873,7 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
                             <SortIcon field="timestamp" />
                           </div>
                         </th>
-                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-3 sm:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Actions
                         </th>
                       </tr>
@@ -881,7 +887,10 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
                           transition={{ delay: index * 0.05 }}
                           className="hover:bg-gray-50 transition-colors"
                         >
-                          <td className="px-6 py-4 whitespace-nowrap">
+                          <td
+                            className="px-3 sm:px-6 py-4 whitespace-nowrap"
+                            data-label="Donor"
+                          >
                             <div>
                               <div className="text-sm font-medium text-gray-900">
                                 {donation.donor_name || "Anonymous"}
@@ -891,38 +900,56 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
                               </div>
                             </div>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
+                          <td
+                            className="px-3 sm:px-6 py-4 whitespace-nowrap"
+                            data-label="Campaign"
+                          >
                             <div className="text-sm text-gray-900">
                               {donation.campaign?.title || "Unknown Campaign"}
                             </div>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
+                          <td
+                            className="px-3 sm:px-6 py-4 whitespace-nowrap"
+                            data-label="Amount"
+                          >
                             <div className="text-sm font-medium text-green-600">
                               {formatPrice(donation.total || 0)}
                             </div>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
+                          <td
+                            className="px-3 sm:px-6 py-4 whitespace-nowrap"
+                            data-label="Squares"
+                          >
                             <div className="text-sm text-gray-900">
                               {Array.isArray(donation.square_ids)
                                 ? donation.square_ids.length
                                 : 0}
                             </div>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
+                          <td
+                            className="px-3 sm:px-6 py-4 whitespace-nowrap"
+                            data-label="Status"
+                          >
                             <span
                               className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${donation.status === "completed" ? "bg-green-100 text-green-800" : donation.status === "pending" ? "bg-yellow-100 text-yellow-800" : "bg-red-100 text-red-800"}`}
                             >
                               {donation.status || "unknown"}
                             </span>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
+                          <td
+                            className="px-3 sm:px-6 py-4 whitespace-nowrap"
+                            data-label="Method"
+                          >
                             <span
                               className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${donation.payment_method === "stripe" ? "bg-blue-100 text-blue-800" : "bg-purple-100 text-purple-800"}`}
                             >
                               {donation.payment_method || "unknown"}
                             </span>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          <td
+                            className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500"
+                            data-label="Date"
+                          >
                             <div>
                               {new Date(
                                 donation.timestamp,
@@ -934,7 +961,10 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
                               ).toLocaleTimeString()}
                             </div>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          <td
+                            className="px-3 sm:px-6 py-4 whitespace-nowrap text-right text-sm font-medium actions-cell"
+                            data-label="Actions"
+                          >
                             <div className="flex items-center justify-end space-x-2">
                               <button
                                 onClick={() => editDonation(donation)}

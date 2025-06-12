@@ -183,19 +183,138 @@ label {
   font-weight: 500;
 }
 
+/* Mobile-friendly table styles */
+.mobile-table {
+  @apply w-full;
+}
+
+@media (max-width: 768px) {
+  .mobile-table {
+    @apply block;
+  }
+
+  .mobile-table thead {
+    @apply hidden;
+  }
+
+  .mobile-table tbody {
+    @apply block;
+  }
+
+  .mobile-table tr {
+    @apply block border border-gray-200 rounded-lg mb-4 p-4 bg-white shadow-sm;
+  }
+
+  .mobile-table td {
+    @apply block text-left border-none pb-2 mb-2;
+  }
+
+  .mobile-table td:before {
+    content: attr(data-label) ": ";
+    @apply font-semibold text-gray-700 inline-block w-24 text-sm;
+  }
+
+  .mobile-table td:last-child {
+    @apply mb-0;
+  }
+
+  .mobile-table .actions-cell {
+    @apply flex flex-wrap gap-2 mt-3;
+  }
+
+  .mobile-table .actions-cell button {
+    @apply flex-1 min-w-0 text-xs px-2 py-1;
+  }
+}
+
+/* Mobile-friendly grid layout improvements */
+@media (max-width: 768px) {
+  .container-responsive {
+    @apply px-2;
+  }
+
+  .grid-cols-2 {
+    @apply grid-cols-1;
+  }
+
+  .lg\:grid-cols-4 {
+    @apply grid-cols-2;
+  }
+
+  .lg\:grid-cols-3 {
+    @apply grid-cols-1;
+  }
+
+  .lg\:col-span-2 {
+    @apply col-span-1;
+  }
+}
+
+/* Improved mobile spacing */
+@media (max-width: 640px) {
+  .space-y-6 > * + * {
+    @apply mt-4;
+  }
+
+  .space-y-4 > * + * {
+    @apply mt-3;
+  }
+
+  .gap-6 {
+    @apply gap-4;
+  }
+
+  .gap-8 {
+    @apply gap-6;
+  }
+
+  .p-6 {
+    @apply p-4;
+  }
+
+  .px-6 {
+    @apply px-4;
+  }
+
+  .py-8 {
+    @apply py-6;
+  }
+}
+
 /* Mobile-first responsive grid */
 .grid-responsive {
   display: grid;
   width: 100%;
-  gap: 2px;
+  gap: 1px;
   max-width: 100%;
   overflow-x: auto;
+  padding: 4px;
 }
 
 /* Grid size adjustments for mobile */
-@media (max-width: 640px) {
+@media (max-width: 480px) {
+  .grid-responsive {
+    gap: 0.5px;
+    padding: 2px;
+  }
+
+  .square-item {
+    font-size: 0.4rem;
+    min-height: 20px;
+    min-width: 20px;
+    border-width: 1px;
+  }
+
+  .grid-overlay .square-item {
+    border-radius: 1px;
+    font-size: 0.35rem;
+  }
+}
+
+@media (min-width: 481px) and (max-width: 640px) {
   .grid-responsive {
     gap: 1px;
+    padding: 3px;
   }
 
   .square-item {
@@ -209,7 +328,23 @@ label {
   }
 }
 
-@media (min-width: 641px) and (max-width: 1023px) {
+@media (min-width: 641px) and (max-width: 768px) {
+  .grid-responsive {
+    gap: 1.5px;
+  }
+
+  .square-item {
+    font-size: 0.55rem;
+    min-height: 28px;
+    min-width: 28px;
+  }
+
+  .grid-overlay .square-item {
+    border-radius: 2px;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1023px) {
   .grid-responsive {
     gap: 2px;
   }

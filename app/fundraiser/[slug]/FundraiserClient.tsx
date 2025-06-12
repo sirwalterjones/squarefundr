@@ -254,30 +254,34 @@ export default function FundraiserClient({
           )}
 
           {/* Progress Stats */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <div className="bg-white rounded-lg p-4 text-center">
-              <div className="text-2xl font-bold text-blue-600">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+            <div className="bg-white rounded-lg p-3 sm:p-4 text-center">
+              <div className="text-lg sm:text-2xl font-bold text-blue-600">
                 {claimedSquares}
               </div>
-              <div className="text-sm text-gray-600">Squares Claimed</div>
+              <div className="text-xs sm:text-sm text-gray-600">
+                Squares Claimed
+              </div>
             </div>
-            <div className="bg-white rounded-lg p-4 text-center">
-              <div className="text-2xl font-bold text-gray-900">
+            <div className="bg-white rounded-lg p-3 sm:p-4 text-center">
+              <div className="text-lg sm:text-2xl font-bold text-gray-900">
                 {totalSquares}
               </div>
-              <div className="text-sm text-gray-600">Total Squares</div>
+              <div className="text-xs sm:text-sm text-gray-600">
+                Total Squares
+              </div>
             </div>
-            <div className="bg-white rounded-lg p-4 text-center">
-              <div className="text-2xl font-bold text-green-600">
+            <div className="bg-white rounded-lg p-3 sm:p-4 text-center">
+              <div className="text-lg sm:text-2xl font-bold text-green-600">
                 {formatPrice(totalRaised)}
               </div>
-              <div className="text-sm text-gray-600">Raised</div>
+              <div className="text-xs sm:text-sm text-gray-600">Raised</div>
             </div>
-            <div className="bg-white rounded-lg p-4 text-center">
-              <div className="text-2xl font-bold text-gray-900">
+            <div className="bg-white rounded-lg p-3 sm:p-4 text-center">
+              <div className="text-lg sm:text-2xl font-bold text-gray-900">
                 {Math.round(progressPercentage)}%
               </div>
-              <div className="text-sm text-gray-600">Complete</div>
+              <div className="text-xs sm:text-sm text-gray-600">Complete</div>
             </div>
           </div>
 
@@ -296,28 +300,30 @@ export default function FundraiserClient({
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Grid Section */}
           <div className="lg:col-span-2">
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">
+            <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-3 sm:mb-4">
                 Select Your Squares
               </h2>
-              <p className="text-gray-600 mb-6">
-                Click on available squares to select them for donation. Selected
+              <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6">
+                Tap on available squares to select them for donation. Selected
                 squares will be highlighted.
               </p>
 
               {isLoading ? (
-                <div className="flex items-center justify-center h-64">
+                <div className="flex items-center justify-center h-48 sm:h-64">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                 </div>
               ) : (
-                <GridOverlay
-                  campaign={campaign}
-                  squares={squares}
-                  selectedSquares={selectedSquares}
-                  onSquareSelect={handleSquareSelect}
-                  onSquareDeselect={handleSquareDeselect}
-                  imageUrl={campaign.image_url}
-                />
+                <div className="w-full overflow-hidden">
+                  <GridOverlay
+                    campaign={campaign}
+                    squares={squares}
+                    selectedSquares={selectedSquares}
+                    onSquareSelect={handleSquareSelect}
+                    onSquareDeselect={handleSquareDeselect}
+                    imageUrl={campaign.image_url}
+                  />
+                </div>
               )}
             </div>
           </div>
