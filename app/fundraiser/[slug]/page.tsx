@@ -17,30 +17,30 @@ export async function generateMetadata({
     // Check if this is the demo campaign
     if (slug === "team-championship-fund") {
       return {
-        title: "Football Team Championship Fund - SquareFundr",
+        title: "Soccer Team Championship Fund - SquareFundr",
         description:
-          "Help our high school football team reach the state championship! We need funds for new equipment, travel expenses, and tournament fees. Every square you purchase brings us closer to our goal and supports our student athletes in their pursuit of excellence.",
+          "Help our high school soccer team reach the state championship! We need funds for new equipment, travel expenses, and tournament fees. Every square you purchase brings us closer to our goal and supports our student athletes in their pursuit of excellence.",
         openGraph: {
-          title: "Football Team Championship Fund",
+          title: "Soccer Team Championship Fund",
           description:
-            "Help our high school football team reach the state championship! We need funds for new equipment, travel expenses, and tournament fees. Every square you purchase brings us closer to our goal and supports our student athletes in their pursuit of excellence.",
+            "Help our high school soccer team reach the state championship! We need funds for new equipment, travel expenses, and tournament fees. Every square you purchase brings us closer to our goal and supports our student athletes in their pursuit of excellence.",
           images: [
             {
-              url: "https://images.unsplash.com/photo-1566577739112-5180d4bf9390?w=800&h=600&fit=crop",
+              url: "https://images.unsplash.com/photo-1560272564-c83b66b1ad12?w=800&h=600&fit=crop",
               width: 800,
               height: 600,
-              alt: "Football Team Championship Fund",
+              alt: "Soccer Team Championship Fund",
             },
           ],
           type: "website",
         },
         twitter: {
           card: "summary_large_image",
-          title: "Football Team Championship Fund",
+          title: "Soccer Team Championship Fund",
           description:
-            "Help our high school football team reach the state championship! Every square you purchase brings us closer to our goal.",
+            "Help our high school soccer team reach the state championship! Every square you purchase brings us closer to our goal.",
           images: [
-            "https://images.unsplash.com/photo-1566577739112-5180d4bf9390?w=800&h=600&fit=crop",
+            "https://images.unsplash.com/photo-1560272564-c83b66b1ad12?w=800&h=600&fit=crop",
           ],
         },
       };
@@ -84,7 +84,7 @@ export async function generateMetadata({
       // Only use fallback if no image_url is provided at all
       if (!imageUrl) {
         imageUrl =
-          "https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=800&h=600&fit=crop&auto=format";
+          "https://images.unsplash.com/photo-1560272564-c83b66b1ad12?w=1200&h=630&fit=crop&auto=format";
       }
 
       return {
@@ -100,11 +100,12 @@ export async function generateMetadata({
           images: [
             {
               url: imageUrl,
-              width: 800,
-              height: 600,
+              width: 1200,
+              height: 630,
               alt: campaign.title,
             },
           ],
+          url: `${apiBaseUrl}/fundraiser/${slug}`,
           type: "website",
         },
         twitter: {
