@@ -48,7 +48,9 @@ export async function generateMetadata({
         },
         // Additional meta tags for better Facebook/Instagram support
         other: {
-          "fb:app_id": "", // Add your Facebook App ID if you have one
+          "fb:app_id": "your-facebook-app-id", // Replace with your actual Facebook App ID
+          "og:url":
+            "https://vibrant-lalande2-fd784.view-3.tempo-dev.app/fundraiser/team-championship-fund",
           "og:image:width": "1200",
           "og:image:height": "630",
           "og:image:type": "image/jpeg",
@@ -124,7 +126,8 @@ export async function generateMetadata({
         },
         // Additional meta tags for better Facebook/Instagram support
         other: {
-          "fb:app_id": "", // Add your Facebook App ID if you have one
+          "fb:app_id": "your-facebook-app-id", // Replace with your actual Facebook App ID
+          "og:url": `https://vibrant-lalande2-fd784.view-3.tempo-dev.app/fundraiser/${slug}`,
           "og:image": imageUrl,
           "og:image:secure_url": imageUrl,
           "og:image:width": "1200",
