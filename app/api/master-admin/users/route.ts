@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
         email: userData.user.email || "No email",
         created_at: userData.user.created_at,
         last_sign_in_at: userData.user.last_sign_in_at,
-        raw_user_meta_data: userData.user.raw_user_meta_data || {},
+        raw_user_meta_data: userData.user.user_metadata || {},
       };
 
       return NextResponse.json({ users: [formattedUser] });
@@ -87,7 +87,7 @@ export async function GET(request: NextRequest) {
       email: user.email || "No email",
       created_at: user.created_at,
       last_sign_in_at: user.last_sign_in_at,
-      raw_user_meta_data: user.raw_user_meta_data || {},
+      raw_user_meta_data: user.user_metadata || {},
     }));
 
     return NextResponse.json({ users: formattedUsers });
