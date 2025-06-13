@@ -48,7 +48,7 @@ export async function generateMetadata({
         },
         // Additional meta tags for better Facebook/Instagram support
         other: {
-          "fb:app_id": "1234567890123456", // Placeholder Facebook App ID
+          "fb:app_id": "1234567890123456",
           "og:url": `${process.env.NEXT_PUBLIC_SITE_URL || "https://vibrant-lalande2-fd784.view-3.tempo-dev.app"}/fundraiser/team-championship-fund`,
           "og:image":
             "https://images.unsplash.com/photo-1560272564-c83b66b1ad12?w=1200&h=630&fit=crop&auto=format",
@@ -58,17 +58,22 @@ export async function generateMetadata({
           "og:image:height": "630",
           "og:image:type": "image/jpeg",
           "og:image:alt": "Soccer Team Championship Fund",
+          "og:title": "Soccer Team Championship Fund",
+          "og:description":
+            "Help our high school soccer team reach the state championship! We need funds for new equipment, travel expenses, and tournament fees. Every square you purchase brings us closer to our goal and supports our student athletes in their pursuit of excellence.",
+          "og:type": "website",
+          "og:site_name": "SquareFundr",
         },
       };
     }
 
     // For real campaigns, fetch from API
-    const apiBaseUrl =
+    const baseUrl =
       process.env.NEXT_PUBLIC_SITE_URL ||
       "https://vibrant-lalande2-fd784.view-3.tempo-dev.app";
 
     try {
-      const response = await fetch(`${apiBaseUrl}/api/campaigns/${slug}`, {
+      const response = await fetch(`${baseUrl}/api/campaigns/${slug}`, {
         cache: "no-store", // Ensure fresh data for metadata
         headers: {
           "Content-Type": "application/json",
@@ -96,6 +101,9 @@ export async function generateMetadata({
 
       console.log("Campaign image URL for metadata:", imageUrl);
       console.log("Full campaign data:", campaign);
+      console.log("Base URL being used:", baseUrl);
+
+      const pageUrl = `${baseUrl}/fundraiser/${slug}`;
 
       return {
         title: `${campaign.title} - SquareFundr`,
@@ -115,7 +123,7 @@ export async function generateMetadata({
               alt: campaign.title,
             },
           ],
-          url: `${process.env.NEXT_PUBLIC_SITE_URL || "https://vibrant-lalande2-fd784.view-3.tempo-dev.app"}/fundraiser/${slug}`,
+          url: pageUrl,
           type: "website",
           siteName: "SquareFundr",
           locale: "en_US",
@@ -130,14 +138,20 @@ export async function generateMetadata({
         },
         // Additional meta tags for better Facebook/Instagram support
         other: {
-          "fb:app_id": "1234567890123456", // Placeholder Facebook App ID
-          "og:url": `${process.env.NEXT_PUBLIC_SITE_URL || "https://vibrant-lalande2-fd784.view-3.tempo-dev.app"}/fundraiser/${slug}`,
+          "fb:app_id": "1234567890123456",
+          "og:url": pageUrl,
           "og:image": imageUrl,
           "og:image:secure_url": imageUrl,
           "og:image:width": "1200",
           "og:image:height": "630",
           "og:image:type": "image/jpeg",
           "og:image:alt": campaign.title,
+          "og:title": campaign.title,
+          "og:description":
+            campaign.description ||
+            "Support this fundraiser by purchasing squares!",
+          "og:type": "website",
+          "og:site_name": "SquareFundr",
         },
       };
     } catch (error) {
