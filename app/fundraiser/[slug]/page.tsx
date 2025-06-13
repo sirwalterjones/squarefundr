@@ -84,15 +84,17 @@ export async function generateMetadata({
       const { campaign } = data;
 
       // Ensure image URL is absolute - prioritize user uploaded images
-      let imageUrl = campaign.image_url;
+      let imageUrl;
 
-      // If image_url exists and is not already absolute, make it absolute
-      if (imageUrl && !imageUrl.startsWith("http")) {
-        imageUrl = `${apiBaseUrl}${imageUrl}`;
-      }
-
-      // Only use fallback if no image_url is provided at all
-      if (!imageUrl) {
+      if (campaign.image_url) {
+        // If image_url exists and is not already absolute, make it absolute
+        if (campaign.image_url.startsWith("http")) {
+          imageUrl = campaign.image_url;
+        } else {
+          imageUrl = `${apiBaseUrl}${campaign.image_url}`;
+        }
+      } else {
+        // Use fallback if no image_url is provided
         imageUrl =
           "https://images.unsplash.com/photo-1560272564-c83b66b1ad12?w=1200&h=630&fit=crop&auto=format";
       }
