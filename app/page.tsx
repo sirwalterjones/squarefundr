@@ -5,74 +5,6 @@ import GridOverlay from "@/components/GridOverlay";
 import { Campaign, Square, SelectedSquare } from "@/types";
 import { useState } from "react";
 
-// Social sharing functions
-const handleShareFacebook = () => {
-  const url = window.location.href;
-  const text = "Check out SquareFundr - Interactive Fundraising Made Simple!";
-
-  // Try to open Facebook app first (mobile)
-  const facebookAppUrl = `fb://facewebmodal/f?href=${encodeURIComponent(url)}`;
-  const facebookWebUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(text)}`;
-
-  // Check if we're on mobile
-  const isMobile =
-    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-      navigator.userAgent,
-    );
-
-  if (isMobile) {
-    // Try to open the app, fallback to web
-    const link = document.createElement("a");
-    link.href = facebookAppUrl;
-    link.click();
-
-    // Fallback to web after a short delay
-    setTimeout(() => {
-      window.open(facebookWebUrl, "_blank");
-    }, 1000);
-  } else {
-    window.open(facebookWebUrl, "_blank");
-  }
-};
-
-const handleShareInstagram = () => {
-  const url = window.location.href;
-  const text = "Check out SquareFundr - Interactive Fundraising Made Simple!";
-
-  // Instagram doesn't have a direct sharing URL, so we'll copy to clipboard and open Instagram
-  navigator.clipboard
-    .writeText(`${text} ${url}`)
-    .then(() => {
-      // Try to open Instagram app (mobile)
-      const instagramAppUrl = "instagram://camera";
-
-      const isMobile =
-        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-          navigator.userAgent,
-        );
-
-      if (isMobile) {
-        const link = document.createElement("a");
-        link.href = instagramAppUrl;
-        link.click();
-
-        // Show a message that the link was copied
-        alert(
-          "Link copied to clipboard! You can now paste it in your Instagram story or post.",
-        );
-      } else {
-        // On desktop, just show the copied message
-        alert(
-          "Link copied to clipboard! Open Instagram on your mobile device to share.",
-        );
-      }
-    })
-    .catch(() => {
-      // Fallback if clipboard API fails
-      alert("Please copy this link to share on Instagram: " + url);
-    });
-};
-
 export default function HomePage() {
   const [selectedSquares, setSelectedSquares] = useState<SelectedSquare[]>([]);
 
@@ -176,36 +108,6 @@ export default function HomePage() {
                 >
                   Try Live Demo
                 </Link>
-              </div>
-
-              {/* Social Sharing Buttons */}
-              <div className="flex justify-center gap-4">
-                <button
-                  onClick={handleShareFacebook}
-                  className="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-all duration-200 flex items-center gap-2"
-                >
-                  <svg
-                    className="w-5 h-5"
-                    fill="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
-                  </svg>
-                  Share on Facebook
-                </button>
-                <button
-                  onClick={handleShareInstagram}
-                  className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-6 py-3 rounded-lg font-semibold hover:from-purple-600 hover:to-pink-600 transition-all duration-200 flex items-center gap-2"
-                >
-                  <svg
-                    className="w-5 h-5"
-                    fill="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.204.013-3.583.07-4.849-.076-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.204.013-3.583.07-4.849-.076-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" />
-                  </svg>
-                  Share on Instagram
-                </button>
               </div>
             </div>
 
