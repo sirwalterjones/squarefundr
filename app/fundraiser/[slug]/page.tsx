@@ -47,59 +47,83 @@ export async function generateMetadata({
     }
 
     // For real campaigns, fetch from API
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_SITE_URL || "https://vibrant-lalande2-fd784.view-3.tempo-dev.app"}/api/campaigns/${slug}`,
-      {
-        cache: "no-store", // Ensure fresh data for metadata
-      },
-    );
+    const apiBaseUrl =
+      process.env.NEXT_PUBLIC_SITE_URL ||
+      "https://vibrant-lalande2-fd784.view-3.tempo-dev.app";
 
-    if (!response.ok) {
+    try {
+      const response = await fetch(`${apiBaseUrl}/api/campaigns/${slug}`, {
+        cache: "no-store", // Ensure fresh data for metadata
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        console.error(
+          `API fetch failed: ${response.status} ${response.statusText}`,
+        );
+        throw new Error(`Failed to fetch campaign: ${response.status}`);
+      }
+
+      const data = await response.json();
+      if (!data.campaign) {
+        throw new Error("No campaign data received");
+      }
+
+      const { campaign } = data;
+
+      // Ensure image URL is absolute - prioritize user uploaded images
+      let imageUrl = campaign.image_url;
+
+      // If image_url exists and is not already absolute, make it absolute
+      if (imageUrl && !imageUrl.startsWith("http")) {
+        imageUrl = `${apiBaseUrl}${imageUrl}`;
+      }
+
+      // Only use fallback if no image_url is provided at all
+      if (!imageUrl) {
+        imageUrl =
+          "https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=800&h=600&fit=crop&auto=format";
+      }
+
+      return {
+        title: `${campaign.title} - SquareFundr`,
+        description:
+          campaign.description ||
+          "Support this fundraiser by purchasing squares!",
+        openGraph: {
+          title: campaign.title,
+          description:
+            campaign.description ||
+            "Support this fundraiser by purchasing squares!",
+          images: [
+            {
+              url: imageUrl,
+              width: 800,
+              height: 600,
+              alt: campaign.title,
+            },
+          ],
+          type: "website",
+        },
+        twitter: {
+          card: "summary_large_image",
+          title: campaign.title,
+          description:
+            campaign.description ||
+            "Support this fundraiser by purchasing squares!",
+          images: [imageUrl],
+        },
+      };
+    } catch (error) {
+      console.error("Error fetching campaign for metadata:", error);
       return {
         title: "Campaign Not Found - SquareFundr",
         description:
           "The fundraiser you're looking for doesn't exist or has been removed.",
       };
     }
-
-    const { campaign } = await response.json();
-
-    // Ensure image URL is absolute
-    const imageUrl = campaign.image_url
-      ? campaign.image_url.startsWith("http")
-        ? campaign.image_url
-        : `${process.env.NEXT_PUBLIC_SITE_URL || "https://vibrant-lalande2-fd784.view-3.tempo-dev.app"}${campaign.image_url}`
-      : "/images/baseball.jpg";
-
-    return {
-      title: `${campaign.title} - SquareFundr`,
-      description:
-        campaign.description ||
-        "Support this fundraiser by purchasing squares!",
-      openGraph: {
-        title: campaign.title,
-        description:
-          campaign.description ||
-          "Support this fundraiser by purchasing squares!",
-        images: [
-          {
-            url: imageUrl,
-            width: 800,
-            height: 600,
-            alt: campaign.title,
-          },
-        ],
-        type: "website",
-      },
-      twitter: {
-        card: "summary_large_image",
-        title: campaign.title,
-        description:
-          campaign.description ||
-          "Support this fundraiser by purchasing squares!",
-        images: [imageUrl],
-      },
-    };
   } catch (error) {
     console.error("Error generating metadata:", error);
     return {
@@ -121,26 +145,46 @@ export default async function FundraiserPage({ params }: PageProps) {
     }
 
     // For real campaigns, fetch server-side
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_SITE_URL || "https://vibrant-lalande2-fd784.view-3.tempo-dev.app"}/api/campaigns/${slug}`,
-      {
+    const serverBaseUrl =
+      process.env.NEXT_PUBLIC_SITE_URL ||
+      "https://vibrant-lalande2-fd784.view-3.tempo-dev.app";
+
+    try {
+      const response = await fetch(`${serverBaseUrl}/api/campaigns/${slug}`, {
         cache: "no-store", // Ensure fresh data
-      },
-    );
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
 
-    if (!response.ok) {
-      notFound();
+      if (!response.ok) {
+        console.error(
+          `Failed to fetch campaign: ${response.status} ${response.statusText}`,
+        );
+        // Instead of notFound(), let client handle the loading
+        return <FundraiserClient slug={slug} />;
+      }
+
+      const data = await response.json();
+      if (!data.campaign) {
+        console.error("No campaign data received from API");
+        return <FundraiserClient slug={slug} />;
+      }
+
+      const { campaign, squares } = data;
+
+      return (
+        <FundraiserClient
+          slug={slug}
+          initialCampaign={campaign}
+          initialSquares={squares}
+        />
+      );
+    } catch (error) {
+      console.error("Error in server-side campaign fetch:", error);
+      // Let client handle the loading and error states
+      return <FundraiserClient slug={slug} />;
     }
-
-    const { campaign, squares } = await response.json();
-
-    return (
-      <FundraiserClient
-        slug={slug}
-        initialCampaign={campaign}
-        initialSquares={squares}
-      />
-    );
   } catch (error) {
     console.error("Error loading campaign:", error);
     notFound();

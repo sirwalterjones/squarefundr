@@ -217,7 +217,7 @@ export default function HomePage() {
                   selectedSquares={selectedSquares}
                   onSquareSelect={handleSquareSelect}
                   onSquareDeselect={handleSquareDeselect}
-                  imageUrl="/images/baseball.jpg"
+                  imageUrl="https://images.unsplash.com/photo-1566577739112-5180d4bf9390?w=800&h=600&fit=crop&auto=format"
                 />
 
                 {/* Demo Legend */}
