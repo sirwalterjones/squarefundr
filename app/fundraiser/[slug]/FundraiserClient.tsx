@@ -571,7 +571,12 @@ export default function FundraiserClient({
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                 </div>
               ) : (
-                <div className="w-full overflow-hidden">
+                <div
+                  className="w-full overflow-hidden"
+                  style={{
+                    paddingBottom: selectedSquares.length > 0 ? "140px" : "0px",
+                  }}
+                >
                   <GridOverlay
                     campaign={campaign}
                     squares={squares}
@@ -770,7 +775,7 @@ export default function FundraiserClient({
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 100, opacity: 0 }}
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t shadow-2xl p-4 sm:p-6"
+            className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t shadow-2xl p-4 sm:p-6"
           >
             <div className="container-responsive">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-4 sm:space-y-0">
