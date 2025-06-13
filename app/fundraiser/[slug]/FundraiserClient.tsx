@@ -13,25 +13,30 @@ import {
 import { supabase } from "@/lib/supabaseClient";
 
 interface FundraiserClientProps {
-  campaign: Campaign;
-  squares: Square[];
+  slug: string;
+  initialCampaign?: Campaign;
+  initialSquares?: Square[];
 }
 
 export default function FundraiserClient({
-  campaign,
-  squares: initialSquares,
+  slug,
+  initialCampaign,
+  initialSquares = [],
 }: FundraiserClientProps) {
+  const [campaign, setCampaign] = useState<Campaign | null>(
+    initialCampaign || null,
+  );
   const [squares, setSquares] = useState<Square[]>(initialSquares);
   const [selectedSquares, setSelectedSquares] = useState<SelectedSquare[]>([]);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(!initialCampaign);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showReceiptButton, setShowReceiptButton] = useState(false);
   const [lastReceiptData, setLastReceiptData] = useState<any>(null);
 
   // Check if this is a demo campaign
-  const isDemoMode = campaign.slug === "team-championship-fund";
+  const isDemoMode = slug === "team-championship-fund";
 
   // Check for success/error messages from URL params
   useEffect(() => {
@@ -89,8 +94,111 @@ export default function FundraiserClient({
     }
   }, [isDemoMode]);
 
+  // Load campaign data if not provided initially
+  useEffect(() => {
+    const loadCampaign = async () => {
+      if (initialCampaign) return; // Skip if we already have campaign data
+
+      try {
+        setIsLoading(true);
+
+        // Check if this is the demo slug
+        if (slug === "team-championship-fund") {
+          // Demo campaign data with default config
+          const demoConfig = {
+            rows: 10,
+            columns: 10,
+            pricingType: "sequential" as const,
+            fixedPrice: 10,
+            sequentialStart: 5,
+            sequentialIncrement: 2,
+            title: "Football Team Championship Fund",
+            description:
+              "Help our high school football team reach the state championship! We need funds for new equipment, travel expenses, and tournament fees. Every square you purchase brings us closer to our goal and supports our student athletes in their pursuit of excellence.",
+            imageUrl:
+              "https://images.unsplash.com/photo-1566577739112-5180d4bf9390?w=800&h=600&fit=crop",
+          };
+
+          const demoCampaign: Campaign = {
+            id: "demo-campaign-1",
+            title: demoConfig.title,
+            description: demoConfig.description,
+            image_url: demoConfig.imageUrl,
+            rows: demoConfig.rows,
+            columns: demoConfig.columns,
+            pricing_type: demoConfig.pricingType,
+            price_data: {
+              sequential: {
+                start: demoConfig.sequentialStart,
+                increment: demoConfig.sequentialIncrement,
+              },
+            },
+            user_id: "campaign-owner",
+            created_at: new Date().toISOString(),
+            slug: slug,
+            public_url: `${window.location.origin}/fundraiser/${slug}`,
+            paid_to_admin: true,
+            is_active: true,
+          };
+
+          // Generate squares with some already claimed
+          const demoSquares: Square[] = [];
+          for (let row = 0; row < demoCampaign.rows; row++) {
+            for (let col = 0; col < demoCampaign.columns; col++) {
+              const number = row * demoCampaign.columns + col + 1;
+              const value =
+                demoConfig.sequentialStart +
+                (number - 1) * demoConfig.sequentialIncrement;
+
+              // Randomly claim some squares for demo
+              const isClaimed = Math.random() < 0.15; // 15% claimed
+
+              demoSquares.push({
+                id: `square-${number}`,
+                campaign_id: demoCampaign.id,
+                row,
+                col: col,
+                number,
+                value,
+                claimed_by: isClaimed ? `donor-${number}` : undefined,
+                donor_name: isClaimed ? `Supporter ${number}` : undefined,
+                payment_status: isClaimed ? "completed" : "pending",
+                payment_type: "paypal",
+                claimed_at: isClaimed ? new Date().toISOString() : undefined,
+              });
+            }
+          }
+
+          setCampaign(demoCampaign);
+          setSquares(demoSquares);
+        } else {
+          // Load real campaign from database
+          const response = await fetch(`/api/campaigns/${slug}`);
+
+          if (!response.ok) {
+            throw new Error("Campaign not found");
+          }
+
+          const { campaign: realCampaign, squares: realSquares } =
+            await response.json();
+          setCampaign(realCampaign);
+          setSquares(realSquares);
+        }
+      } catch (error) {
+        console.error("Failed to load campaign:", error);
+        setCampaign(null);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadCampaign();
+  }, [slug, initialCampaign]);
+
   // Real-time subscription to squares updates
   useEffect(() => {
+    if (!campaign?.id || isDemoMode) return;
+
     const channel = supabase
       .channel("squares-changes")
       .on(
@@ -118,7 +226,7 @@ export default function FundraiserClient({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [campaign.id]);
+  }, [campaign?.id, isDemoMode]);
 
   const handleSquareSelect = (square: SelectedSquare) => {
     setSelectedSquares((prev) => [...prev, square]);
@@ -131,17 +239,42 @@ export default function FundraiserClient({
   };
 
   const handlePaymentSuccess = async () => {
+    if (!campaign) return;
+
     // Refresh squares data
     setIsLoading(true);
     try {
-      const { data: updatedSquares } = await supabase
-        .from("squares")
-        .select("*")
-        .eq("campaign_id", campaign.id)
-        .order("number");
+      if (isDemoMode) {
+        // For demo mode, update locally
+        const claimedSquareIds = selectedSquares.map(
+          (s) => `${s.row}-${s.col}`,
+        );
+        setSquares((prev) =>
+          prev.map((square) => {
+            const squareId = `${square.row}-${square.col}`;
+            if (claimedSquareIds.includes(squareId)) {
+              return {
+                ...square,
+                claimed_by: "new-donor",
+                donor_name: "Anonymous Supporter",
+                payment_status: "completed" as const,
+                claimed_at: new Date().toISOString(),
+              };
+            }
+            return square;
+          }),
+        );
+      } else {
+        // For real campaigns, fetch from database
+        const { data: updatedSquares } = await supabase
+          .from("squares")
+          .select("*")
+          .eq("campaign_id", campaign.id)
+          .order("number");
 
-      if (updatedSquares) {
-        setSquares(updatedSquares);
+        if (updatedSquares) {
+          setSquares(updatedSquares);
+        }
       }
 
       setSelectedSquares([]);
@@ -195,17 +328,9 @@ export default function FundraiserClient({
     tempSquares: squares.filter((s) => s.claimed_by?.startsWith("temp_"))
       .length,
   });
-  const totalSquares = campaign.rows * campaign.columns; // Use campaign configuration, not squares array length
-  const progressPercentage = (claimedSquares / totalSquares) * 100;
-
-  // Debug logging
-  console.log("FundraiserClient Debug:", {
-    campaignRows: campaign.rows,
-    campaignColumns: campaign.columns,
-    totalSquares,
-    squaresLength: squares.length,
-    claimedSquares,
-  });
+  const totalSquares = campaign ? campaign.rows * campaign.columns : 0; // Use campaign configuration, not squares array length
+  const progressPercentage =
+    totalSquares > 0 ? (claimedSquares / totalSquares) * 100 : 0;
 
   const totalRaised = squares
     .filter((s) => s.payment_status === "completed")
@@ -222,6 +347,34 @@ export default function FundraiserClient({
       setTimeout(() => setErrorMessage(null), 3000);
     }
   };
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading campaign...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Campaign not found state
+  if (!campaign) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">
+            Campaign Not Found
+          </h1>
+          <p className="text-gray-600">
+            The fundraiser you're looking for doesn't exist or has been removed.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   const handleShareFacebook = () => {
     const shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}&quote=${encodeURIComponent(`${campaign.title} - ${campaign.description || "Help us reach our goal!"}`)}`;
