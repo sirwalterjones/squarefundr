@@ -83,21 +83,10 @@ export async function generateMetadata({
 
       const { campaign } = data;
 
-      // Ensure image URL is absolute - prioritize user uploaded images
-      let imageUrl;
-
-      if (campaign.image_url) {
-        // If image_url exists and is not already absolute, make it absolute
-        if (campaign.image_url.startsWith("http")) {
-          imageUrl = campaign.image_url;
-        } else {
-          imageUrl = `${apiBaseUrl}${campaign.image_url}`;
-        }
-      } else {
-        // Use fallback if no image_url is provided
-        imageUrl =
-          "https://images.unsplash.com/photo-1560272564-c83b66b1ad12?w=1200&h=630&fit=crop&auto=format";
-      }
+      // Use the campaign's image_url directly since it should already be a full URL
+      const imageUrl =
+        campaign.image_url ||
+        "https://images.unsplash.com/photo-1560272564-c83b66b1ad12?w=1200&h=630&fit=crop&auto=format";
 
       return {
         title: `${campaign.title} - SquareFundr`,
@@ -117,7 +106,7 @@ export async function generateMetadata({
               alt: campaign.title,
             },
           ],
-          url: `${apiBaseUrl}/fundraiser/${slug}`,
+          url: `https://vibrant-lalande2-fd784.view-3.tempo-dev.app/fundraiser/${slug}`,
           type: "website",
           siteName: "SquareFundr",
           locale: "en_US",
