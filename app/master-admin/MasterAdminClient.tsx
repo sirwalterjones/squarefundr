@@ -12,6 +12,10 @@ interface AdminUser {
   email: string;
   created_at: string;
   last_sign_in_at?: string;
+  raw_user_meta_data?: {
+    full_name?: string;
+    name?: string;
+  };
 }
 
 interface MasterAdminClientProps {
@@ -36,6 +40,9 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
     "campaign" | "user" | "donation" | null
   >(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [campaignOwners, setCampaignOwners] = useState<{
+    [key: string]: string;
+  }>({});
 
   const loadCampaigns = async () => {
     setLoading(true);
@@ -45,6 +52,36 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
       if (response.ok) {
         const data = await response.json();
         setCampaigns(data.campaigns || []);
+
+        // Load owner names for campaigns
+        const ownerIds = [
+          ...new Set(data.campaigns?.map((c: Campaign) => c.user_id) || []),
+        ];
+        const ownerNames: { [key: string]: string } = {};
+
+        for (const ownerId of ownerIds) {
+          try {
+            const userResponse = await fetch(
+              `/api/master-admin/users?userId=${ownerId}`,
+            );
+            if (userResponse.ok) {
+              const userData = await userResponse.json();
+              const user = userData.users?.[0];
+              if (user) {
+                ownerNames[ownerId] =
+                  user.raw_user_meta_data?.full_name ||
+                  user.raw_user_meta_data?.name ||
+                  user.email ||
+                  ownerId;
+              }
+            }
+          } catch (err) {
+            console.error(`Failed to load user ${ownerId}:`, err);
+            ownerNames[ownerId] = ownerId;
+          }
+        }
+
+        setCampaignOwners(ownerNames);
       } else {
         setError("Failed to load campaigns");
       }
@@ -401,7 +438,7 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {campaign.user_id}
+                          {campaignOwners[campaign.user_id] || campaign.user_id}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span
@@ -482,8 +519,18 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
                         className="hover:bg-gray-50"
                       >
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">
-                            {user.email}
+                          <div>
+                            <div className="text-sm font-medium text-gray-900">
+                              {user.raw_user_meta_data?.full_name ||
+                                user.raw_user_meta_data?.name ||
+                                user.email}
+                            </div>
+                            {(user.raw_user_meta_data?.full_name ||
+                              user.raw_user_meta_data?.name) && (
+                              <div className="text-sm text-gray-500">
+                                {user.email}
+                              </div>
+                            )}
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">

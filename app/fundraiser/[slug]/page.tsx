@@ -35,7 +35,7 @@ export async function generateMetadata({
           type: "website",
           siteName: "SquareFundr",
           locale: "en_US",
-          url: `${process.env.NEXT_PUBLIC_SITE_URL || "https://vibrant-lalande2-fd784.view-3.tempo-dev.app"}/fundraiser/team-championship-fund`,
+          url: `${process.env.NEXT_PUBLIC_SITE_URL || "https://www.squarefundr.com"}/fundraiser/team-championship-fund`,
         },
         twitter: {
           card: "summary_large_image",
@@ -49,7 +49,7 @@ export async function generateMetadata({
         // Additional meta tags for better Facebook/Instagram support
         other: {
           "fb:app_id": "1234567890123456",
-          "og:url": `${process.env.NEXT_PUBLIC_SITE_URL || "https://vibrant-lalande2-fd784.view-3.tempo-dev.app"}/fundraiser/team-championship-fund`,
+          "og:url": `${process.env.NEXT_PUBLIC_SITE_URL || "https://www.squarefundr.com"}/fundraiser/team-championship-fund`,
           "og:image":
             "https://images.unsplash.com/photo-1560272564-c83b66b1ad12?w=1200&h=630&fit=crop&auto=format",
           "og:image:secure_url":
@@ -69,8 +69,7 @@ export async function generateMetadata({
 
     // For real campaigns, fetch from API
     const baseUrl =
-      process.env.NEXT_PUBLIC_SITE_URL ||
-      "https://vibrant-lalande2-fd784.view-3.tempo-dev.app";
+      process.env.NEXT_PUBLIC_SITE_URL || "https://www.squarefundr.com";
 
     try {
       const response = await fetch(`${baseUrl}/api/campaigns/${slug}`, {
@@ -183,8 +182,7 @@ export default async function FundraiserPage({ params }: PageProps) {
 
     // For real campaigns, fetch server-side
     const serverBaseUrl =
-      process.env.NEXT_PUBLIC_SITE_URL ||
-      "https://vibrant-lalande2-fd784.view-3.tempo-dev.app";
+      process.env.NEXT_PUBLIC_SITE_URL || "https://www.squarefundr.com";
 
     try {
       const response = await fetch(`${serverBaseUrl}/api/campaigns/${slug}`, {

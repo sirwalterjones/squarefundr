@@ -48,6 +48,27 @@ export default function Navbar() {
     return () => subscription.unsubscribe();
   }, []);
 
+  // Force re-check admin status when user visits admin page
+  useEffect(() => {
+    const handleRouteChange = async () => {
+      if (user && window.location.pathname === "/master-admin") {
+        const adminStatus = await isCurrentUserAdmin();
+        setIsAdmin(adminStatus);
+      }
+    };
+
+    // Check on mount and when pathname changes
+    handleRouteChange();
+
+    // Listen for navigation events
+    const handlePopState = () => handleRouteChange();
+    window.addEventListener("popstate", handlePopState);
+
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, [user]);
+
   const handleSignOut = async () => {
     if (!supabase) return;
     await supabase.auth.signOut();

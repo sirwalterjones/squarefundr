@@ -41,6 +41,34 @@ export async function GET(request: NextRequest) {
       },
     });
 
+    // Check if specific user ID is requested
+    const { searchParams } = new URL(request.url);
+    const userId = searchParams.get("userId");
+
+    if (userId) {
+      // Get specific user
+      const { data: userData, error: userError } =
+        await adminSupabase.auth.admin.getUserById(userId);
+
+      if (userError) {
+        console.error("Error fetching user:", userError);
+        return NextResponse.json(
+          { error: "Failed to fetch user" },
+          { status: 500 },
+        );
+      }
+
+      const formattedUser = {
+        id: userData.user.id,
+        email: userData.user.email || "No email",
+        created_at: userData.user.created_at,
+        last_sign_in_at: userData.user.last_sign_in_at,
+        raw_user_meta_data: userData.user.raw_user_meta_data || {},
+      };
+
+      return NextResponse.json({ users: [formattedUser] });
+    }
+
     // Get all users from auth.users
     const { data: users, error: usersError } =
       await adminSupabase.auth.admin.listUsers();
@@ -59,6 +87,7 @@ export async function GET(request: NextRequest) {
       email: user.email || "No email",
       created_at: user.created_at,
       last_sign_in_at: user.last_sign_in_at,
+      raw_user_meta_data: user.raw_user_meta_data || {},
     }));
 
     return NextResponse.json({ users: formattedUsers });
