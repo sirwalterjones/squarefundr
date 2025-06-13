@@ -47,10 +47,10 @@ export default function RootLayout({
       <head>
         <link rel="icon" href="/images/siteicon.png" type="image/png" />
       </head>
-      <Script src="https://api.tempo.new/proxy-asset?url=https://storage.googleapis.com/tempo-public-assets/error-handling.js" />
       <body
         className={`${roboto.variable} antialiased min-h-screen bg-gray-50 font-sans`}
       >
+        <Script src="https://api.tempo.new/proxy-asset?url=https://storage.googleapis.com/tempo-public-assets/error-handling.js" />
         <ClientLayout>{children}</ClientLayout>
       </body>
     </html>
