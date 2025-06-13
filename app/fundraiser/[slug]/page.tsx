@@ -83,10 +83,13 @@ export async function generateMetadata({
 
       const { campaign } = data;
 
-      // Use the campaign's image_url directly since it should already be a full URL
+      // Use the campaign's image_url directly - it should be a full URL from Supabase storage
       const imageUrl =
         campaign.image_url ||
         "https://images.unsplash.com/photo-1560272564-c83b66b1ad12?w=1200&h=630&fit=crop&auto=format";
+
+      console.log("Campaign image URL for metadata:", imageUrl);
+      console.log("Full campaign data:", campaign);
 
       return {
         title: `${campaign.title} - SquareFundr`,
@@ -122,17 +125,19 @@ export async function generateMetadata({
         // Additional meta tags for better Facebook/Instagram support
         other: {
           "fb:app_id": "", // Add your Facebook App ID if you have one
+          "og:image": imageUrl,
+          "og:image:secure_url": imageUrl,
           "og:image:width": "1200",
           "og:image:height": "630",
           "og:image:type": "image/jpeg",
+          "og:image:alt": campaign.title,
         },
       };
     } catch (error) {
       console.error("Error fetching campaign for metadata:", error);
       return {
-        title: "Campaign Not Found - SquareFundr",
-        description:
-          "The fundraiser you're looking for doesn't exist or has been removed.",
+        title: "Fundraiser - SquareFundr",
+        description: "Support this fundraiser by purchasing squares!",
       };
     }
   } catch (error) {
