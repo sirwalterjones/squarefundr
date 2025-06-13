@@ -300,11 +300,13 @@ export default function FundraiserClient({
     }
   };
 
-  const totalSelected = calculateTotalPrice(
-    selectedSquares,
-    campaign.pricing_type,
-    campaign.price_data,
-  );
+  const totalSelected = campaign
+    ? calculateTotalPrice(
+        selectedSquares,
+        campaign.pricing_type,
+        campaign.price_data,
+      )
+    : 0;
   // Count squares that are actually claimed (not temp reservations)
   const claimedSquares = squares.filter(
     (s) =>
@@ -328,7 +330,7 @@ export default function FundraiserClient({
     tempSquares: squares.filter((s) => s.claimed_by?.startsWith("temp_"))
       .length,
   });
-  const totalSquares = campaign ? campaign.rows * campaign.columns : 0; // Use campaign configuration, not squares array length
+  const totalSquares = campaign ? campaign.rows * campaign.columns : 0;
   const progressPercentage =
     totalSquares > 0 ? (claimedSquares / totalSquares) * 100 : 0;
 

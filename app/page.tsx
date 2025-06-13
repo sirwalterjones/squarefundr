@@ -217,7 +217,7 @@ export default function HomePage() {
                   selectedSquares={selectedSquares}
                   onSquareSelect={handleSquareSelect}
                   onSquareDeselect={handleSquareDeselect}
-                  imageUrl={mockCampaign.image_url || "/images/baseball.jpg"}
+                  imageUrl="/images/baseball.jpg"
                 />
 
                 {/* Demo Legend */}
