@@ -56,7 +56,7 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
         // Load owner names for campaigns
         const ownerIds = [
           ...new Set(data.campaigns?.map((c: Campaign) => c.user_id) || []),
-        ];
+        ] as string[];
         const ownerNames: { [key: string]: string } = {};
 
         for (const ownerId of ownerIds) {
