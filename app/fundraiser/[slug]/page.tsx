@@ -35,7 +35,7 @@ export async function generateMetadata({
           type: "website",
           siteName: "SquareFundr",
           locale: "en_US",
-          url: "https://vibrant-lalande2-fd784.view-3.tempo-dev.app/fundraiser/team-championship-fund",
+          url: `${process.env.NEXT_PUBLIC_SITE_URL || "https://vibrant-lalande2-fd784.view-3.tempo-dev.app"}/fundraiser/team-championship-fund`,
         },
         twitter: {
           card: "summary_large_image",
@@ -48,12 +48,16 @@ export async function generateMetadata({
         },
         // Additional meta tags for better Facebook/Instagram support
         other: {
-          "fb:app_id": "your-facebook-app-id", // Replace with your actual Facebook App ID
-          "og:url":
-            "https://vibrant-lalande2-fd784.view-3.tempo-dev.app/fundraiser/team-championship-fund",
+          "fb:app_id": "1234567890123456", // Placeholder Facebook App ID
+          "og:url": `${process.env.NEXT_PUBLIC_SITE_URL || "https://vibrant-lalande2-fd784.view-3.tempo-dev.app"}/fundraiser/team-championship-fund`,
+          "og:image":
+            "https://images.unsplash.com/photo-1560272564-c83b66b1ad12?w=1200&h=630&fit=crop&auto=format",
+          "og:image:secure_url":
+            "https://images.unsplash.com/photo-1560272564-c83b66b1ad12?w=1200&h=630&fit=crop&auto=format",
           "og:image:width": "1200",
           "og:image:height": "630",
           "og:image:type": "image/jpeg",
+          "og:image:alt": "Soccer Team Championship Fund",
         },
       };
     }
@@ -111,7 +115,7 @@ export async function generateMetadata({
               alt: campaign.title,
             },
           ],
-          url: `https://vibrant-lalande2-fd784.view-3.tempo-dev.app/fundraiser/${slug}`,
+          url: `${process.env.NEXT_PUBLIC_SITE_URL || "https://vibrant-lalande2-fd784.view-3.tempo-dev.app"}/fundraiser/${slug}`,
           type: "website",
           siteName: "SquareFundr",
           locale: "en_US",
@@ -126,8 +130,8 @@ export async function generateMetadata({
         },
         // Additional meta tags for better Facebook/Instagram support
         other: {
-          "fb:app_id": "your-facebook-app-id", // Replace with your actual Facebook App ID
-          "og:url": `https://vibrant-lalande2-fd784.view-3.tempo-dev.app/fundraiser/${slug}`,
+          "fb:app_id": "1234567890123456", // Placeholder Facebook App ID
+          "og:url": `${process.env.NEXT_PUBLIC_SITE_URL || "https://vibrant-lalande2-fd784.view-3.tempo-dev.app"}/fundraiser/${slug}`,
           "og:image": imageUrl,
           "og:image:secure_url": imageUrl,
           "og:image:width": "1200",
