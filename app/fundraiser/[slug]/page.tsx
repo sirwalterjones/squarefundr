@@ -4,14 +4,14 @@ import FundraiserClient from "./FundraiserClient";
 import { Campaign, Square } from "@/types";
 
 interface PageProps {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }
 
 // Generate metadata for social sharing
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
-  const { slug } = params;
+  const { slug } = await params;
 
   try {
     // Check if this is the demo campaign
@@ -111,7 +111,7 @@ export async function generateMetadata({
 
 // Server component that fetches data and passes to client component
 export default async function FundraiserPage({ params }: PageProps) {
-  const { slug } = params;
+  const { slug } = await params;
 
   try {
     // Check if this is the demo campaign
