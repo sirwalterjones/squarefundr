@@ -26,13 +26,16 @@ export async function generateMetadata({
             "Help our high school soccer team reach the state championship! We need funds for new equipment, travel expenses, and tournament fees. Every square you purchase brings us closer to our goal and supports our student athletes in their pursuit of excellence.",
           images: [
             {
-              url: "https://images.unsplash.com/photo-1560272564-c83b66b1ad12?w=800&h=600&fit=crop",
-              width: 800,
-              height: 600,
+              url: "https://images.unsplash.com/photo-1560272564-c83b66b1ad12?w=1200&h=630&fit=crop&auto=format",
+              width: 1200,
+              height: 630,
               alt: "Soccer Team Championship Fund",
             },
           ],
           type: "website",
+          siteName: "SquareFundr",
+          locale: "en_US",
+          url: "https://vibrant-lalande2-fd784.view-3.tempo-dev.app/fundraiser/team-championship-fund",
         },
         twitter: {
           card: "summary_large_image",
@@ -40,8 +43,15 @@ export async function generateMetadata({
           description:
             "Help our high school soccer team reach the state championship! Every square you purchase brings us closer to our goal.",
           images: [
-            "https://images.unsplash.com/photo-1560272564-c83b66b1ad12?w=800&h=600&fit=crop",
+            "https://images.unsplash.com/photo-1560272564-c83b66b1ad12?w=1200&h=630&fit=crop&auto=format",
           ],
+        },
+        // Additional meta tags for better Facebook/Instagram support
+        other: {
+          "fb:app_id": "", // Add your Facebook App ID if you have one
+          "og:image:width": "1200",
+          "og:image:height": "630",
+          "og:image:type": "image/jpeg",
         },
       };
     }
@@ -107,6 +117,8 @@ export async function generateMetadata({
           ],
           url: `${apiBaseUrl}/fundraiser/${slug}`,
           type: "website",
+          siteName: "SquareFundr",
+          locale: "en_US",
         },
         twitter: {
           card: "summary_large_image",
@@ -115,6 +127,13 @@ export async function generateMetadata({
             campaign.description ||
             "Support this fundraiser by purchasing squares!",
           images: [imageUrl],
+        },
+        // Additional meta tags for better Facebook/Instagram support
+        other: {
+          "fb:app_id": "", // Add your Facebook App ID if you have one
+          "og:image:width": "1200",
+          "og:image:height": "630",
+          "og:image:type": "image/jpeg",
         },
       };
     } catch (error) {

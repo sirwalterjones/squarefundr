@@ -71,7 +71,11 @@ export default function Navbar() {
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
             <a
-              href="https://www.squarefundr.com/auth"
+              href={
+                user
+                  ? "https://www.squarefundr.com/create"
+                  : "https://www.squarefundr.com/auth"
+              }
               className="text-gray-600 hover:text-blue-600 transition-colors font-medium"
             >
               Create Campaign
@@ -142,7 +146,11 @@ export default function Navbar() {
           <div className="md:hidden py-4 border-t border-gray-100">
             <div className="flex flex-col space-y-4">
               <a
-                href="https://www.squarefundr.com/auth"
+                href={
+                  user
+                    ? "https://www.squarefundr.com/create"
+                    : "https://www.squarefundr.com/auth"
+                }
                 className="text-gray-600 hover:text-blue-600 transition-colors py-2 font-medium"
                 onClick={() => setIsMenuOpen(false)}
               >

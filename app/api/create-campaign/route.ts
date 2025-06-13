@@ -1,52 +1,93 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '@/lib/supabaseServer';
-import { isDemoMode } from '@/lib/supabaseClient';
-import { v4 as uuidv4 } from 'uuid';
+import { NextRequest, NextResponse } from "next/server";
+import { createServerSupabaseClient } from "@/lib/supabaseServer";
+import { isDemoMode } from "@/lib/supabaseClient";
+import { v4 as uuidv4 } from "uuid";
 
 function generateSlug(title: string): string {
   return title
     .toLowerCase()
-    .replace(/[^a-z0-9 -]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
+    .replace(/[^a-z0-9 -]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
     .trim();
 }
 
-function calculateSquarePrice(position: number, pricingType: string, priceData: any): number {
-  switch (pricingType) {
-    case 'fixed':
-      return priceData.fixed || 10;
-    case 'sequential':
-      return (priceData.start || 1) + (position - 1) * (priceData.increment || 1);
-    case 'manual':
-      return priceData.prices?.[position - 1] || 10;
-    default:
-      return 10;
+function calculateSquarePrice(
+  position: number,
+  pricingType: string,
+  priceData: any,
+): number {
+  try {
+    switch (pricingType) {
+      case "fixed":
+        return priceData.fixed || 10;
+      case "sequential":
+        const start = priceData.sequential?.start || priceData.start || 1;
+        const increment =
+          priceData.sequential?.increment || priceData.increment || 1;
+        return start + (position - 1) * increment;
+      case "manual":
+        const key = `${Math.floor((position - 1) / 10)},${(position - 1) % 10}`;
+        return (
+          priceData.manual?.[key] || priceData.prices?.[position - 1] || 10
+        );
+      default:
+        return 10;
+    }
+  } catch (error) {
+    console.error("Error calculating square price:", error);
+    return 10;
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const { title, description, imageUrl, rows, columns, pricingType, priceData } = await request.json();
+    console.log("=== CAMPAIGN CREATION START ===");
 
-    console.log('Campaign creation request:', {
+    const body = await request.json();
+    const {
+      title,
+      description,
+      imageUrl,
+      rows,
+      columns,
+      pricingType,
+      priceData,
+    } = body;
+
+    console.log("Campaign creation request:", {
       title,
       rows,
       columns,
       pricingType,
-      isDemoMode: isDemoMode()
+      priceData,
+      isDemoMode: isDemoMode(),
     });
 
     if (!title || !rows || !columns || !pricingType) {
+      console.error("Missing required fields:", {
+        title: !!title,
+        rows: !!rows,
+        columns: !!columns,
+        pricingType: !!pricingType,
+      });
       return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
+        { error: "Missing required fields" },
+        { status: 400 },
+      );
+    }
+
+    if (rows < 2 || rows > 50 || columns < 2 || columns > 50) {
+      console.error("Invalid grid dimensions:", { rows, columns });
+      return NextResponse.json(
+        { error: "Grid dimensions must be between 2 and 50" },
+        { status: 400 },
       );
     }
 
     // Check if in demo mode
     if (isDemoMode()) {
-      console.log('Using demo mode for campaign creation');
+      console.log("Using demo mode for campaign creation");
       const slug = generateSlug(title);
       const mockCampaign = {
         id: uuidv4(),
@@ -63,28 +104,45 @@ export async function POST(request: NextRequest) {
         publicUrl: `/fundraiser/${slug}`,
         paidToAdmin: false,
         isActive: true,
-        userId: 'demo-user'
+        userId: "demo-user",
       };
 
       return NextResponse.json({
         success: true,
         campaign: mockCampaign,
-        message: 'Campaign created successfully (demo mode)'
+        message: "Campaign created successfully (demo mode)",
       });
     }
 
     // Get authenticated user using regular supabase client
+    console.log("Creating Supabase client...");
     const supabase = await createServerSupabaseClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
 
-    if (authError || !user) {
+    console.log("Getting authenticated user...");
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError) {
+      console.error("Authentication error:", authError);
       return NextResponse.json(
-        { error: 'Authentication required. Please log in to create a campaign.' },
-        { status: 401 }
+        { error: "Authentication error. Please log in again." },
+        { status: 401 },
       );
     }
 
-    console.log('Authenticated user:', user.id);
+    if (!user) {
+      console.error("No authenticated user found");
+      return NextResponse.json(
+        {
+          error: "Authentication required. Please log in to create a campaign.",
+        },
+        { status: 401 },
+      );
+    }
+
+    console.log("Authenticated user:", user.id);
 
     const slug = generateSlug(title);
 
@@ -100,34 +158,36 @@ export async function POST(request: NextRequest) {
       pricing_type: pricingType,
       price_data: priceData,
       is_active: true,
-      total_squares: rows * columns
+      total_squares: rows * columns,
     };
 
-    console.log('Campaign data prepared:', campaignData);
+    console.log("Campaign data prepared:", campaignData);
 
     // Insert campaign using regular user permissions
+    console.log("Inserting campaign into database...");
     const { data: campaign, error: campaignError } = await supabase
-      .from('campaigns')
+      .from("campaigns")
       .insert(campaignData)
       .select()
       .single();
 
     if (campaignError) {
-      console.error('Campaign creation error:', campaignError);
+      console.error("Campaign creation error:", campaignError);
+      console.error("Campaign data that failed:", campaignData);
       return NextResponse.json(
         { error: `Failed to create campaign: ${campaignError.message}` },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
     if (!campaign) {
       return NextResponse.json(
-        { error: 'Campaign was created but no data was returned' },
-        { status: 500 }
+        { error: "Campaign was created but no data was returned" },
+        { status: 500 },
       );
     }
 
-    console.log('Campaign created successfully:', campaign.id);
+    console.log("Campaign created successfully:", campaign.id);
 
     // Create squares for the campaign
     const squares: Array<{
@@ -141,8 +201,8 @@ export async function POST(request: NextRequest) {
       value: number;
       claimed_by: null;
       donor_name: null;
-      payment_status: 'pending';
-      payment_type: 'stripe';
+      payment_status: "pending";
+      payment_type: "stripe";
       claimed_at: null;
     }> = [];
 
@@ -150,7 +210,7 @@ export async function POST(request: NextRequest) {
       for (let col = 0; col < columns; col++) {
         const position = row * columns + col + 1;
         const price = calculateSquarePrice(position, pricingType, priceData);
-        
+
         squares.push({
           campaign_id: campaign.id,
           row: row,
@@ -159,17 +219,19 @@ export async function POST(request: NextRequest) {
           col_num: col,
           number: position,
           position: position,
-          value: price,
+          value: Math.max(0.01, price), // Ensure minimum price
           claimed_by: null,
           donor_name: null,
-          payment_status: 'pending',
-          payment_type: 'stripe',
-          claimed_at: null
+          payment_status: "pending",
+          payment_type: "stripe",
+          claimed_at: null,
         });
       }
     }
 
-    console.log(`Created ${squares.length} squares, now inserting into database`);
+    console.log(
+      `Created ${squares.length} squares, now inserting into database`,
+    );
 
     // Insert squares using regular user permissions
     const BATCH_SIZE = 100;
@@ -178,25 +240,28 @@ export async function POST(request: NextRequest) {
     try {
       for (let i = 0; i < squares.length; i += BATCH_SIZE) {
         const batch = squares.slice(i, i + BATCH_SIZE);
-        console.log(`Inserting batch of ${batch.length} squares (${i+1} to ${Math.min(i + BATCH_SIZE, squares.length)})`);
+        console.log(
+          `Inserting batch of ${batch.length} squares (${i + 1} to ${Math.min(i + BATCH_SIZE, squares.length)})`,
+        );
 
-        const { error } = await supabase
-          .from('squares')
-          .insert(batch);
+        const { error } = await supabase.from("squares").insert(batch);
 
         if (error) {
-          console.error(`Error inserting squares batch ${i/BATCH_SIZE + 1}:`, error);
+          console.error(
+            `Error inserting squares batch ${i / BATCH_SIZE + 1}:`,
+            error,
+          );
           squaresInsertionError = error;
           break;
         }
       }
     } catch (error) {
-      console.error('Unexpected error during squares insertion:', error);
+      console.error("Unexpected error during squares insertion:", error);
       squaresInsertionError = error;
     }
 
     if (squaresInsertionError) {
-      console.error('Squares creation error:', squaresInsertionError);
+      console.error("Squares creation error:", squaresInsertionError);
       // Return success but with warning about squares
       return NextResponse.json({
         success: true,
@@ -215,10 +280,11 @@ export async function POST(request: NextRequest) {
           publicUrl: `/fundraiser/${campaign.slug}`,
           paidToAdmin: false,
           isActive: campaign.is_active,
-          userId: campaign.user_id
+          userId: campaign.user_id,
         },
-        warning: 'Campaign created but squares could not be generated. You may need to refresh the page.',
-        message: 'Campaign created successfully'
+        warning:
+          "Campaign created but squares could not be generated. You may need to refresh the page.",
+        message: "Campaign created successfully",
       });
     }
 
@@ -242,16 +308,20 @@ export async function POST(request: NextRequest) {
         publicUrl: `/fundraiser/${campaign.slug}`,
         paidToAdmin: false,
         isActive: campaign.is_active,
-        userId: campaign.user_id
+        userId: campaign.user_id,
       },
-      message: 'Campaign created successfully'
+      message: "Campaign created successfully",
     });
-
   } catch (error) {
-    console.error('API error:', error);
+    console.error("=== CAMPAIGN CREATION ERROR ===");
+    console.error("API error:", error);
+    console.error(
+      "Error stack:",
+      error instanceof Error ? error.stack : "No stack trace",
+    );
     return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
+      { error: "Internal server error. Please try again." },
+      { status: 500 },
     );
   }
-} 
+}

@@ -146,31 +146,42 @@ export default function CreateCampaignPage() {
   };
 
   const generatePriceData = (formData: CampaignFormData): PriceData => {
-    switch (formData.pricing_type) {
-      case "fixed":
-        return { fixed: formData.fixed_price };
-      case "sequential":
-        return {
-          sequential: {
-            start: formData.sequential_start || 1,
-            increment: formData.sequential_increment || 1,
-          },
-        };
-      case "manual":
-        // For now, initialize with fixed pricing that user can edit later
-        const manualPrices: { [key: string]: number } = {};
-        for (let row = 0; row < formData.rows; row++) {
-          for (let col = 0; col < formData.columns; col++) {
-            manualPrices[`${row},${col}`] = 5;
+    try {
+      switch (formData.pricing_type) {
+        case "fixed":
+          const fixedPrice = formData.fixed_price || 5;
+          return { fixed: Math.max(0.01, fixedPrice) };
+        case "sequential":
+          const start = formData.sequential_start || 1;
+          const increment = formData.sequential_increment || 1;
+          return {
+            sequential: {
+              start: Math.max(0.01, start),
+              increment: Math.max(0, increment),
+            },
+          };
+        case "manual":
+          // For now, initialize with fixed pricing that user can edit later
+          const manualPrices: { [key: string]: number } = {};
+          for (let row = 0; row < formData.rows; row++) {
+            for (let col = 0; col < formData.columns; col++) {
+              manualPrices[`${row},${col}`] = 5;
+            }
           }
-        }
-        return { manual: manualPrices };
-      default:
-        return { fixed: 5 };
+          return { manual: manualPrices };
+        default:
+          return { fixed: 5 };
+      }
+    } catch (error) {
+      console.error("Error generating price data:", error);
+      return { fixed: 5 };
     }
   };
 
   const onSubmit = async (data: CampaignFormData) => {
+    console.log("=== FORM SUBMISSION START ===");
+    console.log("Form data:", data);
+
     // Clear any previous errors
     setErrorMessage("");
 
@@ -185,32 +196,59 @@ export default function CreateCampaignPage() {
     }
 
     setIsSubmitting(true);
+
+    // Add timeout to prevent infinite loading
+    const timeoutId = setTimeout(() => {
+      console.error("Request timeout after 30 seconds");
+      setErrorMessage("Request timed out. Please try again.");
+      setIsSubmitting(false);
+    }, 30000);
+
     try {
       const priceData = generatePriceData(data);
+      console.log("Generated price data:", priceData);
+
+      const requestBody = {
+        title: data.title,
+        description: data.description || null,
+        imageUrl: imageUrl,
+        rows: data.rows,
+        columns: data.columns,
+        pricingType: data.pricing_type,
+        priceData: priceData,
+      };
+
+      console.log("Request body:", requestBody);
 
       // Create campaign via API
+      console.log("Making API request...");
       const response = await fetch("/api/create-campaign", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          title: data.title,
-          description: data.description || null,
-          imageUrl: imageUrl,
-          rows: data.rows,
-          columns: data.columns,
-          pricingType: data.pricing_type,
-          priceData: priceData,
-        }),
+        body: JSON.stringify(requestBody),
       });
 
+      console.log("API response status:", response.status);
+
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorText = await response.text();
+        console.error("API error response:", errorText);
+        let errorData;
+        try {
+          errorData = JSON.parse(errorText);
+        } catch {
+          errorData = { error: errorText || "Unknown server error" };
+        }
         throw new Error(errorData.error || "Failed to create campaign");
       }
 
       const result = await response.json();
+      console.log("API success response:", result);
+
+      // Clear timeout since request succeeded
+      clearTimeout(timeoutId);
 
       // Show success state
       setSuccessData(result);
@@ -218,7 +256,9 @@ export default function CreateCampaignPage() {
       // Show PayPal setup option
       setShowPayPalSetup(true);
     } catch (error) {
+      console.error("=== CAMPAIGN CREATION ERROR ===");
       console.error("Campaign creation error:", error);
+      clearTimeout(timeoutId);
       setErrorMessage(
         `Failed to create campaign: ${error instanceof Error ? error.message : "Unknown error"}`,
       );
