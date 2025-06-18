@@ -3,6 +3,9 @@ import { createServerSupabaseClient } from '@/lib/supabaseServer';
 import { isDemoMode } from '@/lib/supabaseClient';
 import { v4 as uuidv4 } from 'uuid';
 
+// Add timeout configuration
+export const maxDuration = 30; // 30 seconds timeout
+
 function generateSlug(title: string): string {
   return title
     .toLowerCase()
@@ -25,6 +28,128 @@ function calculateSquarePrice(position: number, pricingType: string, priceData: 
   }
 }
 
+// Optimized function to create squares in bulk
+async function createSquaresBulk(supabase: any, campaignId: string, rows: number, columns: number, pricingType: string, priceData: any): Promise<{ success: boolean; error?: any }> {
+  const totalSquares = rows * columns;
+  
+  // If it's a small grid, use the existing method
+  if (totalSquares <= 100) {
+    return await createSquaresLegacy(supabase, campaignId, rows, columns, pricingType, priceData);
+  }
+
+  // For large grids, use SQL bulk insert
+  const values: string[] = [];
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < columns; col++) {
+      const position = row * columns + col + 1;
+      const price = calculateSquarePrice(position, pricingType, priceData);
+      
+      values.push(`(
+        '${campaignId}',
+        ${row},
+        ${col},
+        ${row},
+        ${col},
+        ${position},
+        ${position},
+        ${price},
+        NULL,
+        NULL,
+        'pending',
+        'stripe',
+        NULL
+      )`);
+    }
+  }
+
+  // Insert all squares at once using raw SQL
+  const sql = `
+    INSERT INTO squares (
+      campaign_id, row, col, row_num, col_num, number, position, 
+      value, claimed_by, donor_name, payment_status, payment_type, claimed_at
+    ) VALUES ${values.join(', ')}
+  `;
+
+  try {
+    const { error } = await supabase.rpc('exec_sql', { sql_query: sql });
+    if (error) throw error;
+    return { success: true };
+  } catch (error) {
+    console.error('Bulk insert failed, falling back to batch method:', error);
+    return await createSquaresLegacy(supabase, campaignId, rows, columns, pricingType, priceData);
+  }
+}
+
+// Legacy method for smaller grids or fallback
+async function createSquaresLegacy(supabase: any, campaignId: string, rows: number, columns: number, pricingType: string, priceData: any): Promise<{ success: boolean; error?: any }> {
+  const squares: Array<{
+    campaign_id: string;
+    row: number;
+    col: number;
+    row_num: number;
+    col_num: number;
+    number: number;
+    position: number;
+    value: number;
+    claimed_by: null;
+    donor_name: null;
+    payment_status: 'pending';
+    payment_type: 'stripe';
+    claimed_at: null;
+  }> = [];
+
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < columns; col++) {
+      const position = row * columns + col + 1;
+      const price = calculateSquarePrice(position, pricingType, priceData);
+      
+      squares.push({
+        campaign_id: campaignId,
+        row: row,
+        col: col,
+        row_num: row,
+        col_num: col,
+        number: position,
+        position: position,
+        value: price,
+        claimed_by: null,
+        donor_name: null,
+        payment_status: 'pending',
+        payment_type: 'stripe',
+        claimed_at: null
+      });
+    }
+  }
+
+  console.log(`Created ${squares.length} squares, now inserting into database in batches`);
+
+  // Use smaller batch sizes to avoid timeouts
+  const BATCH_SIZE = 50;
+  let squaresInsertionError: any = null;
+
+  try {
+    for (let i = 0; i < squares.length; i += BATCH_SIZE) {
+      const batch = squares.slice(i, i + BATCH_SIZE);
+      console.log(`Inserting batch ${Math.floor(i/BATCH_SIZE) + 1}/${Math.ceil(squares.length/BATCH_SIZE)}: ${batch.length} squares`);
+
+      const { error } = await supabase
+        .from('squares')
+        .insert(batch);
+
+      if (error) {
+        console.error(`Error inserting squares batch ${Math.floor(i/BATCH_SIZE) + 1}:`, error);
+        squaresInsertionError = error;
+        break;
+      }
+    }
+  } catch (error) {
+    console.error('Unexpected error during squares insertion:', error);
+    squaresInsertionError = error;
+  }
+
+  return { success: !squaresInsertionError, error: squaresInsertionError };
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { title, description, imageUrl, rows, columns, pricingType, priceData } = await request.json();
@@ -34,12 +159,21 @@ export async function POST(request: NextRequest) {
       rows,
       columns,
       pricingType,
+      totalSquares: rows * columns,
       isDemoMode: isDemoMode()
     });
 
     if (!title || !rows || !columns || !pricingType) {
       return NextResponse.json(
         { error: 'Missing required fields' },
+        { status: 400 }
+      );
+    }
+
+    // Validate grid size to prevent extremely large grids
+    if (rows > 100 || columns > 100 || rows * columns > 2500) {
+      return NextResponse.json(
+        { error: 'Grid size too large. Maximum 100x100 or 2500 total squares allowed.' },
         { status: 400 }
       );
     }
@@ -129,121 +263,51 @@ export async function POST(request: NextRequest) {
 
     console.log('Campaign created successfully:', campaign.id);
 
-    // Create squares for the campaign
-    const squares: Array<{
-      campaign_id: string;
-      row: number;
-      col: number;
-      row_num: number;
-      col_num: number;
-      number: number;
-      position: number;
-      value: number;
-      claimed_by: null;
-      donor_name: null;
-      payment_status: 'pending';
-      payment_type: 'stripe';
-      claimed_at: null;
-    }> = [];
+    // Create squares for the campaign using optimized method
+    const squaresResult = await createSquaresBulk(
+      supabase, 
+      campaign.id, 
+      rows, 
+      columns, 
+      pricingType, 
+      priceData
+    );
 
-    for (let row = 0; row < rows; row++) {
-      for (let col = 0; col < columns; col++) {
-        const position = row * columns + col + 1;
-        const price = calculateSquarePrice(position, pricingType, priceData);
-        
-        squares.push({
-          campaign_id: campaign.id,
-          row: row,
-          col: col,
-          row_num: row,
-          col_num: col,
-          number: position,
-          position: position,
-          value: price,
-          claimed_by: null,
-          donor_name: null,
-          payment_status: 'pending',
-          payment_type: 'stripe',
-          claimed_at: null
-        });
-      }
-    }
+    const campaignResponse = {
+      id: campaign.id,
+      slug: campaign.slug,
+      title: campaign.title,
+      description: campaign.description,
+      imageUrl: campaign.image_url,
+      rows: campaign.rows,
+      columns: campaign.columns,
+      pricingType: campaign.pricing_type,
+      priceData: campaign.price_data,
+      totalSquares: campaign.total_squares,
+      createdAt: campaign.created_at,
+      publicUrl: `/fundraiser/${campaign.slug}`,
+      paidToAdmin: false,
+      isActive: campaign.is_active,
+      userId: campaign.user_id
+    };
 
-    console.log(`Created ${squares.length} squares, now inserting into database`);
-
-    // Insert squares using regular user permissions
-    const BATCH_SIZE = 100;
-    let squaresInsertionError: any = null;
-
-    try {
-      for (let i = 0; i < squares.length; i += BATCH_SIZE) {
-        const batch = squares.slice(i, i + BATCH_SIZE);
-        console.log(`Inserting batch of ${batch.length} squares (${i+1} to ${Math.min(i + BATCH_SIZE, squares.length)})`);
-
-        const { error } = await supabase
-          .from('squares')
-          .insert(batch);
-
-        if (error) {
-          console.error(`Error inserting squares batch ${i/BATCH_SIZE + 1}:`, error);
-          squaresInsertionError = error;
-          break;
-        }
-      }
-    } catch (error) {
-      console.error('Unexpected error during squares insertion:', error);
-      squaresInsertionError = error;
-    }
-
-    if (squaresInsertionError) {
-      console.error('Squares creation error:', squaresInsertionError);
+    if (!squaresResult.success) {
+      console.error('Squares creation error:', squaresResult.error);
       // Return success but with warning about squares
       return NextResponse.json({
         success: true,
-        campaign: {
-          id: campaign.id,
-          slug: campaign.slug,
-          title: campaign.title,
-          description: campaign.description,
-          imageUrl: campaign.image_url,
-          rows: campaign.rows,
-          columns: campaign.columns,
-          pricingType: campaign.pricing_type,
-          priceData: campaign.price_data,
-          totalSquares: campaign.total_squares,
-          createdAt: campaign.created_at,
-          publicUrl: `/fundraiser/${campaign.slug}`,
-          paidToAdmin: false,
-          isActive: campaign.is_active,
-          userId: campaign.user_id
-        },
+        campaign: campaignResponse,
         warning: 'Campaign created but squares could not be generated. You may need to refresh the page.',
         message: 'Campaign created successfully'
       });
     }
 
-    console.log(`Successfully inserted all ${squares.length} squares`);
+    console.log(`Successfully created campaign with ${rows * columns} squares`);
 
     // Return success response
     return NextResponse.json({
       success: true,
-      campaign: {
-        id: campaign.id,
-        slug: campaign.slug,
-        title: campaign.title,
-        description: campaign.description,
-        imageUrl: campaign.image_url,
-        rows: campaign.rows,
-        columns: campaign.columns,
-        pricingType: campaign.pricing_type,
-        priceData: campaign.price_data,
-        totalSquares: campaign.total_squares,
-        createdAt: campaign.created_at,
-        publicUrl: `/fundraiser/${campaign.slug}`,
-        paidToAdmin: false,
-        isActive: campaign.is_active,
-        userId: campaign.user_id
-      },
+      campaign: campaignResponse,
       message: 'Campaign created successfully'
     });
 
