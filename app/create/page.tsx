@@ -83,12 +83,17 @@ export default function CreateCampaignPage() {
   useEffect(() => {
     const checkAuth = async () => {
       console.log("🔍 Starting auth check...");
+      
+      // Add overall timeout to prevent infinite loading
+      const authTimeout = setTimeout(() => {
+        console.error("⏰ Auth check timed out after 10 seconds, redirecting to auth");
+        router.push("/auth");
+      }, 10000);
+      
       try {
-        // Temporarily force demo mode to bypass auth hanging issue
-        const forceDemo = true; // TODO: Remove this once auth issue is fixed
-        
-        if (isDemoMode() || forceDemo) {
-          console.log("✅ Demo mode detected (forced:", forceDemo, ")");
+        if (isDemoMode()) {
+          console.log("✅ Demo mode detected");
+          clearTimeout(authTimeout);
           // In demo mode, create a mock user
           const mockUser = {
             id: "demo-user-" + Date.now(),
@@ -103,28 +108,57 @@ export default function CreateCampaignPage() {
 
         console.log("🔍 Checking real auth...");
         
-        // Add timeout to the auth check
-        const authPromise = supabase.auth.getUser();
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Auth timeout')), 5000)
-        );
-        
-        const result = await Promise.race([authPromise, timeoutPromise]);
-        const { data: { user } } = result as any;
-        
-        if (!user) {
-          console.log("❌ No user found, redirecting to auth");
-          // Not authenticated - redirect to auth page
+        try {
+          // First check if there's a session
+          const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+          console.log("📋 Session check result:", { session: !!session, error: sessionError });
+          
+          if (sessionError) {
+            console.error("❌ Session error:", sessionError);
+            clearTimeout(authTimeout);
+            router.push("/auth");
+            return;
+          }
+          
+          if (!session) {
+            console.log("❌ No session found, redirecting to auth");
+            clearTimeout(authTimeout);
+            router.push("/auth");
+            return;
+          }
+          
+          // If we have a session, get the user
+          const { data: { user }, error: userError } = await supabase.auth.getUser();
+          console.log("👤 User check result:", { user: !!user, error: userError });
+          
+          if (userError) {
+            console.error("❌ User error:", userError);
+            clearTimeout(authTimeout);
+            router.push("/auth");
+            return;
+          }
+          
+          if (!user) {
+            console.log("❌ No user found, redirecting to auth");
+            clearTimeout(authTimeout);
+            router.push("/auth");
+            return;
+          }
+
+          console.log("✅ User found:", user.email);
+          setUser(user);
+          setLoading(false);
+          clearTimeout(authTimeout);
+          console.log("✅ Loading set to false");
+        } catch (authError) {
+          console.error("❌ Auth check failed:", authError);
+          clearTimeout(authTimeout);
           router.push("/auth");
           return;
         }
-
-        console.log("✅ User found:", user.email);
-        setUser(user);
-        setLoading(false);
-        console.log("✅ Loading set to false");
       } catch (error) {
         console.error("❌ Auth error:", error);
+        clearTimeout(authTimeout);
         router.push("/auth");
       }
     };
@@ -146,16 +180,6 @@ export default function CreateCampaignPage() {
 
     checkAuth();
     checkPayPalConfig();
-
-    // Fallback timeout to prevent infinite loading
-    const fallbackTimeout = setTimeout(() => {
-      console.log("⚠️ Fallback timeout triggered - forcing loading to false");
-      setLoading(false);
-    }, 10000); // 10 seconds
-
-    return () => {
-      clearTimeout(fallbackTimeout);
-    };
   }, [router]);
 
   const handleImageUpload = async (file: File, url: string) => {
