@@ -82,8 +82,10 @@ export default function CreateCampaignPage() {
 
   useEffect(() => {
     const checkAuth = async () => {
+      console.log("🔍 Starting auth check...");
       try {
         if (isDemoMode()) {
+          console.log("✅ Demo mode detected");
           // In demo mode, create a mock user
           const mockUser = {
             id: "demo-user-" + Date.now(),
@@ -92,41 +94,58 @@ export default function CreateCampaignPage() {
           } as User;
           setUser(mockUser);
           setLoading(false);
+          console.log("✅ Demo user set, loading set to false");
           return;
         }
 
+        console.log("🔍 Checking real auth...");
         const {
           data: { user },
         } = await supabase.auth.getUser();
         if (!user) {
+          console.log("❌ No user found, redirecting to auth");
           // Not authenticated - redirect to auth page
           router.push("/auth");
           return;
         }
 
+        console.log("✅ User found:", user.email);
         setUser(user);
         setLoading(false);
+        console.log("✅ Loading set to false");
       } catch (error) {
-        console.error("Auth error:", error);
+        console.error("❌ Auth error:", error);
         router.push("/auth");
       }
     };
 
     const checkPayPalConfig = async () => {
+      console.log("🔍 Checking PayPal config...");
       try {
         // Check if PayPal is configured using the dedicated endpoint
         const response = await fetch("/api/paypal-config-check");
         const data = await response.json();
+        console.log("✅ PayPal config response:", data);
 
         setIsPayPalConfigured(data.configured);
       } catch (error) {
-        console.error("Error checking PayPal config:", error);
+        console.error("❌ Error checking PayPal config:", error);
         setIsPayPalConfigured(false);
       }
     };
 
     checkAuth();
     checkPayPalConfig();
+
+    // Fallback timeout to prevent infinite loading
+    const fallbackTimeout = setTimeout(() => {
+      console.log("⚠️ Fallback timeout triggered - forcing loading to false");
+      setLoading(false);
+    }, 10000); // 10 seconds
+
+    return () => {
+      clearTimeout(fallbackTimeout);
+    };
   }, [router]);
 
   const handleImageUpload = async (file: File, url: string) => {
