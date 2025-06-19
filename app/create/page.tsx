@@ -98,10 +98,15 @@ export default function CreateCampaignPage() {
     checkPayPalConfig();
   }, []);
 
-  // Handle auth redirect
+  // Handle auth redirect - only redirect if we're sure there's no user
   useEffect(() => {
+    // Wait a bit longer to ensure auth is fully initialized
     if (!loading && !user) {
-      router.push("/auth?message=Please log in to create a campaign");
+      const timer = setTimeout(() => {
+        router.push("/auth?message=Please log in to create a campaign");
+      }, 500); // Give extra time for auth to settle
+      
+      return () => clearTimeout(timer);
     }
   }, [loading, user, router]);
 
@@ -339,9 +344,12 @@ export default function CreateCampaignPage() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="text-gray-600 mt-2">Verifying your login...</p>
-          <p className="text-gray-500 text-sm mt-1">This should only take a moment</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="text-gray-600 mt-4 text-lg">Verifying your login...</p>
+          <p className="text-gray-500 text-sm mt-2">Please wait while we authenticate you</p>
+          <div className="mt-4 text-xs text-gray-400">
+            If this takes too long, please refresh the page
+          </div>
         </div>
       </div>
     );
