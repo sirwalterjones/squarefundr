@@ -51,6 +51,23 @@ class SupabaseClientSingleton {
         "ENV Value Check - KEY length:",
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.length || 0,
       );
+      
+      // Log first few characters to help identify if URL is correct
+      const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      if (url) {
+        console.log(
+          "ENV URL Check - starts with https://:",
+          url.startsWith("https://")
+        );
+        console.log(
+          "ENV URL Check - contains supabase:",
+          url.includes("supabase")
+        );
+        console.log(
+          "ENV URL Check - first 20 chars:",
+          url.substring(0, 20) + "..."
+        );
+      }
     }
 
     this.initializeClients();

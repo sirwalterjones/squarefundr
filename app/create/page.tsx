@@ -114,6 +114,16 @@ export default function CreateCampaignPage() {
         
         console.log("✅ Supabase client and auth are available");
         
+        // Test the auth debug endpoint to see if server-side auth works
+        try {
+          console.log("🔍 Testing server-side auth...");
+          const debugResponse = await fetch("/api/test-auth-debug");
+          const debugData = await debugResponse.json();
+          console.log("🔍 Server auth debug result:", debugData);
+        } catch (debugError) {
+          console.error("❌ Server auth debug failed:", debugError);
+        }
+        
         // Create a promise that races between auth check and timeout
         const authPromise = async () => {
           try {
