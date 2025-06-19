@@ -6,8 +6,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { supabase, isDemoMode } from "@/lib/supabaseClient";
-import { User } from "@supabase/supabase-js";
 import ImageUploader from "@/components/ImageUploader";
+import { useAuth } from "@/app/client-layout";
 import { PricingType, PriceData } from "@/types";
 import {
   formatPrice,
@@ -35,8 +35,7 @@ type CampaignFormData = z.infer<typeof campaignSchema>;
 
 export default function CreateCampaignPage() {
   const router = useRouter();
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { user, loading } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadedImage, setUploadedImage] = useState<File | null>(null);
   const [imageUrl, setImageUrl] = useState<string>("");
@@ -81,122 +80,6 @@ export default function CreateCampaignPage() {
   const totalSquares = watchedValues.rows * watchedValues.columns;
 
   useEffect(() => {
-    const checkAuth = async () => {
-      console.log("🔍 Starting auth check...");
-      
-      try {
-        if (isDemoMode()) {
-          console.log("✅ Demo mode detected");
-          // In demo mode, create a mock user
-          const mockUser = {
-            id: "demo-user-" + Date.now(),
-            email: "demo@example.com",
-            created_at: new Date().toISOString(),
-          } as User;
-          setUser(mockUser);
-          setLoading(false);
-          console.log("✅ Demo user set, loading set to false");
-          return;
-        }
-
-        console.log("🔍 Checking real auth...");
-        
-        // First verify the Supabase client is properly initialized
-        if (!supabase) {
-          console.error("❌ Supabase client is not initialized");
-          throw new Error("Supabase client not initialized");
-        }
-        
-        if (!supabase.auth) {
-          console.error("❌ Supabase auth is not available");
-          throw new Error("Supabase auth not available");
-        }
-        
-        console.log("✅ Supabase client and auth are available");
-        
-
-        
-        // Check authentication with improved error handling
-        console.log("📋 Getting session...");
-        
-        try {
-          // Check session with longer timeout
-          const sessionResult = await Promise.race([
-            supabase.auth.getSession(),
-            new Promise((_, reject) => 
-              setTimeout(() => reject(new Error("Session check timed out - please refresh and try again")), 10000)
-            )
-          ]);
-          
-          const { data: { session }, error: sessionError } = sessionResult as any;
-          console.log("📋 Session check result:", { session: !!session, error: sessionError });
-          
-          if (sessionError) {
-            console.error("❌ Session error:", sessionError);
-            throw new Error(`Session error: ${sessionError.message}`);
-          }
-          
-          if (!session) {
-            console.log("❌ No session found - user needs to log in");
-            throw new Error("Please log in to create a campaign");
-          }
-          
-          // If we have a session, get the user
-          console.log("👤 Getting user...");
-          const userResult = await Promise.race([
-            supabase.auth.getUser(),
-            new Promise((_, reject) => 
-              setTimeout(() => reject(new Error("User check timed out - please refresh and try again")), 10000)
-            )
-          ]);
-          
-          const { data: { user }, error: userError } = userResult as any;
-          console.log("👤 User check result:", { user: !!user, error: userError });
-          
-          if (userError) {
-            console.error("❌ User error:", userError);
-            throw new Error(`User verification failed: ${userError.message}`);
-          }
-          
-          if (!user) {
-            console.log("❌ No user found - invalid session");
-            throw new Error("Invalid session - please log in again");
-          }
-
-          console.log("✅ User found:", user.email);
-          setUser(user);
-          setLoading(false);
-          console.log("✅ Auth successful, loading set to false");
-        } catch (authError) {
-          console.error("❌ Auth check failed:", authError);
-          throw authError;
-        }
-        
-              } catch (error) {
-          console.error("❌ Auth error:", error);
-          
-          // Determine the appropriate error message
-          let errorMessage = "Please log in to create a campaign";
-          if (error instanceof Error) {
-            if (error.message.includes("timed out")) {
-              errorMessage = "Connection timeout - please refresh the page and try again";
-            } else if (error.message.includes("Please log in")) {
-              errorMessage = error.message;
-            } else if (error.message.includes("Invalid session")) {
-              errorMessage = "Your session has expired - please log in again";
-            }
-          }
-          
-          console.log("🔄 Redirecting to auth page:", errorMessage);
-          
-          // Show loading state briefly, then redirect
-          setLoading(false);
-          setTimeout(() => {
-            router.push(`/auth?message=${encodeURIComponent(errorMessage)}`);
-          }, 500);
-        }
-    };
-
     const checkPayPalConfig = async () => {
       console.log("🔍 Checking PayPal config...");
       try {
@@ -212,9 +95,15 @@ export default function CreateCampaignPage() {
       }
     };
 
-    checkAuth();
     checkPayPalConfig();
-  }, [router]);
+  }, []);
+
+  // Handle auth redirect
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push("/auth?message=Please log in to create a campaign");
+    }
+  }, [loading, user, router]);
 
   const handleImageUpload = async (file: File, url: string) => {
     setIsUploading(true);

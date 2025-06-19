@@ -2,24 +2,17 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { supabase, isCurrentUserAdmin } from "@/lib/supabaseClient";
-import { User } from "@supabase/supabase-js";
+import { isCurrentUserAdmin } from "@/lib/supabaseClient";
+import { useAuth } from "@/app/client-layout";
 
 export default function Navbar() {
-  const [user, setUser] = useState<User | null>(null);
+  const { user, signOut } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
 
+  // Check admin status when user changes
   useEffect(() => {
-    if (!supabase) return;
-
-    // Get initial user and check admin status
-    const checkUserAndAdmin = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      setUser(user);
-
+    const checkAdminStatus = async () => {
       if (user) {
         const adminStatus = await isCurrentUserAdmin();
         setIsAdmin(adminStatus);
@@ -28,25 +21,8 @@ export default function Navbar() {
       }
     };
 
-    checkUserAndAdmin();
-
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      const newUser = session?.user ?? null;
-      setUser(newUser);
-
-      if (newUser) {
-        const adminStatus = await isCurrentUserAdmin();
-        setIsAdmin(adminStatus);
-      } else {
-        setIsAdmin(false);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
+    checkAdminStatus();
+  }, [user]);
 
   // Force re-check admin status when user visits admin page
   useEffect(() => {
@@ -69,12 +45,6 @@ export default function Navbar() {
     };
   }, [user]);
 
-  const handleSignOut = async () => {
-    if (!supabase) return;
-    await supabase.auth.signOut();
-    setUser(null);
-  };
-
   return (
     <nav className="bg-white/95 backdrop-blur-sm shadow-sm border-b border-gray-100 sticky top-0 z-50">
       <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -91,16 +61,12 @@ export default function Navbar() {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
-            <a
-              href={
-                user
-                  ? "https://www.squarefundr.com/create"
-                  : "https://www.squarefundr.com/auth"
-              }
+            <Link
+              href={user ? "/create" : "/auth"}
               className="text-gray-600 hover:text-blue-600 transition-colors font-medium"
             >
               Create Campaign
-            </a>
+            </Link>
             <Link
               href="/fundraiser/team-championship-fund"
               className="text-gray-600 hover:text-blue-600 transition-colors font-medium"
@@ -125,7 +91,7 @@ export default function Navbar() {
                   </Link>
                 )}
                 <button
-                  onClick={handleSignOut}
+                  onClick={signOut}
                   className="border-2 border-blue-600 text-blue-600 px-6 py-2 rounded-xl font-semibold hover:bg-blue-600 hover:text-white transition-all duration-200"
                 >
                   Sign Out
@@ -166,17 +132,13 @@ export default function Navbar() {
         {isMenuOpen && (
           <div className="md:hidden py-4 border-t border-gray-100">
             <div className="flex flex-col space-y-4">
-              <a
-                href={
-                  user
-                    ? "https://www.squarefundr.com/create"
-                    : "https://www.squarefundr.com/auth"
-                }
+              <Link
+                href={user ? "/create" : "/auth"}
                 className="text-gray-600 hover:text-blue-600 transition-colors py-2 font-medium"
                 onClick={() => setIsMenuOpen(false)}
               >
                 Create Campaign
-              </a>
+              </Link>
               <Link
                 href="/fundraiser/team-championship-fund"
                 className="text-gray-600 hover:text-blue-600 transition-colors py-2 font-medium"
@@ -205,7 +167,7 @@ export default function Navbar() {
                   )}
                   <button
                     onClick={() => {
-                      handleSignOut();
+                      signOut();
                       setIsMenuOpen(false);
                     }}
                     className="border-2 border-blue-600 text-blue-600 px-6 py-2 rounded-xl font-semibold hover:bg-blue-600 hover:text-white transition-all duration-200 text-left"
@@ -228,4 +190,4 @@ export default function Navbar() {
       </div>
     </nav>
   );
-}
+} 
