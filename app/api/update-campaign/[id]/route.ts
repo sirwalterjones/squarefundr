@@ -92,7 +92,7 @@ export async function PUT(
         pricing_type: pricingType,
         price_data: priceData,
         is_active: isActive,
-      focusPoint,
+        og_focus_point: focusPoint,
         updated_at: new Date().toISOString(),
       })
       .eq('id', id)
