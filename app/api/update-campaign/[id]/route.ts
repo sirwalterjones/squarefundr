@@ -10,6 +10,7 @@ interface UpdateCampaignData {
   pricingType: 'fixed' | 'sequential' | 'manual';
   priceData: any;
   isActive: boolean;
+  focusPoint?: { x: number; y: number };
 }
 
 export async function PUT(
@@ -41,6 +42,7 @@ export async function PUT(
       pricingType,
       priceData,
       isActive,
+      focusPoint,
     } = body;
 
     console.log('Campaign update request:', {
@@ -50,6 +52,7 @@ export async function PUT(
       columns,
       pricingType,
       isActive,
+      focusPoint,
     });
 
     // Validate input
@@ -89,6 +92,7 @@ export async function PUT(
         pricing_type: pricingType,
         price_data: priceData,
         is_active: isActive,
+      focusPoint,
         updated_at: new Date().toISOString(),
       })
       .eq('id', id)

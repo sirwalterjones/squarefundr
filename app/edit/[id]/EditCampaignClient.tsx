@@ -9,6 +9,7 @@ import { User } from "@supabase/supabase-js";
 import { Campaign } from "@/types";
 import { formatPrice } from "@/utils/pricingUtils";
 import ImageUploader from "@/components/ImageUploader";
+import FocusPointSelector from "@/components/FocusPointSelector";
 
 const campaignSchema = z.object({
   title: z.string().min(1, "Title is required").max(100, "Title too long"),
@@ -47,6 +48,9 @@ export default function EditCampaignClient({
   const [successMessage, setSuccessMessage] = useState("");
   const [imageUrl, setImageUrl] = useState(campaign.image_url || "");
   const [uploadedImage, setUploadedImage] = useState<File | null>(null);
+  const [focusPoint, setFocusPoint] = useState(
+    campaign.og_focus_point || { x: 0.5, y: 0.3 }
+  );
   const [paypalBusinessName, setPaypalBusinessName] = useState("");
   const [paypalStatus, setPaypalStatus] = useState<{
     connected: boolean;
@@ -186,6 +190,7 @@ export default function EditCampaignClient({
           pricingType: data.pricing_type,
           priceData: priceData,
           isActive: data.is_active,
+          focusPoint: focusPoint
         }),
       });
 
@@ -430,6 +435,14 @@ export default function EditCampaignClient({
                       className="h-full w-full"
                     />
                   </div>
+                {/* Focus Point Selector - only show after image is uploaded */}
+                {imageUrl && (
+                  <FocusPointSelector
+                    imageUrl={imageUrl}
+                    onFocusPointChange={setFocusPoint}
+                    initialFocusPoint={focusPoint}
+                  />
+                )} 
                 </div>
               </div>
 
