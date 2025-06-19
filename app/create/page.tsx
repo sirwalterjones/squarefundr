@@ -114,15 +114,7 @@ export default function CreateCampaignPage() {
         
         console.log("✅ Supabase client and auth are available");
         
-        // Test the auth debug endpoint to see if server-side auth works
-        try {
-          console.log("🔍 Testing server-side auth...");
-          const debugResponse = await fetch("/api/test-auth-debug");
-          const debugData = await debugResponse.json();
-          console.log("🔍 Server auth debug result:", debugData);
-        } catch (debugError) {
-          console.error("❌ Server auth debug failed:", debugError);
-        }
+
         
         // Create a promise that races between auth check and timeout
         const authPromise = async () => {
@@ -191,11 +183,15 @@ export default function CreateCampaignPage() {
         setLoading(false);
         console.log("✅ Auth successful, loading set to false");
         
-      } catch (error) {
-        console.error("❌ Auth error:", error);
-        console.log("🔄 Redirecting to auth page");
-        router.push("/auth");
-      }
+              } catch (error) {
+          console.error("❌ Auth error:", error);
+          console.log("🔄 Redirecting to auth page - Please log in first");
+          
+          // Add a slight delay to show any loading state
+          setTimeout(() => {
+            router.push("/auth?message=Please log in to create a campaign");
+          }, 500);
+        }
     };
 
     const checkPayPalConfig = async () => {

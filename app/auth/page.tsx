@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -18,11 +18,21 @@ type AuthFormData = z.infer<typeof authSchema>;
 
 export default function AuthPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<string>('');
   const [isSuccess, setIsSuccess] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const [showResetPassword, setShowResetPassword] = useState(false);
+
+  // Check for URL message parameter
+  useEffect(() => {
+    const urlMessage = searchParams.get('message');
+    if (urlMessage) {
+      setMessage(urlMessage);
+      setIsSuccess(false);
+    }
+  }, [searchParams]);
 
   const {
     register,
