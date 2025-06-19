@@ -24,27 +24,6 @@ export default function Navbar() {
     checkAdminStatus();
   }, [user]);
 
-  // Force re-check admin status when user visits admin page
-  useEffect(() => {
-    const handleRouteChange = async () => {
-      if (user && window.location.pathname === "/master-admin") {
-        const adminStatus = await isCurrentUserAdmin();
-        setIsAdmin(adminStatus);
-      }
-    };
-
-    // Check on mount and when pathname changes
-    handleRouteChange();
-
-    // Listen for navigation events
-    const handlePopState = () => handleRouteChange();
-    window.addEventListener("popstate", handlePopState);
-
-    return () => {
-      window.removeEventListener("popstate", handlePopState);
-    };
-  }, [user]);
-
   return (
     <nav className="bg-white/95 backdrop-blur-sm shadow-sm border-b border-gray-100 sticky top-0 z-50">
       <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
