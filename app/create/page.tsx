@@ -84,16 +84,9 @@ export default function CreateCampaignPage() {
     const checkAuth = async () => {
       console.log("🔍 Starting auth check...");
       
-      // Add overall timeout to prevent infinite loading
-      const authTimeout = setTimeout(() => {
-        console.error("⏰ Auth check timed out after 10 seconds, redirecting to auth");
-        router.push("/auth");
-      }, 10000);
-      
       try {
         if (isDemoMode()) {
           console.log("✅ Demo mode detected");
-          clearTimeout(authTimeout);
           // In demo mode, create a mock user
           const mockUser = {
             id: "demo-user-" + Date.now(),
@@ -108,57 +101,89 @@ export default function CreateCampaignPage() {
 
         console.log("🔍 Checking real auth...");
         
-        try {
-          // First check if there's a session
-          const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-          console.log("📋 Session check result:", { session: !!session, error: sessionError });
-          
-          if (sessionError) {
-            console.error("❌ Session error:", sessionError);
-            clearTimeout(authTimeout);
-            router.push("/auth");
-            return;
-          }
-          
-          if (!session) {
-            console.log("❌ No session found, redirecting to auth");
-            clearTimeout(authTimeout);
-            router.push("/auth");
-            return;
-          }
-          
-          // If we have a session, get the user
-          const { data: { user }, error: userError } = await supabase.auth.getUser();
-          console.log("👤 User check result:", { user: !!user, error: userError });
-          
-          if (userError) {
-            console.error("❌ User error:", userError);
-            clearTimeout(authTimeout);
-            router.push("/auth");
-            return;
-          }
-          
-          if (!user) {
-            console.log("❌ No user found, redirecting to auth");
-            clearTimeout(authTimeout);
-            router.push("/auth");
-            return;
-          }
-
-          console.log("✅ User found:", user.email);
-          setUser(user);
-          setLoading(false);
-          clearTimeout(authTimeout);
-          console.log("✅ Loading set to false");
-        } catch (authError) {
-          console.error("❌ Auth check failed:", authError);
-          clearTimeout(authTimeout);
-          router.push("/auth");
-          return;
+        // First verify the Supabase client is properly initialized
+        if (!supabase) {
+          console.error("❌ Supabase client is not initialized");
+          throw new Error("Supabase client not initialized");
         }
+        
+        if (!supabase.auth) {
+          console.error("❌ Supabase auth is not available");
+          throw new Error("Supabase auth not available");
+        }
+        
+        console.log("✅ Supabase client and auth are available");
+        
+        // Create a promise that races between auth check and timeout
+        const authPromise = async () => {
+          try {
+            // First check if there's a session with timeout
+            console.log("📋 Getting session...");
+            const sessionResult = await Promise.race([
+              supabase.auth.getSession(),
+              new Promise((_, reject) => 
+                setTimeout(() => reject(new Error("Session timeout")), 5000)
+              )
+            ]);
+            
+            const { data: { session }, error: sessionError } = sessionResult as any;
+            console.log("📋 Session check result:", { session: !!session, error: sessionError });
+            
+            if (sessionError) {
+              console.error("❌ Session error:", sessionError);
+              throw sessionError;
+            }
+            
+            if (!session) {
+              console.log("❌ No session found");
+              throw new Error("No session found");
+            }
+            
+            // If we have a session, get the user with timeout
+            console.log("👤 Getting user...");
+            const userResult = await Promise.race([
+              supabase.auth.getUser(),
+              new Promise((_, reject) => 
+                setTimeout(() => reject(new Error("User timeout")), 5000)
+              )
+            ]);
+            
+            const { data: { user }, error: userError } = userResult as any;
+            console.log("👤 User check result:", { user: !!user, error: userError });
+            
+            if (userError) {
+              console.error("❌ User error:", userError);
+              throw userError;
+            }
+            
+            if (!user) {
+              console.log("❌ No user found");
+              throw new Error("No user found");
+            }
+
+            console.log("✅ User found:", user.email);
+            return user;
+          } catch (error) {
+            console.error("❌ Auth check failed:", error);
+            throw error;
+          }
+        };
+        
+        // Run auth check with overall timeout
+        const user = await Promise.race([
+          authPromise(),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error("Overall auth timeout")), 8000)
+          )
+        ]);
+        
+        setUser(user as User);
+        setLoading(false);
+        console.log("✅ Auth successful, loading set to false");
+        
       } catch (error) {
         console.error("❌ Auth error:", error);
-        clearTimeout(authTimeout);
+        console.log("🔄 Redirecting to auth page");
         router.push("/auth");
       }
     };
