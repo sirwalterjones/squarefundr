@@ -116,80 +116,83 @@ export default function CreateCampaignPage() {
         
 
         
-        // Create a promise that races between auth check and timeout
-        const authPromise = async () => {
-          try {
-            // First check if there's a session with timeout
-            console.log("📋 Getting session...");
-            const sessionResult = await Promise.race([
-              supabase.auth.getSession(),
-              new Promise((_, reject) => 
-                setTimeout(() => reject(new Error("Session timeout")), 5000)
-              )
-            ]);
-            
-            const { data: { session }, error: sessionError } = sessionResult as any;
-            console.log("📋 Session check result:", { session: !!session, error: sessionError });
-            
-            if (sessionError) {
-              console.error("❌ Session error:", sessionError);
-              throw sessionError;
-            }
-            
-            if (!session) {
-              console.log("❌ No session found");
-              throw new Error("No session found");
-            }
-            
-            // If we have a session, get the user with timeout
-            console.log("👤 Getting user...");
-            const userResult = await Promise.race([
-              supabase.auth.getUser(),
-              new Promise((_, reject) => 
-                setTimeout(() => reject(new Error("User timeout")), 5000)
-              )
-            ]);
-            
-            const { data: { user }, error: userError } = userResult as any;
-            console.log("👤 User check result:", { user: !!user, error: userError });
-            
-            if (userError) {
-              console.error("❌ User error:", userError);
-              throw userError;
-            }
-            
-            if (!user) {
-              console.log("❌ No user found");
-              throw new Error("No user found");
-            }
-
-            console.log("✅ User found:", user.email);
-            return user;
-          } catch (error) {
-            console.error("❌ Auth check failed:", error);
-            throw error;
+        // Check authentication with improved error handling
+        console.log("📋 Getting session...");
+        
+        try {
+          // Check session with longer timeout
+          const sessionResult = await Promise.race([
+            supabase.auth.getSession(),
+            new Promise((_, reject) => 
+              setTimeout(() => reject(new Error("Session check timed out - please refresh and try again")), 10000)
+            )
+          ]);
+          
+          const { data: { session }, error: sessionError } = sessionResult as any;
+          console.log("📋 Session check result:", { session: !!session, error: sessionError });
+          
+          if (sessionError) {
+            console.error("❌ Session error:", sessionError);
+            throw new Error(`Session error: ${sessionError.message}`);
           }
-        };
-        
-        // Run auth check with overall timeout
-        const user = await Promise.race([
-          authPromise(),
-          new Promise((_, reject) => 
-            setTimeout(() => reject(new Error("Overall auth timeout")), 8000)
-          )
-        ]);
-        
-        setUser(user as User);
-        setLoading(false);
-        console.log("✅ Auth successful, loading set to false");
+          
+          if (!session) {
+            console.log("❌ No session found - user needs to log in");
+            throw new Error("Please log in to create a campaign");
+          }
+          
+          // If we have a session, get the user
+          console.log("👤 Getting user...");
+          const userResult = await Promise.race([
+            supabase.auth.getUser(),
+            new Promise((_, reject) => 
+              setTimeout(() => reject(new Error("User check timed out - please refresh and try again")), 10000)
+            )
+          ]);
+          
+          const { data: { user }, error: userError } = userResult as any;
+          console.log("👤 User check result:", { user: !!user, error: userError });
+          
+          if (userError) {
+            console.error("❌ User error:", userError);
+            throw new Error(`User verification failed: ${userError.message}`);
+          }
+          
+          if (!user) {
+            console.log("❌ No user found - invalid session");
+            throw new Error("Invalid session - please log in again");
+          }
+
+          console.log("✅ User found:", user.email);
+          setUser(user);
+          setLoading(false);
+          console.log("✅ Auth successful, loading set to false");
+        } catch (authError) {
+          console.error("❌ Auth check failed:", authError);
+          throw authError;
+        }
         
               } catch (error) {
           console.error("❌ Auth error:", error);
-          console.log("🔄 Redirecting to auth page - Please log in first");
           
-          // Add a slight delay to show any loading state
+          // Determine the appropriate error message
+          let errorMessage = "Please log in to create a campaign";
+          if (error instanceof Error) {
+            if (error.message.includes("timed out")) {
+              errorMessage = "Connection timeout - please refresh the page and try again";
+            } else if (error.message.includes("Please log in")) {
+              errorMessage = error.message;
+            } else if (error.message.includes("Invalid session")) {
+              errorMessage = "Your session has expired - please log in again";
+            }
+          }
+          
+          console.log("🔄 Redirecting to auth page:", errorMessage);
+          
+          // Show loading state briefly, then redirect
+          setLoading(false);
           setTimeout(() => {
-            router.push("/auth?message=Please log in to create a campaign");
+            router.push(`/auth?message=${encodeURIComponent(errorMessage)}`);
           }, 500);
         }
     };
@@ -448,7 +451,8 @@ export default function CreateCampaignPage() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="text-gray-600 mt-2">Loading...</p>
+          <p className="text-gray-600 mt-2">Verifying your login...</p>
+          <p className="text-gray-500 text-sm mt-1">This should only take a moment</p>
         </div>
       </div>
     );
