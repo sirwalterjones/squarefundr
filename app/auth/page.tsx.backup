@@ -48,48 +48,23 @@ function AuthPageContent() {
     setMessage('');
 
     try {
-      if (isSignUp) {
-        // Sign up with Supabase directly
-        const { data: authData, error } = await supabase.auth.signUp({
-          email: data.email,
-          password: data.password,
-          options: {
-            data: {
-              full_name: data.fullName || data.email.split('@')[0],
-            },
-          },
-        });
+      const endpoint = isSignUp ? '/api/auth/signup' : '/api/auth/login';
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
 
-        if (error) {
-          throw new Error(error.message);
-        }
+      const result = await response.json();
 
-        if (authData.user && !authData.session) {
-          setMessage('Please check your email to confirm your account before signing in.');
-          setIsSuccess(true);
-          return;
-        }
-
-        setMessage('Account created successfully!');
-        setIsSuccess(true);
-      } else {
-        // Sign in with Supabase directly
-        const { data: authData, error } = await supabase.auth.signInWithPassword({
-          email: data.email,
-          password: data.password,
-        });
-
-        if (error) {
-          throw new Error(error.message);
-        }
-
-        if (authData.user) {
-          setMessage('Signed in successfully!');
-          setIsSuccess(true);
-        } else {
-          throw new Error('Authentication failed');
-        }
+      if (!response.ok) {
+        throw new Error(result.error || 'Authentication failed');
       }
+
+      setIsSuccess(true);
+      setMessage(result.message);
 
       // Redirect to dashboard after successful authentication
       setTimeout(() => {
@@ -350,4 +325,4 @@ export default function AuthPage() {
       <AuthPageContent />
     </Suspense>
   );
-} 
+}
