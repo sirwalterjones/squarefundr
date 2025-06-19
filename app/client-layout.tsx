@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabaseClient";
-import Navbar from "../components/Navbar";
+import Navbar from "@/components/Navbar";
 import { TempoInit } from "./tempo-init";
 
 interface AuthContextType {
