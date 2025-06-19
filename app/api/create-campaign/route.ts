@@ -178,6 +178,7 @@ export async function POST(request: NextRequest) {
       columns,
       pricingType,
       priceData,
+      focusPoint,
     } = body;
 
     console.log("Campaign creation request:", {
@@ -292,6 +293,7 @@ export async function POST(request: NextRequest) {
       price_data: priceData,
       is_active: true,
       total_squares: rows * columns,
+      og_focus_point: focusPoint || { x: 0.5, y: 0.3 },
     };
 
     console.log("Campaign data prepared:", campaignData);

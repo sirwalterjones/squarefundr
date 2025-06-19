@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { supabase, isDemoMode } from "@/lib/supabaseClient";
 import ImageUploader from "@/components/ImageUploader";
+import FocusPointSelector from "@/components/FocusPointSelector";
 import { useAuth } from "@/app/client-layout";
 import { PricingType, PriceData } from "@/types";
 import {
@@ -56,6 +57,7 @@ export default function CreateCampaignPage() {
   const [copyMessage, setCopyMessage] = useState("");
   const [isPayPalConfigured, setIsPayPalConfigured] = useState(true);
   const [successMessage, setSuccessMessage] = useState("");
+  const [focusPoint, setFocusPoint] = useState({ x: 0.5, y: 0.3 });
 
   const {
     register,
@@ -197,6 +199,7 @@ export default function CreateCampaignPage() {
         columns: data.columns,
         pricingType: data.pricing_type,
         priceData: priceData,
+        focusPoint: focusPoint,
       };
 
       console.log("Request body:", requestBody);
@@ -826,6 +829,15 @@ export default function CreateCampaignPage() {
                   currentImage={imageUrl}
                 />
               </div>
+
+              {/* Focus Point Selector - only show after image is uploaded */}
+              {imageUrl && (
+                <FocusPointSelector
+                  imageUrl={imageUrl}
+                  onFocusPointChange={setFocusPoint}
+                  initialFocusPoint={focusPoint}
+                />
+              )}
 
               <div className="flex justify-end">
                 <button

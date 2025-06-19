@@ -24,6 +24,11 @@ export interface Campaign {
   paypal_account_id?: string;
   paypal_email?: string;
   paypal_onboarding_complete?: boolean;
+  // Open Graph image positioning
+  og_focus_point?: {
+    x: number; // 0-1, where 0.5 is center horizontally
+    y: number; // 0-1, where 0.5 is center vertically
+  };
 }
 
 export interface Square {
