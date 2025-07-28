@@ -7,31 +7,56 @@ import { useState, useEffect } from "react";
 
 export default function HomePage() {
   const [selectedSquares, setSelectedSquares] = useState<SelectedSquare[]>([]);
-  const [campaigns, setCampaigns] = useState(25);
-  const [moneyRaised, setMoneyRaised] = useState(500);
+  const [campaigns, setCampaigns] = useState(15);
+  const [moneyRaised, setMoneyRaised] = useState(1500);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // Animated counter effect
+  // Load real campaign and donation data
   useEffect(() => {
     setIsLoaded(true);
     
-    // Simulate loading real data (replace with actual API call later)
     const loadRealData = async () => {
       try {
-        // For now, add some realistic growth to the base numbers
-        const campaignGrowth = Math.floor(Math.random() * 15) + 5; // 5-20 additional campaigns
-        const moneyGrowth = Math.floor(Math.random() * 15000) + 2500; // $2500-$17500 additional
+        // Fetch real campaign data
+        const campaignsResponse = await fetch('/api/master-admin/campaigns');
+        let totalCampaigns = 15; // Base count
         
+        if (campaignsResponse.ok) {
+          const campaignsData = await campaignsResponse.json();
+          const activeCampaigns = campaignsData.campaigns?.filter((c: any) => c.is_active) || [];
+          totalCampaigns = Math.max(15, activeCampaigns.length); // Never go below 15
+        }
+
+        // Fetch real donation data to calculate total raised
+        const donationsResponse = await fetch('/api/master-admin/donations');
+        let totalRaised = 1500; // Base amount
+        
+        if (donationsResponse.ok) {
+          const donationsData = await donationsResponse.json();
+          const completedDonations = donationsData.donations?.filter((d: any) => d.status === 'completed') || [];
+          const realTotal = completedDonations.reduce((sum: number, donation: any) => {
+            return sum + (parseFloat(donation.total) || 0);
+          }, 0);
+          totalRaised = Math.max(1500, Math.round(realTotal + 1500)); // Add base amount to real total
+        }
+
+        // Animate to real numbers
         setTimeout(() => {
-          setCampaigns(25 + campaignGrowth);
-          setMoneyRaised(500 + moneyGrowth);
+          setCampaigns(totalCampaigns);
+          setMoneyRaised(totalRaised);
         }, 1000);
+
       } catch (error) {
         console.error('Error loading campaign data:', error);
+        // Keep base numbers if API fails
       }
     };
 
     loadRealData();
+
+    // Set up interval to refresh data every 30 seconds for live updates
+    const interval = setInterval(loadRealData, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   // Mock campaign data for the interactive demo
