@@ -9,117 +9,43 @@ export async function PUT(request: NextRequest) {
   try {
     console.log("[EDIT-DONATION] Starting edit donation request");
 
-    const { transactionId, donorName, donorEmail, status } =
-      await request.json();
-
-    console.log("[EDIT-DONATION] Request data:", {
-      transactionId,
-      donorName,
-      donorEmail,
-      status,
-    });
+    const { transactionId, donorName, donorEmail, status } = await request.json();
 
     if (!transactionId) {
-      console.log("[EDIT-DONATION] Missing transaction ID");
-      return NextResponse.json(
-        { error: "Transaction ID is required" },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "Transaction ID is required" }, { status: 400 });
     }
 
-    // Create server supabase client for auth
     const supabase = await createServerSupabaseClient();
-    
-    // Variables for square update tracking
-    let updatedSquares: any[] | null = null;
-    let squareUpdateError: any = null;
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
 
-    // Check authentication
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    console.log("[EDIT-DONATION] Auth check:", {
-      hasUser: !!user,
-      userId: user?.id,
-      authError: authError?.message || "none",
-    });
-
-    if (authError) {
-      console.log("[EDIT-DONATION] Auth error:", authError);
-      return NextResponse.json(
-        { error: "Authentication failed" },
-        { status: 401 },
-      );
+    if (authError || !user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (!user) {
-      console.log("[EDIT-DONATION] No user found in session");
-      return NextResponse.json(
-        { error: "Unauthorized - no user session" },
-        { status: 401 },
-      );
-    }
-
-    // Create admin client for database operations
     const adminSupabase = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
+      auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    // Get the transaction with enhanced logging
-    console.log(
-      `[EDIT-DONATION] Looking for transaction with ID: ${transactionId}`,
-    );
-
+    // Get transaction
     const { data: transaction, error: transactionError } = await adminSupabase
       .from("transactions")
       .select("*")
       .eq("id", transactionId)
       .single();
 
-    console.log("[EDIT-DONATION] Transaction lookup result:", {
-      found: !!transaction,
-      transactionId: transaction?.id,
-      campaignId: transaction?.campaign_id,
-      currentStatus: transaction?.status,
-      error: transactionError?.message || "none",
-    });
-
     if (transactionError || !transaction) {
-      console.error("[EDIT-DONATION] Transaction not found:", {
-        transactionId,
-        error: transactionError,
-      });
-      return NextResponse.json(
-        { error: "Transaction not found" },
-        { status: 404 },
-      );
+      return NextResponse.json({ error: "Transaction not found" }, { status: 404 });
     }
 
-    // Verify the campaign belongs to the user
+    // Verify campaign ownership
     const { data: campaign, error: campaignError } = await adminSupabase
       .from("campaigns")
-      .select("user_id, title")
+      .select("user_id")
       .eq("id", transaction.campaign_id)
       .single();
 
-    console.log("[EDIT-DONATION] Campaign ownership check:", {
-      campaignFound: !!campaign,
-      campaignUserId: campaign?.user_id,
-      requestUserId: user.id,
-      isOwner: campaign?.user_id === user.id,
-      error: campaignError?.message || "none",
-    });
-
     if (campaignError || !campaign || campaign.user_id !== user.id) {
-      return NextResponse.json(
-        { error: "Transaction not found or access denied" },
-        { status: 404 },
-      );
+      return NextResponse.json({ error: "Access denied" }, { status: 404 });
     }
 
     // Update transaction
@@ -128,349 +54,42 @@ export async function PUT(request: NextRequest) {
     if (donorEmail !== undefined) updateData.donor_email = donorEmail;
     if (status !== undefined) updateData.status = status;
 
-    console.log("[EDIT-DONATION] Updating transaction with:", updateData);
-
     const { error: updateError } = await adminSupabase
       .from("transactions")
       .update(updateData)
       .eq("id", transactionId);
 
     if (updateError) {
-      console.error("[EDIT-DONATION] Error updating transaction:", updateError);
-      return NextResponse.json(
-        { error: "Failed to update transaction" },
-        { status: 500 },
-      );
+      return NextResponse.json({ error: "Failed to update transaction" }, { status: 500 });
     }
 
-    console.log("[EDIT-DONATION] Transaction updated successfully", {
-      transactionId,
-      oldPaymentMethod: transaction.payment_method,
-      newStatus: status,
-      hasSquareIds: !!transaction.square_ids,
-      squareIdsLength: Array.isArray(transaction.square_ids) ? transaction.square_ids.length : typeof transaction.square_ids,
-      rawSquareIds: transaction.square_ids,
-      donorEmail: transaction.donor_email,
-      campaignId: transaction.campaign_id,
-      total: transaction.total
-    });
+    // Update squares for PayPal transactions
+    let updatedSquares: any[] | null = null;
+    if (transaction.payment_method === "paypal" && status === "completed") {
+      // Try to find and update squares by donor email
+      const { data: squares, error: squareError } = await adminSupabase
+        .from("squares")
+        .update({
+          payment_status: "completed",
+          claimed_at: new Date().toISOString(),
+          donor_name: donorName || transaction.donor_name,
+          claimed_by: donorEmail || transaction.donor_email,
+        })
+        .eq("claimed_by", transaction.donor_email)
+        .eq("campaign_id", transaction.campaign_id)
+        .eq("payment_type", "paypal")
+        .eq("payment_status", "pending")
+        .select();
 
-    // Also update the squares if donor info changed or status changed
-    if (
-      (donorName !== undefined ||
-        donorEmail !== undefined ||
-        status !== undefined)
-    ) {
-      const squareUpdateData: any = {};
-      if (donorName !== undefined) squareUpdateData.donor_name = donorName;
-      if (donorEmail !== undefined) squareUpdateData.claimed_by = donorEmail;
-      if (status === "completed") {
-        squareUpdateData.payment_status = "completed";
-        squareUpdateData.claimed_at = new Date().toISOString();
-      } else if (status === "pending") {
-        squareUpdateData.payment_status = "pending";
-      } else if (status === "failed") {
-        squareUpdateData.payment_status = "failed";
-      }
-
-      console.log("[EDIT-DONATION] Updating squares with data:", {
-        squareUpdateData,
-        square_ids: transaction.square_ids,
-      });
-
-      // Parse square_ids if it's a string
-      let squareIds: string[] = [];
-      try {
-        if (typeof transaction.square_ids === "string") {
-          // Handle both JSON string and comma-separated string
-          if (transaction.square_ids.startsWith("[")) {
-            squareIds = JSON.parse(transaction.square_ids);
-          } else {
-            squareIds = transaction.square_ids
-              .split(",")
-              .map((id) => id.trim())
-              .filter((id) => id);
-          }
-        } else if (Array.isArray(transaction.square_ids)) {
-          squareIds = transaction.square_ids;
-        }
-      } catch (e) {
-        console.error("[EDIT-DONATION] Error parsing square_ids:", e);
-        squareIds = [];
-      }
-
-      console.log("[EDIT-DONATION] Parsed square IDs:", squareIds);
-
-      if (squareIds.length > 0) {
-        console.log("[EDIT-DONATION] Updating squares for transaction:", transactionId);
-
-        // First, try to find squares by donor email (permanent reservation)
-        console.log("[EDIT-DONATION] Looking for squares with claimed_by: " + transaction.donor_email);
-        
-        const { data: reservedSquares, error: reservedSquareError } = await adminSupabase
-          .from("squares")
-          .select("*")
-          .eq("claimed_by", transaction.donor_email)
-          .eq("campaign_id", transaction.campaign_id)
-          .eq("payment_type", "paypal")
-          .eq("payment_status", "pending");
-
-        console.log("[EDIT-DONATION] Reserved squares query result:", {
-          reservedSquares: reservedSquares?.length || 0,
-          reservedSquareError: reservedSquareError?.message || "none",
-        });
-
-        // Try updating by donor email first (permanent reservation)
-        if (reservedSquares && reservedSquares.length > 0) {
-          console.log("[EDIT-DONATION] Updating squares by donor email");
-          
-          const { data: updatedReservedSquares, error: reservedUpdateError } = await adminSupabase
-            .from("squares")
-            .update(squareUpdateData)
-            .eq("claimed_by", transaction.donor_email)
-            .eq("campaign_id", transaction.campaign_id)
-            .eq("payment_type", "paypal")
-            .eq("payment_status", "pending")
-            .select();
-
-          console.log("[EDIT-DONATION] Reserved squares update result:", {
-            updatedReservedSquares: updatedReservedSquares?.length || 0,
-            reservedUpdateError: reservedUpdateError?.message || "none",
-          });
-
-          if (!reservedUpdateError && updatedReservedSquares) {
-            updatedSquares = updatedReservedSquares;
-            squareUpdateError = null;
-          } else {
-            squareUpdateError = reservedUpdateError;
-          }
-        }
-
-        // If no squares were updated by temp prefix, try updating by square IDs from transaction
-        if ((!updatedSquares || updatedSquares.length === 0) && transaction.square_ids) {
-          console.log("[EDIT-DONATION] Trying to update squares by square_ids from transaction");
-          
-          try {
-            let squareIds = transaction.square_ids;
-
-            // Parse if it's a string
-            if (typeof squareIds === "string") {
-              squareIds = JSON.parse(squareIds);
-            }
-
-            console.log("[EDIT-DONATION] Square IDs to update:", squareIds);
-
-            if (Array.isArray(squareIds) && squareIds.length > 0) {
-              const { data: squaresByIds, error: squaresByIdsError } = await adminSupabase
-                .from("squares")
-                .update(squareUpdateData)
-                .in("id", squareIds)
-                .select();
-
-              console.log("[EDIT-DONATION] Square update by IDs result:", {
-                squaresByIds: squaresByIds?.length || 0,
-                squaresByIdsError: squaresByIdsError?.message || "none",
-                squareIds,
-              });
-
-              if (!squaresByIdsError && squaresByIds) {
-                updatedSquares = squaresByIds;
-                squareUpdateError = null;
-              } else {
-                squareUpdateError = squaresByIdsError;
-              }
-            }
-          } catch (parseError) {
-            console.error("[EDIT-DONATION] Error parsing square_ids:", parseError);
-            squareUpdateError = parseError;
-          }
-        }
-      }
-
-      // PayPal fallback logic - moved outside square_ids check to handle empty arrays
-      if ((!updatedSquares || updatedSquares.length === 0) && transaction.payment_method === "paypal") {
-          console.log("[EDIT-DONATION] PayPal transaction with no square_ids - looking for pending PayPal squares in campaign");
-          
-          const { data: pendingPayPalSquares, error: pendingPayPalError } = await adminSupabase
-            .from("squares")
-            .select("*")
-            .eq("campaign_id", transaction.campaign_id)
-            .eq("payment_type", "paypal")
-            .eq("payment_status", "pending");
-
-          console.log("[EDIT-DONATION] Pending PayPal squares query result:", {
-            pendingPayPalSquares: pendingPayPalSquares?.length || 0,
-            pendingPayPalError: pendingPayPalError?.message || "none",
-          });
-
-          if (pendingPayPalSquares && pendingPayPalSquares.length > 0) {
-            console.log("[EDIT-DONATION] Found pending PayPal squares, updating them");
-            
-            const { data: updatedPendingSquares, error: pendingUpdateError } = await adminSupabase
-              .from("squares")
-              .update(squareUpdateData)
-              .eq("campaign_id", transaction.campaign_id)
-              .eq("payment_type", "paypal")
-              .eq("payment_status", "pending")
-              .select();
-
-            console.log("[EDIT-DONATION] Pending PayPal squares update result:", {
-              updatedPendingSquares: updatedPendingSquares?.length || 0,
-              pendingUpdateError: pendingUpdateError?.message || "none",
-            });
-
-            if (!pendingUpdateError && updatedPendingSquares) {
-              updatedSquares = updatedPendingSquares;
-              squareUpdateError = null;
-            } else {
-              squareUpdateError = pendingUpdateError;
-            }
-          } else {
-            // If no pending PayPal squares found, try to reserve and complete available squares 
-            // based on the transaction total
-            console.log("[EDIT-DONATION] No pending PayPal squares found - looking for available squares to reserve based on transaction total");
-            
-            const { data: availableSquares, error: availableSquaresError } = await adminSupabase
-              .from("squares")
-              .select("*")
-              .eq("campaign_id", transaction.campaign_id)
-              .is("claimed_by", null)
-              .order("number", { ascending: true });
-
-            console.log("[EDIT-DONATION] Available squares query result:", {
-              availableSquares: availableSquares?.length || 0,
-              availableSquaresError: availableSquaresError?.message || "none",
-              transactionTotal: transaction.total,
-              campaignId: transaction.campaign_id,
-              firstFewSquares: availableSquares?.slice(0, 3).map(s => ({
-                id: s.id,
-                number: s.number,
-                value: s.value,
-                claimed_by: s.claimed_by
-              }))
-            });
-
-            if (availableSquares && availableSquares.length > 0) {
-              // Find squares that match the transaction total
-              let selectedSquares: any[] = [];
-              let currentTotal = 0;
-              
-              for (const square of availableSquares) {
-                if (currentTotal < transaction.total) {
-                  selectedSquares.push(square);
-                  currentTotal += square.value;
-                  
-                  if (currentTotal >= transaction.total) {
-                    break;
-                  }
-                }
-              }
-
-              console.log("[EDIT-DONATION] Selected squares for reservation:", {
-                selectedSquares: selectedSquares.length,
-                selectedTotal: currentTotal,
-                targetTotal: transaction.total,
-                squareNumbers: selectedSquares.map(s => s.number),
-              });
-
-              if (selectedSquares.length > 0 && currentTotal >= transaction.total) {
-                // Reserve and complete these squares
-                const squareIds = selectedSquares.map(s => s.id);
-                
-                const { data: reservedSquares, error: reservationError } = await adminSupabase
-                  .from("squares")
-                  .update({
-                    claimed_by: transaction.donor_email || "anonymous",
-                    donor_name: transaction.donor_name || "Anonymous", 
-                    payment_status: "completed" as const,
-                    payment_type: "paypal" as const,
-                    claimed_at: new Date().toISOString(),
-                  })
-                  .in("id", squareIds)
-                  .is("claimed_by", null) // Only update if still available
-                  .select();
-
-                console.log("[EDIT-DONATION] Square reservation and completion result:", {
-                  reservedSquares: reservedSquares?.length || 0,
-                  reservationError,
-                  squareIds,
-                });
-
-                if (!reservationError && reservedSquares && reservedSquares.length > 0) {
-                  updatedSquares = reservedSquares;
-                  squareUpdateError = null;
-                  
-                  // Update transaction with the square IDs
-                  await adminSupabase
-                    .from("transactions")
-                    .update({ square_ids: squareIds })
-                    .eq("id", transactionId);
-                    
-                  console.log("[EDIT-DONATION] Successfully reserved and completed squares for transaction:", {
-                    transactionId,
-                    squareCount: reservedSquares.length,
-                    totalValue: reservedSquares.reduce((sum, s) => sum + s.value, 0),
-                  });
-                } else {
-                  squareUpdateError = reservationError || new Error("No squares were reserved");
-                }
-              } else {
-                console.log("[EDIT-DONATION] Could not find enough available squares to match transaction total");
-                squareUpdateError = new Error("Insufficient available squares to match transaction total");
-              }
-            } else {
-              console.log("[EDIT-DONATION] No available squares found in campaign");
-              squareUpdateError = availableSquaresError || new Error("No available squares found");
-            }
-          }
-        }
-
-        console.log("[EDIT-DONATION] Final square update result:", {
-          updatedCount: updatedSquares?.length || 0,
-          squareUpdateError: squareUpdateError?.message || "none",
-        });
-
-        if (squareUpdateError) {
-          console.error("[EDIT-DONATION] Error updating squares:", squareUpdateError);
-          
-          // Check if the error is due to no available squares
-          const isNoSquaresError = squareUpdateError.message?.includes("No available squares found") || 
-                                   squareUpdateError.message?.includes("Insufficient available squares");
-          
-          if (isNoSquaresError) {
-            console.log("[EDIT-DONATION] Transaction marked as completed despite no squares being reserved");
-            return NextResponse.json({ 
-              success: true,
-              warning: "Transaction completed but no squares were available to reserve",
-              squaresReserved: 0
-            });
-          }
-        } else {
-          console.log("[EDIT-DONATION] Successfully updated squares:", {
-            count: updatedSquares?.length || 0,
-            squares: updatedSquares?.map(s => `Square ${s.number}: ${s.donor_name} (${s.payment_status})`)
-          });
-        }
-      }
+      updatedSquares = squares;
     }
 
-
-    console.log("[EDIT-DONATION] Edit donation completed successfully", {
-      transactionId,
-      paymentMethod: transaction.payment_method,
-      status,
-      squaresUpdated: updatedSquares?.length || 0,
-      squareUpdateError: squareUpdateError?.message || "none"
-    });
-    
-    return NextResponse.json({
+    return NextResponse.json({ 
       success: true,
       squaresReserved: updatedSquares?.length || 0
-    });  } catch (error) {
+    });
+  } catch (error) {
     console.error("[EDIT-DONATION] API error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
