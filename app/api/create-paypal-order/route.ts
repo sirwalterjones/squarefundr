@@ -188,20 +188,26 @@ export async function POST(request: NextRequest) {
 
     const squareUUIDs = reservedSquares?.map((square) => square.id) || [];
     console.log("Reserved square UUIDs:", squareUUIDs);
+    console.log("Reserved square UUIDs length:", squareUUIDs.length);
+    console.log("Reserved square UUIDs type:", typeof squareUUIDs);
+
+    const transactionData = {
+      id: transactionId,
+      campaign_id: campaignId,
+      square_ids: squareUUIDs,
+      total: totalAmount,
+      payment_method: "paypal",
+      donor_email: donorEmail,
+      donor_name: donorName,
+      status: "pending",
+      timestamp: new Date().toISOString(),
+    };
+    
+    console.log("Creating transaction with data:", JSON.stringify(transactionData, null, 2));
 
     const { error: transactionError } = await supabase
       .from("transactions")
-      .insert({
-        id: transactionId,
-        campaign_id: campaignId,
-        square_ids: squareUUIDs,
-        total: totalAmount,
-        payment_method: "paypal",
-        donor_email: donorEmail,
-        donor_name: donorName,
-        status: "pending",
-        timestamp: new Date().toISOString(),
-      });
+      .insert(transactionData);
 
     if (transactionError) {
       console.error("Transaction creation error details:", {
@@ -221,6 +227,28 @@ export async function POST(request: NextRequest) {
     }
 
     console.log("Transaction created successfully with ID:", transactionId);
+    
+    // Verify the transaction was created with correct square_ids
+    const { data: verifyTransaction, error: verifyError } = await supabase
+      .from("transactions")
+      .select("*")
+      .eq("id", transactionId)
+      .single();
+      
+    if (verifyError) {
+      console.error("Error verifying transaction creation:", verifyError);
+    } else {
+      console.log("Verification - transaction created with:", {
+        id: verifyTransaction.id,
+        square_ids: verifyTransaction.square_ids,
+        square_ids_length: Array.isArray(verifyTransaction.square_ids) ? verifyTransaction.square_ids.length : typeof verifyTransaction.square_ids,
+        square_ids_type: typeof verifyTransaction.square_ids,
+        campaign_id: verifyTransaction.campaign_id,
+        total: verifyTransaction.total,
+        payment_method: verifyTransaction.payment_method,
+        donor_email: verifyTransaction.donor_email,
+      });
+    }
 
     // Create PayPal payment link for personal account
     const baseUrl = request.nextUrl.origin.includes("localhost")
