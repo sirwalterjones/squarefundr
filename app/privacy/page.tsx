@@ -7,14 +7,14 @@ export const metadata: Metadata = {
 
 export default function PrivacyPage() {
   return (
-    <div className="min-h-screen bg-black py-8">
+    <div className="min-h-screen bg-gray-50 py-8">
       <div className="container-responsive max-w-4xl">
         <div className="card">
-          <h1 className="text-3xl font-bold text-white mb-8">Privacy Policy</h1>
+          <h1 className="text-3xl font-bold text-black mb-8">Privacy Policy</h1>
           
-          <div className="space-y-6 text-gray-300">
+          <div className="space-y-6 text-gray-600">
             <section>
-              <h2 className="text-xl font-semibold text-white mb-4">Introduction</h2>
+              <h2 className="text-xl font-semibold text-black mb-4">Introduction</h2>
               <p className="leading-relaxed">
                 At SquareFundr, we are committed to protecting your privacy and ensuring the security of your personal information. 
                 This Privacy Policy explains how we collect, use, and safeguard your data when you use our fundraising platform.
@@ -22,9 +22,9 @@ export default function PrivacyPage() {
             </section>
 
             <section>
-              <h2 className="text-xl font-semibold text-white mb-4">Information We Collect</h2>
+              <h2 className="text-xl font-semibold text-black mb-4">Information We Collect</h2>
               <div className="space-y-3">
-                <h3 className="text-lg font-medium text-white">Personal Information</h3>
+                <h3 className="text-lg font-medium text-black">Personal Information</h3>
                 <ul className="list-disc list-inside space-y-2 ml-4">
                   <li>Name and email address when you create an account</li>
                   <li>Payment information (processed securely through PayPal)</li>
@@ -32,7 +32,7 @@ export default function PrivacyPage() {
                   <li>Donor information for campaign tracking</li>
                 </ul>
                 
-                <h3 className="text-lg font-medium text-white">Technical Information</h3>
+                <h3 className="text-lg font-medium text-black">Technical Information</h3>
                 <ul className="list-disc list-inside space-y-2 ml-4">
                   <li>IP address and browser information</li>
                   <li>Usage data and analytics</li>
@@ -42,7 +42,7 @@ export default function PrivacyPage() {
             </section>
 
             <section>
-              <h2 className="text-xl font-semibold text-white mb-4">How We Use Your Information</h2>
+              <h2 className="text-xl font-semibold text-black mb-4">How We Use Your Information</h2>
               <ul className="list-disc list-inside space-y-2">
                 <li>To provide and maintain our fundraising platform</li>
                 <li>To process donations and payments</li>
@@ -53,7 +53,7 @@ export default function PrivacyPage() {
             </section>
 
             <section>
-              <h2 className="text-xl font-semibold text-white mb-4">Data Protection</h2>
+              <h2 className="text-xl font-semibold text-black mb-4">Data Protection</h2>
               <div className="space-y-3">
                 <p className="leading-relaxed">
                   We implement industry-standard security measures to protect your personal information:
@@ -68,7 +68,7 @@ export default function PrivacyPage() {
             </section>
 
             <section>
-              <h2 className="text-xl font-semibold text-white mb-4">We Do Not Share Your Data</h2>
+              <h2 className="text-xl font-semibold text-black mb-4">We Do Not Share Your Data</h2>
               <p className="leading-relaxed">
                 We are committed to protecting your privacy and will not sell, trade, or otherwise transfer your personal information to third parties, except:
               </p>
@@ -81,7 +81,7 @@ export default function PrivacyPage() {
             </section>
 
             <section>
-              <h2 className="text-xl font-semibold text-white mb-4">Your Rights</h2>
+              <h2 className="text-xl font-semibold text-black mb-4">Your Rights</h2>
               <p className="leading-relaxed">
                 You have the right to:
               </p>
@@ -95,7 +95,7 @@ export default function PrivacyPage() {
             </section>
 
             <section>
-              <h2 className="text-xl font-semibold text-white mb-4">Cookies and Tracking</h2>
+              <h2 className="text-xl font-semibold text-black mb-4">Cookies and Tracking</h2>
               <p className="leading-relaxed">
                 We use cookies and similar technologies to improve your experience on our platform. 
                 You can control cookie settings through your browser preferences.
@@ -103,7 +103,7 @@ export default function PrivacyPage() {
             </section>
 
             <section>
-              <h2 className="text-xl font-semibold text-white mb-4">Children's Privacy</h2>
+              <h2 className="text-xl font-semibold text-black mb-4">Children's Privacy</h2>
               <p className="leading-relaxed">
                 Our platform is not intended for children under 13 years of age. 
                 We do not knowingly collect personal information from children under 13.
@@ -111,7 +111,7 @@ export default function PrivacyPage() {
             </section>
 
             <section>
-              <h2 className="text-xl font-semibold text-white mb-4">Changes to This Policy</h2>
+              <h2 className="text-xl font-semibold text-black mb-4">Changes to This Policy</h2>
               <p className="leading-relaxed">
                 We may update this Privacy Policy from time to time. 
                 We will notify you of any changes by posting the new Privacy Policy on this page 
@@ -120,16 +120,16 @@ export default function PrivacyPage() {
             </section>
 
             <section>
-              <h2 className="text-xl font-semibold text-white mb-4">Contact Us</h2>
+              <h2 className="text-xl font-semibold text-black mb-4">Contact Us</h2>
               <p className="leading-relaxed">
                 If you have any questions about this Privacy Policy or our data practices, 
                 please contact us at privacy@squarefundr.com
               </p>
             </section>
 
-            <div className="mt-8 p-4 bg-gray-800 rounded-lg border border-gray-700">
-              <p className="text-sm text-gray-400">
-                <strong>Last Updated:</strong> December 2024
+            <div className="mt-8 p-4 bg-gray-100 rounded-lg border border-gray-200">
+              <p className="text-sm text-gray-600">
+                <strong>Last Updated:</strong> December 2025
               </p>
             </div>
           </div>
