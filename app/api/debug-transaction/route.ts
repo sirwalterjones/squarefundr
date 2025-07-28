@@ -8,10 +8,7 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const transactionId = searchParams.get("transaction_id");
-
-    if (!transactionId) {
-      return NextResponse.json({ error: "Transaction ID required" }, { status: 400 });
-    }
+    const listPayPal = searchParams.get("list_paypal");
 
     const adminSupabase = createClient(supabaseUrl, supabaseServiceKey, {
       auth: {
@@ -19,6 +16,25 @@ export async function GET(request: NextRequest) {
         persistSession: false,
       },
     });
+
+    // If list_paypal is requested, return recent PayPal transactions
+    if (listPayPal === "true") {
+      const { data: paypalTransactions, error: paypalError } = await adminSupabase
+        .from("transactions")
+        .select("*")
+        .eq("payment_method", "paypal")
+        .order("timestamp", { ascending: false })
+        .limit(10);
+
+      return NextResponse.json({
+        paypalTransactions: paypalTransactions || [],
+        paypalError: paypalError?.message || null,
+      });
+    }
+
+    if (!transactionId) {
+      return NextResponse.json({ error: "Transaction ID required" }, { status: 400 });
+    }
 
     // Get transaction details
     const { data: transaction, error: transactionError } = await adminSupabase
