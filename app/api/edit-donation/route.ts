@@ -110,7 +110,7 @@ export async function PUT(request: NextRequest) {
           .from("squares")
           .select("*")
           .eq("campaign_id", transaction.campaign_id)
-          .is("claimed_by", null)
+          .or("claimed_by.is.null,claimed_by.eq.")
           .order("number", { ascending: true });
 
         console.log("[EDIT-DONATION] Available squares query result:", {
