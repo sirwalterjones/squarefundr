@@ -72,7 +72,61 @@ export async function POST(request: NextRequest) {
     }
 
     // Update the squares to mark them as completed
-    if (transaction.square_ids) {
+    console.log("[MARK-PAID-NEW] Updating squares for transaction:", transactionId);
+    
+    const updateData = {
+      claimed_by: transaction.donor_email || "anonymous",
+      donor_name: transaction.donor_name || "Anonymous",
+      payment_status: "completed" as const,
+      payment_type: "paypal" as const,
+      claimed_at: new Date().toISOString(),
+    };
+
+    console.log("[MARK-PAID-NEW] Square update data:", updateData);
+
+    // First, try to find squares with temp prefix
+    console.log("[MARK-PAID-NEW] Looking for temp squares with claimed_by: temp_" + transactionId);
+    
+    const { data: tempSquares, error: tempSquareError } = await adminSupabase
+      .from("squares")
+      .select("*")
+      .eq("claimed_by", `temp_${transactionId}`);
+
+    console.log("[MARK-PAID-NEW] Temp squares query result:", {
+      tempSquares: tempSquares?.length || 0,
+      tempSquareError,
+    });
+
+    let updatedSquares: any[] | null = null;
+    let squareUpdateError: any = null;
+
+    // Try updating by temp prefix first
+    if (tempSquares && tempSquares.length > 0) {
+      console.log("[MARK-PAID-NEW] Updating squares by temp prefix");
+      
+      const { data: updatedTempSquares, error: tempUpdateError } = await adminSupabase
+        .from("squares")
+        .update(updateData)
+        .eq("claimed_by", `temp_${transactionId}`)
+        .select();
+
+      console.log("[MARK-PAID-NEW] Temp squares update result:", {
+        updatedTempSquares: updatedTempSquares?.length || 0,
+        tempUpdateError,
+      });
+
+      if (!tempUpdateError && updatedTempSquares) {
+        updatedSquares = updatedTempSquares;
+        squareUpdateError = null;
+      } else {
+        squareUpdateError = tempUpdateError;
+      }
+    }
+
+    // If no squares were updated by temp prefix, try updating by square IDs from transaction
+    if ((!updatedSquares || updatedSquares.length === 0) && transaction.square_ids) {
+      console.log("[MARK-PAID-NEW] Trying to update squares by square_ids from transaction");
+      
       try {
         let squareIds = transaction.square_ids;
 
@@ -84,28 +138,38 @@ export async function POST(request: NextRequest) {
         console.log("[MARK-PAID-NEW] Square IDs to update:", squareIds);
 
         if (Array.isArray(squareIds) && squareIds.length > 0) {
-          const { error: squareUpdateError } = await adminSupabase
+          const { data: squaresByIds, error: squaresByIdsError } = await adminSupabase
             .from("squares")
-            .update({ 
-              payment_status: "completed",
-              claimed_by: transaction.donor_email || "anonymous",
-              donor_name: transaction.donor_name || "Anonymous",
-              claimed_at: new Date().toISOString()
-            })
-            .in("id", squareIds);
+            .update(updateData)
+            .in("id", squareIds)
+            .select();
 
-          if (squareUpdateError) {
-            console.error(
-              "[MARK-PAID-NEW] Error updating squares:",
-              squareUpdateError,
-            );
+          console.log("[MARK-PAID-NEW] Square update by IDs result:", {
+            squaresByIds: squaresByIds?.length || 0,
+            squaresByIdsError,
+            squareIds,
+          });
+
+          if (!squaresByIdsError && squaresByIds) {
+            updatedSquares = squaresByIds;
+            squareUpdateError = null;
           } else {
-            console.log("[MARK-PAID-NEW] Successfully updated squares with claimed_by field");
+            squareUpdateError = squaresByIdsError;
           }
         }
       } catch (parseError) {
         console.error("[MARK-PAID-NEW] Error parsing square_ids:", parseError);
+        squareUpdateError = parseError;
       }
+    }
+
+    if (squareUpdateError) {
+      console.error("[MARK-PAID-NEW] Error updating squares:", squareUpdateError);
+    } else {
+      console.log("[MARK-PAID-NEW] Successfully updated squares:", {
+        count: updatedSquares?.length || 0,
+        squares: updatedSquares?.map(s => `Square ${s.number}: ${s.donor_name} (${s.payment_status})`)
+      });
     }
 
     console.log("[MARK-PAID-NEW] Successfully marked donation as paid");
