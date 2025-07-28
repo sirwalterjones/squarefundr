@@ -47,7 +47,7 @@ export default function Navbar() {
               Create Campaign
             </Link>
             <Link
-              href="/fundraiser/team-championship-fund"
+              href={`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/fundraiser/team-championship-fund`}
               className="text-gray-600 hover:text-blue-600 transition-colors font-medium"
             >
               View Demo
@@ -119,7 +119,7 @@ export default function Navbar() {
                 Create Campaign
               </Link>
               <Link
-                href="/fundraiser/team-championship-fund"
+                href={`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/fundraiser/team-championship-fund`}
                 className="text-gray-600 hover:text-blue-600 transition-colors py-2 font-medium"
                 onClick={() => setIsMenuOpen(false)}
               >

@@ -29,7 +29,7 @@ export default async function DashboardPage() {
         total_squares: 100,
         pricing_type: "fixed" as const,
         price_data: { fixed: 10 },
-        public_url: "/fundraiser/demo-animal-shelter",
+        public_url: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/fundraiser/demo-animal-shelter`,
         paid_to_admin: false,
         is_active: true,
         created_at: new Date().toISOString(),
@@ -55,7 +55,7 @@ export default async function DashboardPage() {
         total_squares: 50,
         pricing_type: "sequential" as const,
         price_data: { sequential: { start: 5, increment: 2 } },
-        public_url: "/fundraiser/team-championship-fund",
+        public_url: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/fundraiser/team-championship-fund`,
         paid_to_admin: false,
         is_active: true,
         created_at: new Date(Date.now() - 86400000).toISOString(), // 1 day ago

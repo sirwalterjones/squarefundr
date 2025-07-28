@@ -116,7 +116,7 @@ export async function PUT(
         id: updatedCampaign.id,
         title: updatedCampaign.title,
         slug: updatedCampaign.slug,
-        publicUrl: `/fundraiser/${updatedCampaign.slug}`,
+        publicUrl: `${request.nextUrl.origin}/fundraiser/${updatedCampaign.slug}`,
       },
     });
 

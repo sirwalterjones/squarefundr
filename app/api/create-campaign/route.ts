@@ -235,7 +235,7 @@ export async function POST(request: NextRequest) {
         priceData: priceData,
         totalSquares: rows * columns,
         createdAt: new Date().toISOString(),
-        publicUrl: `/fundraiser/${slug}`,
+        publicUrl: `${request.nextUrl.origin}/fundraiser/${slug}`,
         paidToAdmin: false,
         isActive: true,
         userId: "demo-user",
@@ -346,7 +346,7 @@ export async function POST(request: NextRequest) {
       priceData: campaign.price_data,
       totalSquares: campaign.total_squares,
       createdAt: campaign.created_at,
-      publicUrl: `/fundraiser/${campaign.slug}`,
+      publicUrl: `${request.nextUrl.origin}/fundraiser/${campaign.slug}`,
       paidToAdmin: false,
       isActive: campaign.is_active,
       userId: campaign.user_id

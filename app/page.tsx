@@ -103,7 +103,7 @@ export default function HomePage() {
                   Create Your Campaign
                 </Link>
                 <Link
-                  href="/fundraiser/team-championship-fund"
+                  href={`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/fundraiser/team-championship-fund`}
                   className="border-2 border-blue-600 text-blue-600 px-8 py-4 rounded-xl font-semibold hover:bg-blue-600 hover:text-white transition-all duration-200"
                 >
                   Try Live Demo

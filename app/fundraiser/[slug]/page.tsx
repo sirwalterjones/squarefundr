@@ -37,7 +37,7 @@ export async function generateMetadata({
           type: "website",
           siteName: "SquareFundr",
           locale: "en_US",
-          url: `${baseUrl}/fundraiser/team-championship-fund`,
+          url: `${baseUrl}/fundraiser/${slug}`,
         },
         twitter: {
           card: "summary_large_image",
@@ -51,7 +51,7 @@ export async function generateMetadata({
         // Additional meta tags for better Facebook/Instagram support
         other: {
           "fb:app_id": "1234567890123456",
-          "og:url": `${baseUrl}/fundraiser/team-championship-fund`,
+          "og:url": `${baseUrl}/fundraiser/${slug}`,
           "og:image":
             "https://images.unsplash.com/photo-1560272564-c83b66b1ad12?w=1200&h=630&fit=crop&auto=format",
           "og:image:secure_url":

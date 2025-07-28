@@ -42,7 +42,7 @@ export async function GET(
             updated_at: new Date().toISOString(),
             is_active: true,
             user_id: 'demo-user',
-            public_url: `/fundraiser/${slug}`
+            public_url: `${request.nextUrl.origin}/fundraiser/${slug}`
           },
           squares: Array.from({ length: 100 }, (_, i) => ({
             id: `demo-square-${i + 1}`,
