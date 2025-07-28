@@ -25,63 +25,73 @@ export default function Navbar() {
   }, [user]);
 
   return (
-    <nav className="bg-white/95 backdrop-blur-sm border-b border-gray-200 sticky top-0 z-50">
+    <nav className="bg-white/95 backdrop-blur-sm border-b border-gray-200 sticky top-0 z-50 shadow-sm">
       <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-3 group">
-            <div className="w-10 h-10 bg-black rounded-full flex items-center justify-center group-hover:scale-105 transition-transform duration-200">
-              <span className="text-white font-bold text-lg">SF</span>
+            <div className="w-10 h-10 bg-black rounded-full flex items-center justify-center group-hover:scale-110 group-hover:rotate-12 transition-all duration-300 group-hover:shadow-lg">
+              <span className="text-white font-bold text-lg group-hover:scale-110 transition-transform duration-300">SF</span>
             </div>
-            <span className="text-2xl font-bold text-black">
+            <span className="text-2xl font-bold text-black group-hover:text-gray-700 transition-colors duration-300">
               SquareFundr
             </span>
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-8">
+          <div className="hidden md:flex items-center space-x-2">
             <Link
               href={user ? "/create" : "/auth"}
-              className="text-gray-600 hover:text-black transition-colors font-medium"
+              className="relative px-4 py-2 text-gray-600 font-medium rounded-lg hover:text-black transition-all duration-300 hover:bg-gray-50 group overflow-hidden"
             >
-              Create Campaign
+              <span className="relative z-10">Create Campaign</span>
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 opacity-0 group-hover:opacity-10 transition-opacity duration-300"></div>
+              <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-blue-500 to-purple-500 group-hover:w-full transition-all duration-300"></div>
             </Link>
             <Link
               href={`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/fundraiser/team-championship-fund`}
-              className="text-gray-600 hover:text-black transition-colors font-medium"
+              className="relative px-4 py-2 text-gray-600 font-medium rounded-lg hover:text-black transition-all duration-300 hover:bg-gray-50 group overflow-hidden"
             >
-              View Demo
+              <span className="relative z-10">View Demo</span>
+              <div className="absolute inset-0 bg-gradient-to-r from-green-500 to-blue-500 opacity-0 group-hover:opacity-10 transition-opacity duration-300"></div>
+              <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-green-500 to-blue-500 group-hover:w-full transition-all duration-300"></div>
             </Link>
 
             {user ? (
               <>
                 <Link
                   href="/dashboard"
-                  className="text-gray-600 hover:text-black transition-colors font-medium"
+                  className="relative px-4 py-2 text-gray-600 font-medium rounded-lg hover:text-black transition-all duration-300 hover:bg-gray-50 group overflow-hidden"
                 >
-                  Dashboard
+                  <span className="relative z-10">Dashboard</span>
+                  <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 opacity-0 group-hover:opacity-10 transition-opacity duration-300"></div>
+                  <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-purple-500 to-pink-500 group-hover:w-full transition-all duration-300"></div>
                 </Link>
                 {isAdmin && (
                   <Link
                     href="/master-admin"
-                    className="text-gray-600 hover:text-black transition-colors font-medium"
+                    className="relative px-4 py-2 text-gray-600 font-medium rounded-lg hover:text-black transition-all duration-300 hover:bg-gray-50 group overflow-hidden"
                   >
-                    Admin
+                    <span className="relative z-10">Admin</span>
+                    <div className="absolute inset-0 bg-gradient-to-r from-red-500 to-orange-500 opacity-0 group-hover:opacity-10 transition-opacity duration-300"></div>
+                    <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-red-500 to-orange-500 group-hover:w-full transition-all duration-300"></div>
                   </Link>
                 )}
                 <button
                   onClick={signOut}
-                  className="border-2 border-black text-black px-6 py-2 rounded-full font-medium hover:bg-black hover:text-white transition-all duration-200"
+                  className="relative ml-2 border-2 border-black text-black px-6 py-2 rounded-full font-medium hover:bg-black hover:text-white transition-all duration-300 hover:scale-105 hover:shadow-lg group overflow-hidden"
                 >
-                  Sign Out
+                  <span className="relative z-10">Sign Out</span>
+                  <div className="absolute inset-0 bg-black scale-0 group-hover:scale-100 transition-transform duration-300 rounded-full"></div>
                 </button>
               </>
             ) : (
               <Link
                 href="/auth"
-                className="bg-black text-white px-6 py-2 rounded-full font-medium hover:bg-gray-900 transition-all duration-200"
+                className="relative ml-2 bg-black text-white px-6 py-2 rounded-full font-medium hover:bg-gray-900 transition-all duration-300 hover:scale-105 hover:shadow-lg group overflow-hidden"
               >
-                Sign In
+                <span className="relative z-10">Sign In</span>
+                <div className="absolute inset-0 bg-gradient-to-r from-gray-800 to-black opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-full"></div>
               </Link>
             )}
           </div>
@@ -89,10 +99,10 @@ export default function Navbar() {
           {/* Mobile menu button */}
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="md:hidden p-2 rounded-full hover:bg-gray-100 transition-colors text-black"
+            className="md:hidden p-2 rounded-full hover:bg-gray-100 transition-all duration-300 text-black hover:scale-110 hover:rotate-180 group"
           >
             <svg
-              className="w-6 h-6"
+              className="w-6 h-6 group-hover:text-purple-600 transition-colors duration-300"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -101,7 +111,7 @@ export default function Navbar() {
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth={2}
-                d="M4 6h16M4 12h16M4 18h16"
+                d={isMenuOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"}
               />
             </svg>
           </button>
@@ -109,39 +119,43 @@ export default function Navbar() {
 
         {/* Mobile Navigation */}
         {isMenuOpen && (
-          <div className="md:hidden py-4 border-t border-gray-200">
-            <div className="flex flex-col space-y-4">
+          <div className="md:hidden py-4 border-t border-gray-200 bg-gradient-to-b from-gray-50 to-white animate-in slide-in-from-top duration-300">
+            <div className="flex flex-col space-y-2">
               <Link
                 href={user ? "/create" : "/auth"}
-                className="text-gray-600 hover:text-black transition-colors py-2 font-medium"
+                className="relative text-gray-600 hover:text-black transition-all duration-300 py-3 px-4 font-medium rounded-lg hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 group"
                 onClick={() => setIsMenuOpen(false)}
               >
-                Create Campaign
+                <span className="relative z-10">Create Campaign</span>
+                <div className="absolute left-0 bottom-0 w-0 h-1 bg-gradient-to-r from-blue-500 to-purple-500 group-hover:w-full transition-all duration-300 rounded-full"></div>
               </Link>
               <Link
                 href={`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/fundraiser/team-championship-fund`}
-                className="text-gray-600 hover:text-black transition-colors py-2 font-medium"
+                className="relative text-gray-600 hover:text-black transition-all duration-300 py-3 px-4 font-medium rounded-lg hover:bg-gradient-to-r hover:from-green-50 hover:to-blue-50 group"
                 onClick={() => setIsMenuOpen(false)}
               >
-                View Demo
+                <span className="relative z-10">View Demo</span>
+                <div className="absolute left-0 bottom-0 w-0 h-1 bg-gradient-to-r from-green-500 to-blue-500 group-hover:w-full transition-all duration-300 rounded-full"></div>
               </Link>
 
               {user ? (
                 <>
                   <Link
                     href="/dashboard"
-                    className="text-gray-600 hover:text-black transition-colors py-2 font-medium"
+                    className="relative text-gray-600 hover:text-black transition-all duration-300 py-3 px-4 font-medium rounded-lg hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 group"
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    Dashboard
+                    <span className="relative z-10">Dashboard</span>
+                    <div className="absolute left-0 bottom-0 w-0 h-1 bg-gradient-to-r from-purple-500 to-pink-500 group-hover:w-full transition-all duration-300 rounded-full"></div>
                   </Link>
                   {isAdmin && (
                     <Link
                       href="/master-admin"
-                      className="text-gray-600 hover:text-black transition-colors py-2 font-medium"
+                      className="relative text-gray-600 hover:text-black transition-all duration-300 py-3 px-4 font-medium rounded-lg hover:bg-gradient-to-r hover:from-red-50 hover:to-orange-50 group"
                       onClick={() => setIsMenuOpen(false)}
                     >
-                      Admin
+                      <span className="relative z-10">Admin</span>
+                      <div className="absolute left-0 bottom-0 w-0 h-1 bg-gradient-to-r from-red-500 to-orange-500 group-hover:w-full transition-all duration-300 rounded-full"></div>
                   </Link>
                   )}
                   <button
@@ -149,18 +163,20 @@ export default function Navbar() {
                       signOut();
                       setIsMenuOpen(false);
                     }}
-                    className="border-2 border-black text-black px-6 py-2 rounded-full font-medium hover:bg-black hover:text-white transition-all duration-200 text-left"
+                    className="relative border-2 border-black text-black px-6 py-3 mt-2 rounded-full font-medium hover:bg-black hover:text-white transition-all duration-300 text-left hover:scale-105 hover:shadow-lg group overflow-hidden"
                   >
-                    Sign Out
+                    <span className="relative z-10">Sign Out</span>
+                    <div className="absolute inset-0 bg-black scale-0 group-hover:scale-100 transition-transform duration-300 rounded-full"></div>
                   </button>
                 </>
               ) : (
                 <Link
                   href="/auth"
-                  className="bg-black text-white px-6 py-2 rounded-full font-medium hover:bg-gray-900 transition-all duration-200 inline-block text-center"
+                  className="relative bg-black text-white px-6 py-3 mt-2 rounded-full font-medium hover:bg-gray-900 transition-all duration-300 inline-block text-center hover:scale-105 hover:shadow-lg group overflow-hidden"
                   onClick={() => setIsMenuOpen(false)}
                 >
-                  Sign In
+                  <span className="relative z-10">Sign In</span>
+                  <div className="absolute inset-0 bg-gradient-to-r from-gray-800 to-black opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-full"></div>
                 </Link>
               )}
             </div>
