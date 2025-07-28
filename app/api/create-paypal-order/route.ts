@@ -120,8 +120,12 @@ export async function POST(request: NextRequest) {
       claimed_at: new Date().toISOString(),
     }));
 
+    console.log("Square updates to apply:", squareUpdates);
+
     // Update each square with permanent reservation
     for (const update of squareUpdates) {
+      console.log(`Updating square at row ${update.row}, col ${update.col} for campaign ${update.campaign_id}`);
+      
       const { error: updateError } = await supabase
         .from("squares")
         .update({
@@ -137,6 +141,15 @@ export async function POST(request: NextRequest) {
 
       if (updateError) {
         console.error("Error reserving square:", updateError);
+        console.error("Square update details:", {
+          campaign_id: update.campaign_id,
+          row: update.row,
+          col: update.col,
+          claimed_by: update.claimed_by,
+          error: updateError.message,
+          details: updateError.details,
+          hint: updateError.hint,
+        });
         // If we can't reserve squares, we should fail the transaction
         return NextResponse.json(
           {
@@ -145,6 +158,8 @@ export async function POST(request: NextRequest) {
           },
           { status: 500 },
         );
+      } else {
+        console.log(`Successfully reserved square at row ${update.row}, col ${update.col}`);
       }
     }
 
@@ -190,32 +205,54 @@ export async function POST(request: NextRequest) {
     const returnUrl = `${baseUrl}/api/paypal-success?transaction_id=${transactionId}&donor_name=${encodeURIComponent(donorName)}&donor_email=${encodeURIComponent(donorEmail)}`;
     const cancelUrl = `${baseUrl}/fundraiser/${campaign.slug}?canceled=true&transaction_id=${transactionId}`;
 
-    const paypalOrder = await createPayPalOrder(
-      totalAmount,
-      "USD",
+    console.log("Creating PayPal order with data:", {
+      amount: totalAmount,
+      currency: "USD",
       campaignId,
       squareKeys,
       returnUrl,
       cancelUrl,
-      campaign.paypal_email, // Direct payment to campaign owner's PayPal
-    );
+      payeeEmail: campaign.paypal_email,
+    });
 
-    // Find approval URL
-    const approvalUrl = paypalOrder.links?.find(
-      (link: any) => link.rel === "approve",
-    )?.href;
+    try {
+      const paypalOrder = await createPayPalOrder(
+        totalAmount,
+        "USD",
+        campaignId,
+        squareKeys,
+        returnUrl,
+        cancelUrl,
+        campaign.paypal_email, // Direct payment to campaign owner's PayPal
+      );
 
-    if (!approvalUrl) {
-      throw new Error("No approval URL found in PayPal response");
+      console.log("PayPal order created:", paypalOrder);
+
+      // Find approval URL
+      const approvalUrl = paypalOrder.links?.find(
+        (link: any) => link.rel === "approve",
+      )?.href;
+
+      if (!approvalUrl) {
+        console.error("No approval URL found in PayPal response:", paypalOrder);
+        throw new Error("No approval URL found in PayPal response");
+      }
+
+      console.log("PayPal approval URL:", approvalUrl);
+      // Store PayPal order ID in transaction
+      await supabase
+        .from("transactions")
+        .update({ paypal_order_id: paypalOrder.id })
+        .eq("id", transactionId);
+
+      return NextResponse.json({ approvalUrl });
+    } catch (paypalError) {
+      console.error("Error creating PayPal order:", paypalError);
+      return NextResponse.json(
+        { error: "Failed to create PayPal order", details: paypalError instanceof Error ? paypalError.message : "Unknown error" },
+        { status: 500 },
+      );
     }
-
-    // Store PayPal order ID in transaction
-    await supabase
-      .from("transactions")
-      .update({ paypal_order_id: paypalOrder.id })
-      .eq("id", transactionId);
-
-    return NextResponse.json({ approvalUrl });
   } catch (error) {
     console.error("PayPal order creation error:", error);
     return NextResponse.json(
