@@ -57,16 +57,22 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('Existing squares:', existingSquares?.length || 0);
+    const expectedSquareCount = campaign.rows * campaign.columns;
+    console.log('Expected squares:', expectedSquareCount);
 
-    if (existingSquares && existingSquares.length > 0) {
+    if (existingSquares && existingSquares.length >= expectedSquareCount) {
       return NextResponse.json({ 
         success: true, 
-        message: 'Squares already exist',
+        message: 'All squares already exist',
         squareCount: existingSquares.length 
       });
     }
 
-    // Create squares for the campaign
+    // Create a set of existing square positions for quick lookup
+    const existingPositions = new Set(existingSquares?.map(s => s.number) || []);
+    console.log('Existing positions:', Array.from(existingPositions));
+
+    // Create squares for the campaign (only missing ones)
     const squares: Array<{
       campaign_id: string;
       row: number;
@@ -85,6 +91,12 @@ export async function POST(request: NextRequest) {
     for (let row = 0; row < campaign.rows; row++) {
       for (let col = 0; col < campaign.columns; col++) {
         const position = row * campaign.columns + col + 1;
+        
+        // Skip if this square already exists
+        if (existingPositions.has(position)) {
+          continue;
+        }
+        
         const price = calculateSquarePrice(position, campaign.pricing_type, campaign.price_data);
         
         squares.push({
