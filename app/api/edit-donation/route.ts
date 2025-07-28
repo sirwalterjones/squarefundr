@@ -285,9 +285,10 @@ export async function PUT(request: NextRequest) {
             squareUpdateError = parseError;
           }
         }
+      }
 
-        // If still no squares updated and this is a PayPal transaction, try to find squares by campaign and payment status
-        if ((!updatedSquares || updatedSquares.length === 0) && transaction.payment_method === "paypal") {
+      // PayPal fallback logic - moved outside square_ids check to handle empty arrays
+      if ((!updatedSquares || updatedSquares.length === 0) && transaction.payment_method === "paypal") {
           console.log("[EDIT-DONATION] PayPal transaction with no square_ids - looking for pending PayPal squares in campaign");
           
           const { data: pendingPayPalSquares, error: pendingPayPalError } = await adminSupabase
@@ -452,6 +453,7 @@ export async function PUT(request: NextRequest) {
         }
       }
     }
+      }
 
     console.log("[EDIT-DONATION] Edit donation completed successfully", {
       transactionId,
