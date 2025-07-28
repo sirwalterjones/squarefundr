@@ -148,7 +148,11 @@ export async function PUT(request: NextRequest) {
       oldPaymentMethod: transaction.payment_method,
       newStatus: status,
       hasSquareIds: !!transaction.square_ids,
-      squareIdsLength: Array.isArray(transaction.square_ids) ? transaction.square_ids.length : typeof transaction.square_ids
+      squareIdsLength: Array.isArray(transaction.square_ids) ? transaction.square_ids.length : typeof transaction.square_ids,
+      rawSquareIds: transaction.square_ids,
+      donorEmail: transaction.donor_email,
+      campaignId: transaction.campaign_id,
+      total: transaction.total
     });
 
     // Also update the squares if donor info changed or status changed
@@ -335,8 +339,15 @@ export async function PUT(request: NextRequest) {
 
             console.log("[EDIT-DONATION] Available squares query result:", {
               availableSquares: availableSquares?.length || 0,
-              availableSquaresError,
+              availableSquaresError: availableSquaresError?.message || "none",
               transactionTotal: transaction.total,
+              campaignId: transaction.campaign_id,
+              firstFewSquares: availableSquares?.slice(0, 3).map(s => ({
+                id: s.id,
+                number: s.number,
+                value: s.value,
+                claimed_by: s.claimed_by
+              }))
             });
 
             if (availableSquares && availableSquares.length > 0) {
