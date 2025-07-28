@@ -454,7 +454,6 @@ export async function PUT(request: NextRequest) {
       }
     }
 
-
     console.log("[EDIT-DONATION] Edit donation completed successfully", {
       transactionId,
       paymentMethod: transaction.payment_method,
@@ -463,10 +462,11 @@ export async function PUT(request: NextRequest) {
       squareUpdateError: squareUpdateError?.message || "none"
     });
     
-    return NextResponse.json({
+    return NextResponse.json({ 
       success: true,
       squaresReserved: updatedSquares?.length || 0
-    });  } catch (error) {
+    });
+  } catch (error) {
     console.error("[EDIT-DONATION] API error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
