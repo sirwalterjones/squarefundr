@@ -634,20 +634,29 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
                             {Math.round(campaign.stats.progressPercentage)}%
                             complete
                           </div>
-                          <button
-                            onClick={() => {
-                              const url = `${window.location.origin}/fundraiser/${campaign.slug}`;
-                              navigator.clipboard.writeText(url).then(() => {
-                                setSuccessMessage("Campaign URL copied to clipboard!");
-                                setTimeout(() => setSuccessMessage(null), 3000);
-                              }).catch(() => {
-                                alert("Failed to copy URL. Please copy manually: " + url);
-                              });
-                            }}
-                            className="mt-2 px-2 py-1 text-xs border border-blue-300 text-blue-600 rounded hover:bg-blue-50 transition-colors"
-                          >
-                            Copy URL
-                          </button>
+                          <div className="mt-2 flex gap-2 justify-end">
+                            <Link
+                              href={`/fundraiser/${campaign.slug}`}
+                              className="px-2 py-1 text-xs border border-black text-black rounded hover:bg-black hover:text-white transition-colors"
+                              target="_blank"
+                            >
+                              View
+                            </Link>
+                            <button
+                              onClick={() => {
+                                const url = `${window.location.origin}/fundraiser/${campaign.slug}`;
+                                navigator.clipboard.writeText(url).then(() => {
+                                  setSuccessMessage("Campaign URL copied to clipboard!");
+                                  setTimeout(() => setSuccessMessage(null), 3000);
+                                }).catch(() => {
+                                  alert("Failed to copy URL. Please copy manually: " + url);
+                                });
+                              }}
+                              className="px-2 py-1 text-xs border border-blue-300 text-blue-600 rounded hover:bg-blue-50 transition-colors"
+                            >
+                              Copy URL
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>
