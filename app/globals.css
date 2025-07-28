@@ -128,15 +128,15 @@ body {
 /* Custom components */
 @layer components {
   .btn-primary {
-    @apply bg-white text-black px-6 py-3 rounded-full font-medium hover:bg-gray-100 transition-all duration-200 shadow-sm border-0;
+    @apply bg-black text-white px-6 py-3 rounded-full font-medium hover:bg-gray-900 transition-all duration-200 shadow-sm border-0;
   }
 
   .btn-secondary {
-    @apply bg-black text-white px-6 py-3 rounded-full font-medium hover:bg-gray-900 transition-all duration-200 border border-white;
+    @apply bg-white text-black px-6 py-3 rounded-full font-medium hover:bg-gray-100 transition-all duration-200 border border-black;
   }
 
   .btn-outline {
-    @apply border-2 border-white text-white px-6 py-3 rounded-full font-medium hover:bg-white hover:text-black transition-all duration-200;
+    @apply border-2 border-black text-black px-6 py-3 rounded-full font-medium hover:bg-black hover:text-white transition-all duration-200;
   }
 
   .input-field {

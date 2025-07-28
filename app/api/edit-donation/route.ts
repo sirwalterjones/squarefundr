@@ -84,6 +84,13 @@ export async function PUT(request: NextRequest) {
       updatedSquares = squares;
     }
 
+    console.log("[EDIT-DONATION] Edit donation completed successfully", {
+      transactionId,
+      paymentMethod: transaction.payment_method,
+      status,
+      squaresUpdated: updatedSquares?.length || 0
+    });
+
     return NextResponse.json({ 
       success: true,
       squaresReserved: updatedSquares?.length || 0
