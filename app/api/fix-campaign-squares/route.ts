@@ -84,8 +84,8 @@ export async function POST(request: NextRequest) {
       value: number;
       claimed_by: null;
       donor_name: null;
-      payment_status: string | null;
-      payment_type: string | null;
+      payment_status: string;
+      payment_type: string;
       claimed_at: null;
     }> = [];
     for (let row = 0; row < campaign.rows; row++) {
@@ -110,8 +110,8 @@ export async function POST(request: NextRequest) {
           value: price,
           claimed_by: null,
           donor_name: null,
-          payment_status: null,
-          payment_type: null,
+          payment_status: 'available',
+          payment_type: 'cash',
           claimed_at: null
         });
       }
