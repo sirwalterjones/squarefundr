@@ -152,50 +152,109 @@ export default function HomePage() {
                   SquareFundr
                 </span>
               </div>
+              
+              {/* Main Heading with Side Counters */}
+              <div className="relative mb-6">
+                <div className="hidden lg:flex items-center justify-between w-full max-w-6xl mx-auto">
+                  
+                  {/* Left Counter - Campaigns */}
+                  <div className="flex-shrink-0 group">
+                    <div className="relative">
+                      <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl blur-lg opacity-30 group-hover:opacity-50 transition-opacity duration-300"></div>
+                      <div className="relative bg-gradient-to-r from-blue-500 to-purple-500 text-white px-6 py-4 rounded-xl shadow-lg">
+                        <div className="text-2xl xl:text-4xl font-bold mb-1">
+                          <AnimatedCounter value={campaigns} />
+                        </div>
+                        <div className="text-xs xl:text-sm font-medium uppercase tracking-wider">
+                          Active Campaigns
+                        </div>
+                      </div>
+                    </div>
+                    {/* Live indicator for left counter */}
+                    <div className="flex items-center justify-center mt-2">
+                      <div className="flex items-center space-x-1 text-gray-600">
+                        <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></div>
+                        <span className="text-xs font-medium">Live</span>
+                      </div>
+                    </div>
+                  </div>
 
-              {/* Live Stats Counter */}
-              <div className="relative mb-12">
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 rounded-2xl blur-xl opacity-20 animate-pulse"></div>
-                <div className="relative bg-white/90 backdrop-blur-sm border border-gray-200 rounded-2xl p-8 shadow-2xl">
-                  <div className="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-16">
-                    
-                    {/* Campaigns Counter */}
+                  {/* Center - Main Heading */}
+                  <div className="flex-1 text-center mx-8">
+                    <h1 className="text-4xl xl:text-6xl font-bold text-black">
+                      Interactive Fundraising
+                      <span className="block text-black">
+                        Made Simple
+                      </span>
+                    </h1>
+                  </div>
+
+                  {/* Right Counter - Money Raised */}
+                  <div className="flex-shrink-0 group">
+                    <div className="relative">
+                      <div className="absolute inset-0 bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl blur-lg opacity-30 group-hover:opacity-50 transition-opacity duration-300"></div>
+                      <div className="relative bg-gradient-to-r from-green-500 to-emerald-500 text-white px-6 py-4 rounded-xl shadow-lg">
+                        <div className="text-2xl xl:text-4xl font-bold mb-1">
+                          <AnimatedCounter value={moneyRaised} prefix="$" />
+                        </div>
+                        <div className="text-xs xl:text-sm font-medium uppercase tracking-wider">
+                          Total Raised
+                        </div>
+                      </div>
+                    </div>
+                    {/* Live indicator for right counter */}
+                    <div className="flex items-center justify-center mt-2">
+                      <div className="flex items-center space-x-1 text-gray-600">
+                        <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></div>
+                        <span className="text-xs font-medium">Live</span>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+
+                {/* Mobile/Tablet Layout - Stacked */}
+                <div className="lg:hidden">
+                  <h1 className="text-4xl md:text-6xl font-bold text-black mb-8">
+                    Interactive Fundraising
+                    <span className="block text-black">
+                      Made Simple
+                    </span>
+                  </h1>
+                  
+                  {/* Mobile Stats */}
+                  <div className="flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-8">
                     <div className="text-center group">
                       <div className="relative">
                         <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl blur-lg opacity-30 group-hover:opacity-50 transition-opacity duration-300"></div>
                         <div className="relative bg-gradient-to-r from-blue-500 to-purple-500 text-white px-6 py-4 rounded-xl shadow-lg">
-                          <div className="text-3xl md:text-5xl font-bold mb-2">
+                          <div className="text-3xl font-bold mb-2">
                             <AnimatedCounter value={campaigns} />
                           </div>
-                          <div className="text-sm md:text-base font-medium uppercase tracking-wider">
+                          <div className="text-sm font-medium uppercase tracking-wider">
                             Active Campaigns
                           </div>
                         </div>
                       </div>
                     </div>
 
-                    {/* Separator */}
-                    <div className="hidden md:block w-px h-16 bg-gradient-to-b from-gray-200 via-gray-400 to-gray-200"></div>
-
-                    {/* Money Raised Counter */}
                     <div className="text-center group">
                       <div className="relative">
                         <div className="absolute inset-0 bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl blur-lg opacity-30 group-hover:opacity-50 transition-opacity duration-300"></div>
                         <div className="relative bg-gradient-to-r from-green-500 to-emerald-500 text-white px-6 py-4 rounded-xl shadow-lg">
-                          <div className="text-3xl md:text-5xl font-bold mb-2">
+                          <div className="text-3xl font-bold mb-2">
                             <AnimatedCounter value={moneyRaised} prefix="$" />
                           </div>
-                          <div className="text-sm md:text-base font-medium uppercase tracking-wider">
+                          <div className="text-sm font-medium uppercase tracking-wider">
                             Total Raised
                           </div>
                         </div>
                       </div>
                     </div>
-
                   </div>
-                  
-                  {/* Live indicator */}
-                  <div className="flex items-center justify-center mt-6">
+
+                  {/* Mobile Live indicator */}
+                  <div className="flex items-center justify-center mt-4">
                     <div className="flex items-center space-x-2 text-gray-600">
                       <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
                       <span className="text-sm font-medium">Live Stats</span>
@@ -203,13 +262,6 @@ export default function HomePage() {
                   </div>
                 </div>
               </div>
-              
-              <h1 className="text-4xl md:text-6xl font-bold text-black mb-6">
-                Interactive Fundraising
-                <span className="block text-black">
-                  Made Simple
-                </span>
-              </h1>
               <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
                 Create engaging fundraising campaigns with interactive square
                 grids. Supporters can select and purchase squares on your images
