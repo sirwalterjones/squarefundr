@@ -84,6 +84,16 @@ export default function HomePage() {
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
           <div className="text-center">
             <div className="text-center mb-16 animate-fade-in">
+              {/* SquareFundr Logo */}
+              <div className="flex items-center justify-center mb-8">
+                <div className="w-16 h-16 bg-black rounded-full flex items-center justify-center hover:scale-105 transition-transform duration-200 shadow-lg">
+                  <span className="text-white font-bold text-2xl">SF</span>
+                </div>
+                <span className="ml-4 text-3xl font-bold text-black">
+                  SquareFundr
+                </span>
+              </div>
+              
               <h1 className="text-4xl md:text-6xl font-bold text-black mb-6">
                 Interactive Fundraising
                 <span className="block text-black">
