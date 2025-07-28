@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
           value: price,
           claimed_by: null,
           donor_name: null,
-          payment_status: 'available',
+          payment_status: 'pending',
           payment_type: 'cash',
           claimed_at: null
         });
