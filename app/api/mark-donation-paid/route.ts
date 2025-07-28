@@ -52,7 +52,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log("[MARK-PAID-NEW] Found transaction:", transaction);
+    console.log("[MARK-PAID-NEW] Found transaction:", {
+      id: transaction.id,
+      payment_method: transaction.payment_method,
+      campaign_id: transaction.campaign_id,
+      donor_email: transaction.donor_email,
+      total: transaction.total,
+      square_ids: transaction.square_ids,
+      status: transaction.status
+    });
 
     // Update transaction status to completed
     const { error: updateError } = await adminSupabase
@@ -168,6 +176,13 @@ export async function POST(request: NextRequest) {
         squareUpdateError = parseError;
       }
     }
+
+    console.log("[MARK-PAID-NEW] Before fallback logic check:", {
+      updatedSquaresCount: updatedSquares?.length || 0,
+      paymentMethod: transaction.payment_method,
+      isPayPal: transaction.payment_method === "paypal",
+      shouldRunFallback: (!updatedSquares || updatedSquares.length === 0) && transaction.payment_method === "paypal"
+    });
 
     // If still no squares updated and this is a PayPal transaction, try to find squares by campaign and payment status
     if ((!updatedSquares || updatedSquares.length === 0) && transaction.payment_method === "paypal") {
@@ -322,10 +337,29 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    console.log("[MARK-PAID-NEW] Successfully marked donation as paid");
+    console.log("[MARK-PAID-NEW] Successfully marked donation as paid", {
+      transactionId,
+      squaresReserved: updatedSquares?.length || 0,
+      updatedSquareDetails: updatedSquares?.map(s => ({
+        id: s.id,
+        number: s.number,
+        claimed_by: s.claimed_by,
+        payment_status: s.payment_status
+      }))
+    });
+    
     return NextResponse.json({ 
       success: true,
-      squaresReserved: updatedSquares?.length || 0
+      squaresReserved: updatedSquares?.length || 0,
+      debug: {
+        transactionId,
+        paymentMethod: transaction.payment_method,
+        squareDetails: updatedSquares?.map(s => ({
+          id: s.id,
+          number: s.number,
+          value: s.value
+        }))
+      }
     });
   } catch (error) {
     console.error("[MARK-PAID-NEW] API error:", error);
