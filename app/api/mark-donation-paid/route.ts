@@ -86,7 +86,12 @@ export async function POST(request: NextRequest) {
         if (Array.isArray(squareIds) && squareIds.length > 0) {
           const { error: squareUpdateError } = await adminSupabase
             .from("squares")
-            .update({ payment_status: "completed" })
+            .update({ 
+              payment_status: "completed",
+              claimed_by: transaction.donor_email || "anonymous",
+              donor_name: transaction.donor_name || "Anonymous",
+              claimed_at: new Date().toISOString()
+            })
             .in("id", squareIds);
 
           if (squareUpdateError) {
@@ -95,7 +100,7 @@ export async function POST(request: NextRequest) {
               squareUpdateError,
             );
           } else {
-            console.log("[MARK-PAID-NEW] Successfully updated squares");
+            console.log("[MARK-PAID-NEW] Successfully updated squares with claimed_by field");
           }
         }
       } catch (parseError) {
