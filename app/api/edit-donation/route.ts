@@ -157,7 +157,6 @@ export async function PUT(request: NextRequest) {
 
     // Also update the squares if donor info changed or status changed
     if (
-      transaction.square_ids &&
       (donorName !== undefined ||
         donorEmail !== undefined ||
         status !== undefined)
