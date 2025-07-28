@@ -47,9 +47,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        <link rel="icon" href="/favicon.ico" sizes="32x32" />
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-        <link rel="icon" href="/images/siteicon.png" type="image/png" />
-        <link rel="apple-touch-icon" href="/images/siteicon.png" />
+        <link rel="icon" href="/favicon-32x32.png" type="image/png" sizes="32x32" />
+        <link rel="icon" href="/favicon-16x16.png" type="image/png" sizes="16x16" />
+        <link rel="apple-touch-icon" href="/images/siteicon.png" sizes="180x180" />
       </head>
       <body
         className={`${roboto.variable} antialiased min-h-screen bg-black font-sans flex flex-col`}
