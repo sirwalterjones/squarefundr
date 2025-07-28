@@ -11,6 +11,7 @@ const roboto = Roboto({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://www.squarefundr.com'),
   title: "SquareFundr",
   description:
     "Create engaging fundraising campaigns with interactive square grids. Supporters can select and purchase squares on your images to help reach your goals.",
