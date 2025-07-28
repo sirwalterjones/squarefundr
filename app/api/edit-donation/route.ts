@@ -152,7 +152,7 @@ export async function PUT(request: NextRequest) {
                 claimed_at: new Date().toISOString(),
               })
               .in("id", squareIds)
-              .is("claimed_by", null) // Only update if still available
+              .or("claimed_by.is.null,claimed_by.eq.") // Only update if still available (null or empty string)
               .select();
 
             console.log("[EDIT-DONATION] Square reservation result:", {
