@@ -215,6 +215,9 @@ export async function POST(request: NextRequest) {
       payeeEmail: campaign.paypal_email,
     });
 
+    let approvalUrl: string;
+    let paypalOrderId: string;
+
     try {
       const paypalOrder = await createPayPalOrder(
         totalAmount,
@@ -229,30 +232,39 @@ export async function POST(request: NextRequest) {
       console.log("PayPal order created:", paypalOrder);
 
       // Find approval URL
-      const approvalUrl = paypalOrder.links?.find(
+      const foundApprovalUrl = paypalOrder.links?.find(
         (link: any) => link.rel === "approve",
       )?.href;
 
-      if (!approvalUrl) {
+      if (!foundApprovalUrl) {
         console.error("No approval URL found in PayPal response:", paypalOrder);
         throw new Error("No approval URL found in PayPal response");
       }
 
-      console.log("PayPal approval URL:", approvalUrl);
-      // Store PayPal order ID in transaction
-      await supabase
-        .from("transactions")
-        .update({ paypal_order_id: paypalOrder.id })
-        .eq("id", transactionId);
+      approvalUrl = foundApprovalUrl;
+      paypalOrderId = paypalOrder.id;
 
-      return NextResponse.json({ approvalUrl });
+      console.log("PayPal approval URL:", approvalUrl);
     } catch (paypalError) {
       console.error("Error creating PayPal order:", paypalError);
-      return NextResponse.json(
-        { error: "Failed to create PayPal order", details: paypalError instanceof Error ? paypalError.message : "Unknown error" },
-        { status: 500 },
-      );
+      
+      // Even if PayPal order creation fails, we should still return the transaction
+      // The squares are already reserved, so the admin can manually mark as completed
+      return NextResponse.json({
+        error: "PayPal order creation failed, but squares are reserved",
+        details: paypalError instanceof Error ? paypalError.message : "Unknown error",
+        transactionId: transactionId,
+        squaresReserved: true,
+      }, { status: 200 });
     }
+
+    // Store PayPal order ID in transaction
+    await supabase
+      .from("transactions")
+      .update({ paypal_order_id: paypalOrderId })
+      .eq("id", transactionId);
+
+    return NextResponse.json({ approvalUrl });
   } catch (error) {
     console.error("PayPal order creation error:", error);
     return NextResponse.json(
