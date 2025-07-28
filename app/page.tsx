@@ -85,11 +85,11 @@ export default function HomePage() {
           <div className="text-center">
             <div className="text-center mb-16 animate-fade-in">
               {/* SquareFundr Logo */}
-              <div className="flex items-center justify-center mb-8">
-                <div className="w-16 h-16 bg-black rounded-full flex items-center justify-center hover:scale-105 transition-transform duration-200 shadow-lg">
-                  <span className="text-white font-bold text-2xl">SF</span>
+              <div className="flex items-center justify-center mb-12">
+                <div className="w-24 h-24 md:w-32 md:h-32 bg-black rounded-full flex items-center justify-center hover:scale-105 transition-transform duration-200 shadow-xl">
+                  <span className="text-white font-bold text-4xl md:text-5xl">SF</span>
                 </div>
-                <span className="ml-4 text-3xl font-bold text-black">
+                <span className="ml-6 text-5xl md:text-7xl font-bold text-black">
                   SquareFundr
                 </span>
               </div>
