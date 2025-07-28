@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    if (!transactionId) {
+    if (!transactionId && !listPayPal && !checkPendingPayPal) {
       return NextResponse.json({ error: "Transaction ID required" }, { status: 400 });
     }
 
