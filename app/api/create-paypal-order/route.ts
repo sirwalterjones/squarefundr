@@ -88,16 +88,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get the actual square UUIDs for the transaction
-    const squareUUIDs = existingSquares?.map((square) => square.id) || [];
-
     // Create transaction record
     const transactionId = uuidv4();
 
     console.log("Creating transaction with data:", {
       id: transactionId,
       campaign_id: campaignId,
-      square_ids: squareUUIDs,
       total: totalAmount,
       payment_method: "paypal",
       donor_email: donorEmail,
@@ -164,6 +160,34 @@ export async function POST(request: NextRequest) {
     }
 
     console.log(`Successfully reserved ${squares.length} squares for PayPal transaction ${transactionId}`);
+
+    // Now get the square UUIDs after they've been reserved
+    const { data: reservedSquares, error: reservedSquareError } = await supabase
+      .from("squares")
+      .select("id")
+      .eq("campaign_id", campaignId)
+      .in(
+        "row",
+        squares.map((s: SelectedSquare) => s.row),
+      )
+      .in(
+        "col",
+        squares.map((s: SelectedSquare) => s.col),
+      );
+
+    if (reservedSquareError) {
+      console.error("Error getting reserved square UUIDs:", reservedSquareError);
+      return NextResponse.json(
+        {
+          error: "Failed to get reserved square UUIDs",
+          details: reservedSquareError.message || "Unknown database error",
+        },
+        { status: 500 },
+      );
+    }
+
+    const squareUUIDs = reservedSquares?.map((square) => square.id) || [];
+    console.log("Reserved square UUIDs:", squareUUIDs);
 
     const { error: transactionError } = await supabase
       .from("transactions")
