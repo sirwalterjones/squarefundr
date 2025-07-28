@@ -189,23 +189,83 @@ export async function PUT(request: NextRequest) {
       console.log("[EDIT-DONATION] Parsed square IDs:", squareIds);
 
       if (squareIds.length > 0) {
-        const { data: updatedSquares, error: squareUpdateError } =
-          await adminSupabase
+        console.log("[EDIT-DONATION] Updating squares for transaction:", transactionId);
+        
+        let updatedSquares: any[] | null = null;
+        let squareUpdateError: any = null;
+
+        // First, try to find squares with temp prefix
+        console.log("[EDIT-DONATION] Looking for temp squares with claimed_by: temp_" + transactionId);
+        
+        const { data: tempSquares, error: tempSquareError } = await adminSupabase
+          .from("squares")
+          .select("*")
+          .eq("claimed_by", `temp_${transactionId}`);
+
+        console.log("[EDIT-DONATION] Temp squares query result:", {
+          tempSquares: tempSquares?.length || 0,
+          tempSquareError: tempSquareError?.message || "none",
+        });
+
+        // Try updating by temp prefix first
+        if (tempSquares && tempSquares.length > 0) {
+          console.log("[EDIT-DONATION] Updating squares by temp prefix");
+          
+          const { data: updatedTempSquares, error: tempUpdateError } = await adminSupabase
+            .from("squares")
+            .update(squareUpdateData)
+            .eq("claimed_by", `temp_${transactionId}`)
+            .select();
+
+          console.log("[EDIT-DONATION] Temp squares update result:", {
+            updatedTempSquares: updatedTempSquares?.length || 0,
+            tempUpdateError: tempUpdateError?.message || "none",
+          });
+
+          if (!tempUpdateError && updatedTempSquares) {
+            updatedSquares = updatedTempSquares;
+            squareUpdateError = null;
+          } else {
+            squareUpdateError = tempUpdateError;
+          }
+        }
+
+        // If no squares were updated by temp prefix, try updating by square IDs
+        if (!updatedSquares || updatedSquares.length === 0) {
+          console.log("[EDIT-DONATION] Trying to update squares by square_ids from transaction");
+          
+          const { data: squaresByIds, error: squaresByIdsError } = await adminSupabase
             .from("squares")
             .update(squareUpdateData)
             .in("id", squareIds)
             .select();
 
-        console.log("[EDIT-DONATION] Square update result:", {
+          console.log("[EDIT-DONATION] Square update by IDs result:", {
+            squaresByIds: squaresByIds?.length || 0,
+            squaresByIdsError: squaresByIdsError?.message || "none",
+            squareIds,
+          });
+
+          if (!squaresByIdsError && squaresByIds) {
+            updatedSquares = squaresByIds;
+            squareUpdateError = null;
+          } else {
+            squareUpdateError = squaresByIdsError;
+          }
+        }
+
+        console.log("[EDIT-DONATION] Final square update result:", {
           updatedCount: updatedSquares?.length || 0,
           squareUpdateError: squareUpdateError?.message || "none",
         });
 
         if (squareUpdateError) {
-          console.error(
-            "[EDIT-DONATION] Error updating squares:",
-            squareUpdateError,
-          );
+          console.error("[EDIT-DONATION] Error updating squares:", squareUpdateError);
+        } else {
+          console.log("[EDIT-DONATION] Successfully updated squares:", {
+            count: updatedSquares?.length || 0,
+            squares: updatedSquares?.map(s => `Square ${s.number}: ${s.donor_name} (${s.payment_status})`)
+          });
         }
       }
     }
