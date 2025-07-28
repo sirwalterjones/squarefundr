@@ -77,20 +77,20 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen bg-white">
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gray-900">
-        <div className="absolute inset-0 bg-gradient-to-r from-red-600/10 to-purple-600/10"></div>
+      <section className="relative overflow-hidden bg-gray-50">
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-50/50 to-purple-50/50"></div>
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
           <div className="text-center">
             <div className="text-center mb-16 animate-fade-in">
-              <h1 className="text-4xl md:text-6xl font-bold text-white mb-6">
+              <h1 className="text-4xl md:text-6xl font-bold text-black mb-6">
                 Interactive Fundraising
-                <span className="block text-white">
+                <span className="block text-black">
                   Made Simple
                 </span>
               </h1>
-              <p className="text-xl text-gray-300 mb-8 max-w-3xl mx-auto">
+              <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
                 Create engaging fundraising campaigns with interactive square
                 grids. Supporters can select and purchase squares on your images
                 to help reach your goals.
@@ -98,13 +98,13 @@ export default function HomePage() {
               <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
                 <Link
                   href="/create"
-                  className="bg-white text-black px-8 py-4 rounded-full font-medium hover:bg-gray-100 transition-all duration-200 shadow-sm"
+                  className="bg-black text-white px-8 py-4 rounded-full font-medium hover:bg-gray-900 transition-all duration-200 shadow-sm"
                 >
                   Create Your Campaign
                 </Link>
                 <Link
                   href={`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/fundraiser/team-championship-fund`}
-                  className="border-2 border-white text-white px-8 py-4 rounded-full font-medium hover:bg-white hover:text-black transition-all duration-200"
+                  className="border-2 border-black text-black px-8 py-4 rounded-full font-medium hover:bg-black hover:text-white transition-all duration-200"
                 >
                   Try Live Demo
                 </Link>
@@ -112,7 +112,7 @@ export default function HomePage() {
             </div>
 
             {/* Interactive Visual Example */}
-            <div className="relative max-w-2xl mx-auto bg-black rounded-lg border border-gray-800 overflow-hidden">
+            <div className="relative max-w-2xl mx-auto bg-white rounded-lg border border-gray-200 overflow-hidden shadow-lg">
               <div className="relative">
                 <GridOverlay
                   campaign={mockCampaign}
@@ -124,19 +124,19 @@ export default function HomePage() {
                 />
 
                 {/* Demo Legend */}
-                <div className="absolute bottom-4 left-4 right-4 bg-black bg-opacity-90 rounded-lg p-3 text-sm text-white">
+                <div className="absolute bottom-4 left-4 right-4 bg-white bg-opacity-95 rounded-lg p-3 text-sm text-black border border-gray-200">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-4">
                       <div className="flex items-center space-x-2">
-                        <div className="w-4 h-4 bg-gray-900 rounded"></div>
+                        <div className="w-4 h-4 bg-green-600 rounded"></div>
                         <span>Claimed</span>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <div className="w-4 h-4 bg-white rounded"></div>
+                        <div className="w-4 h-4 bg-blue-500 rounded"></div>
                         <span>Selected</span>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <div className="w-4 h-4 bg-black border border-gray-700 rounded"></div>
+                        <div className="w-4 h-4 bg-gray-200 border border-gray-300 rounded"></div>
                         <span>Available</span>
                       </div>
                     </div>
@@ -146,22 +146,22 @@ export default function HomePage() {
               </div>
 
               <div className="p-6">
-                <h3 className="font-bold text-white mb-3 text-lg">
+                <h3 className="font-bold text-black mb-3 text-lg">
                   Soccer Team Championship Fund
                 </h3>
-                <div className="flex items-center justify-between text-sm text-gray-300 mb-3">
+                <div className="flex items-center justify-between text-sm text-gray-600 mb-3">
                   <span>12/80 squares claimed</span>
-                  <span className="font-medium text-green-400 text-lg">
+                  <span className="font-medium text-green-600 text-lg">
                     $2,340 raised
                   </span>
                 </div>
-                <div className="w-full bg-gray-800 rounded-full h-3">
+                <div className="w-full bg-gray-200 rounded-full h-3">
                   <div
                     className="bg-green-500 h-3 rounded-full transition-all duration-300"
                     style={{ width: "15%" }}
                   ></div>
                 </div>
-                <p className="text-xs text-gray-400 mt-2">
+                <p className="text-xs text-gray-500 mt-2">
                   ✨ Try hovering over the squares above! (Demo only - no actual
                   purchases)
                 </p>
@@ -172,13 +172,13 @@ export default function HomePage() {
       </section>
 
       {/* Features Section */}
-      <section className="py-24 bg-black">
+      <section className="py-24 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-20">
-            <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
+            <h2 className="text-4xl md:text-5xl font-bold text-black mb-6">
               How SquareFundr Works
             </h2>
-            <p className="text-xl text-gray-300 max-w-3xl mx-auto">
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
               Three simple steps to launch your interactive fundraising campaign
             </p>
           </div>
@@ -200,10 +200,10 @@ export default function HomePage() {
                   />
                 </svg>
               </div>
-              <h3 className="text-2xl font-bold text-white mb-4">
+              <h3 className="text-2xl font-bold text-black mb-4">
                 Upload & Configure
               </h3>
-              <p className="text-lg text-gray-300 leading-relaxed">
+              <p className="text-lg text-gray-600 leading-relaxed">
                 Upload your campaign image and set up your grid. Choose from
                 flexible pricing options that work best for your fundraising
                 goals.
@@ -226,10 +226,10 @@ export default function HomePage() {
                   />
                 </svg>
               </div>
-              <h3 className="text-2xl font-bold text-white mb-4">
+              <h3 className="text-2xl font-bold text-black mb-4">
                 Share Your Campaign
               </h3>
-              <p className="text-lg text-gray-300 leading-relaxed">
+              <p className="text-lg text-gray-600 leading-relaxed">
                 Get a beautiful, shareable link. Supporters can easily view your
                 campaign and select squares to contribute to your cause.
               </p>
@@ -251,10 +251,10 @@ export default function HomePage() {
                   />
                 </svg>
               </div>
-              <h3 className="text-2xl font-bold text-white mb-4">
+              <h3 className="text-2xl font-bold text-black mb-4">
                 Collect Donations
               </h3>
-              <p className="text-lg text-gray-300 leading-relaxed">
+              <p className="text-lg text-gray-600 leading-relaxed">
                 Accept secure online payments or cash donations. Track your
                 progress in real-time with our comprehensive dashboard.
               </p>

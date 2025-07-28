@@ -763,13 +763,13 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
                                   alert("Failed to copy URL. Please copy manually: " + url);
                                 });
                               }}
-                              className="px-3 py-2 text-xs sm:text-sm border border-blue-300 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors flex-1 sm:flex-none whitespace-nowrap"
+                              className="px-3 py-2 text-xs sm:text-sm border border-black text-black rounded-lg hover:bg-gray-50 transition-colors flex-1 sm:flex-none whitespace-nowrap"
                             >
                               Copy URL
                             </button>
                             <Link
                               href={`/edit/${campaign.id}`}
-                              className="px-3 py-2 text-xs sm:text-sm bg-black text-white rounded-lg hover:bg-gray-900 transition-colors flex-1 sm:flex-none whitespace-nowrap text-center"
+                              className="px-3 py-2 text-xs sm:text-sm bg-white text-black border border-black rounded-lg hover:bg-gray-50 transition-colors flex-1 sm:flex-none whitespace-nowrap text-center"
                             >
                               Edit
                             </Link>
