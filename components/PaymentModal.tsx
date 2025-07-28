@@ -255,14 +255,14 @@ export default function PaymentModal({
                 {selectedSquares.map((square) => (
                   <div
                     key={`${square.row}-${square.col}`}
-                    className="flex justify-between text-sm"
+                    className="flex justify-between text-sm text-gray-700"
                   >
                     <span>Square #{square.number}</span>
                     <span>{formatPrice(square.value)}</span>
                   </div>
                 ))}
               </div>
-              <div className="border-t border-gray-200 mt-2 pt-2 flex justify-between font-medium">
+              <div className="border-t border-gray-200 mt-2 pt-2 flex justify-between font-medium text-gray-900">
                 <span>Total</span>
                 <span>{formatPrice(total)}</span>
               </div>
