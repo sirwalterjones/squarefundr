@@ -230,27 +230,84 @@ export async function PUT(request: NextRequest) {
           }
         }
 
-        // If no squares were updated by temp prefix, try updating by square IDs
-        if (!updatedSquares || updatedSquares.length === 0) {
+        // If no squares were updated by temp prefix, try updating by square IDs from transaction
+        if ((!updatedSquares || updatedSquares.length === 0) && transaction.square_ids) {
           console.log("[EDIT-DONATION] Trying to update squares by square_ids from transaction");
           
-          const { data: squaresByIds, error: squaresByIdsError } = await adminSupabase
-            .from("squares")
-            .update(squareUpdateData)
-            .in("id", squareIds)
-            .select();
+          try {
+            let squareIds = transaction.square_ids;
 
-          console.log("[EDIT-DONATION] Square update by IDs result:", {
-            squaresByIds: squaresByIds?.length || 0,
-            squaresByIdsError: squaresByIdsError?.message || "none",
-            squareIds,
+            // Parse if it's a string
+            if (typeof squareIds === "string") {
+              squareIds = JSON.parse(squareIds);
+            }
+
+            console.log("[EDIT-DONATION] Square IDs to update:", squareIds);
+
+            if (Array.isArray(squareIds) && squareIds.length > 0) {
+              const { data: squaresByIds, error: squaresByIdsError } = await adminSupabase
+                .from("squares")
+                .update(squareUpdateData)
+                .in("id", squareIds)
+                .select();
+
+              console.log("[EDIT-DONATION] Square update by IDs result:", {
+                squaresByIds: squaresByIds?.length || 0,
+                squaresByIdsError: squaresByIdsError?.message || "none",
+                squareIds,
+              });
+
+              if (!squaresByIdsError && squaresByIds) {
+                updatedSquares = squaresByIds;
+                squareUpdateError = null;
+              } else {
+                squareUpdateError = squaresByIdsError;
+              }
+            }
+          } catch (parseError) {
+            console.error("[EDIT-DONATION] Error parsing square_ids:", parseError);
+            squareUpdateError = parseError;
+          }
+        }
+
+        // If still no squares updated and this is a PayPal transaction, try to find squares by campaign and payment status
+        if ((!updatedSquares || updatedSquares.length === 0) && transaction.payment_method === "paypal") {
+          console.log("[EDIT-DONATION] PayPal transaction with no square_ids - looking for pending PayPal squares in campaign");
+          
+          const { data: pendingPayPalSquares, error: pendingPayPalError } = await adminSupabase
+            .from("squares")
+            .select("*")
+            .eq("campaign_id", transaction.campaign_id)
+            .eq("payment_type", "paypal")
+            .eq("payment_status", "pending");
+
+          console.log("[EDIT-DONATION] Pending PayPal squares query result:", {
+            pendingPayPalSquares: pendingPayPalSquares?.length || 0,
+            pendingPayPalError: pendingPayPalError?.message || "none",
           });
 
-          if (!squaresByIdsError && squaresByIds) {
-            updatedSquares = squaresByIds;
-            squareUpdateError = null;
-          } else {
-            squareUpdateError = squaresByIdsError;
+          if (pendingPayPalSquares && pendingPayPalSquares.length > 0) {
+            console.log("[EDIT-DONATION] Found pending PayPal squares, updating them");
+            
+            const { data: updatedPendingSquares, error: pendingUpdateError } = await adminSupabase
+              .from("squares")
+              .update(squareUpdateData)
+              .eq("campaign_id", transaction.campaign_id)
+              .eq("payment_type", "paypal")
+              .eq("payment_status", "pending")
+              .select();
+
+            console.log("[EDIT-DONATION] Pending PayPal squares update result:", {
+              updatedPendingSquares: updatedPendingSquares?.length || 0,
+              pendingUpdateError: pendingUpdateError?.message || "none",
+            });
+
+            if (!pendingUpdateError && updatedPendingSquares) {
+              updatedSquares = updatedPendingSquares;
+              squareUpdateError = null;
+            } else {
+              squareUpdateError = pendingUpdateError;
+            }
           }
         }
 

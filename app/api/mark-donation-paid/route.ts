@@ -163,6 +163,47 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // If still no squares updated and this is a PayPal transaction, try to find squares by campaign and payment status
+    if ((!updatedSquares || updatedSquares.length === 0) && transaction.payment_method === "paypal") {
+      console.log("[MARK-PAID-NEW] PayPal transaction with no square_ids - looking for pending PayPal squares in campaign");
+      
+      const { data: pendingPayPalSquares, error: pendingPayPalError } = await adminSupabase
+        .from("squares")
+        .select("*")
+        .eq("campaign_id", transaction.campaign_id)
+        .eq("payment_type", "paypal")
+        .eq("payment_status", "pending");
+
+      console.log("[MARK-PAID-NEW] Pending PayPal squares query result:", {
+        pendingPayPalSquares: pendingPayPalSquares?.length || 0,
+        pendingPayPalError,
+      });
+
+      if (pendingPayPalSquares && pendingPayPalSquares.length > 0) {
+        console.log("[MARK-PAID-NEW] Found pending PayPal squares, updating them");
+        
+        const { data: updatedPendingSquares, error: pendingUpdateError } = await adminSupabase
+          .from("squares")
+          .update(updateData)
+          .eq("campaign_id", transaction.campaign_id)
+          .eq("payment_type", "paypal")
+          .eq("payment_status", "pending")
+          .select();
+
+        console.log("[MARK-PAID-NEW] Pending PayPal squares update result:", {
+          updatedPendingSquares: updatedPendingSquares?.length || 0,
+          pendingUpdateError,
+        });
+
+        if (!pendingUpdateError && updatedPendingSquares) {
+          updatedSquares = updatedPendingSquares;
+          squareUpdateError = null;
+        } else {
+          squareUpdateError = pendingUpdateError;
+        }
+      }
+    }
+
     if (squareUpdateError) {
       console.error("[MARK-PAID-NEW] Error updating squares:", squareUpdateError);
     } else {
