@@ -37,6 +37,16 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Transaction not found" }, { status: 404 });
     }
 
+    console.log("[EDIT-DONATION] Transaction details:", {
+      id: transaction.id,
+      payment_method: transaction.payment_method,
+      donor_email: transaction.donor_email,
+      total: transaction.total,
+      square_ids: transaction.square_ids,
+      square_ids_length: Array.isArray(transaction.square_ids) ? transaction.square_ids.length : typeof transaction.square_ids,
+      campaign_id: transaction.campaign_id
+    });
+
     // Verify campaign ownership
     const { data: campaign, error: campaignError } = await adminSupabase
       .from("campaigns")
@@ -66,8 +76,10 @@ export async function PUT(request: NextRequest) {
     // Update squares for PayPal transactions
     let updatedSquares: any[] | null = null;
     if (transaction.payment_method === "paypal" && status === "completed") {
-      // Try to find and update squares by donor email
-      const { data: squares, error: squareError } = await adminSupabase
+      console.log("[EDIT-DONATION] Processing PayPal transaction completion");
+      
+      // Try to find and update existing squares by donor email
+      const { data: existingSquares, error: existingSquareError } = await adminSupabase
         .from("squares")
         .update({
           payment_status: "completed",
@@ -81,7 +93,89 @@ export async function PUT(request: NextRequest) {
         .eq("payment_status", "pending")
         .select();
 
-      updatedSquares = squares;
+      console.log("[EDIT-DONATION] Existing squares update result:", {
+        squares: existingSquares?.length || 0,
+        error: existingSquareError?.message || "none"
+      });
+
+      updatedSquares = existingSquares;
+
+      // If no existing squares found, this might be a transaction created before our fix
+      // Try to reserve available squares based on transaction total
+      if ((!updatedSquares || updatedSquares.length === 0) && transaction.total > 0) {
+        console.log("[EDIT-DONATION] No existing squares found, attempting to reserve available squares");
+        
+        // Find available squares to reserve
+        const { data: availableSquares, error: availableError } = await adminSupabase
+          .from("squares")
+          .select("*")
+          .eq("campaign_id", transaction.campaign_id)
+          .is("claimed_by", null)
+          .order("number", { ascending: true });
+
+        console.log("[EDIT-DONATION] Available squares query result:", {
+          available: availableSquares?.length || 0,
+          error: availableError?.message || "none",
+          transactionTotal: transaction.total
+        });
+
+        if (availableSquares && availableSquares.length > 0) {
+          // Calculate how many squares we need based on transaction total and square value
+          const squareValue = availableSquares[0].value;
+          const squaresNeeded = Math.ceil(transaction.total / squareValue);
+          
+          console.log("[EDIT-DONATION] Square calculation:", {
+            squareValue,
+            transactionTotal: transaction.total,
+            squaresNeeded,
+            availableCount: availableSquares.length
+          });
+
+          if (availableSquares.length >= squaresNeeded) {
+            // Select the squares to reserve
+            const squaresToReserve = availableSquares.slice(0, squaresNeeded);
+            const squareIds = squaresToReserve.map(s => s.id);
+
+            console.log("[EDIT-DONATION] Reserving squares:", {
+              squareIds,
+              squareNumbers: squaresToReserve.map(s => s.number)
+            });
+
+            // Reserve the squares
+            const { data: reservedSquares, error: reserveError } = await adminSupabase
+              .from("squares")
+              .update({
+                claimed_by: donorEmail || transaction.donor_email,
+                donor_name: donorName || transaction.donor_name,
+                payment_status: "completed",
+                payment_type: "paypal",
+                claimed_at: new Date().toISOString(),
+              })
+              .in("id", squareIds)
+              .is("claimed_by", null) // Only update if still available
+              .select();
+
+            console.log("[EDIT-DONATION] Square reservation result:", {
+              reserved: reservedSquares?.length || 0,
+              error: reserveError?.message || "none"
+            });
+
+            if (!reserveError && reservedSquares && reservedSquares.length > 0) {
+              updatedSquares = reservedSquares;
+              
+              // Update the transaction with the square IDs
+              await adminSupabase
+                .from("transactions")
+                .update({ square_ids: squareIds })
+                .eq("id", transactionId);
+
+              console.log("[EDIT-DONATION] Successfully reserved and updated transaction with square IDs");
+            }
+          } else {
+            console.log("[EDIT-DONATION] Not enough available squares to fulfill transaction");
+          }
+        }
+      }
     }
 
     console.log("[EDIT-DONATION] Edit donation completed successfully", {
