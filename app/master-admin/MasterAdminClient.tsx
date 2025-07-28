@@ -131,15 +131,12 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
     }
   };
 
+  // Load all data on component mount to show counts immediately
   useEffect(() => {
-    if (selectedTab === "campaigns") {
-      loadCampaigns();
-    } else if (selectedTab === "users") {
-      loadUsers();
-    } else if (selectedTab === "donations") {
-      loadDonations();
-    }
-  }, [selectedTab]);
+    loadCampaigns();
+    loadUsers();
+    loadDonations();
+  }, []);
 
   const handleDelete = async () => {
     if (!itemToDelete || !deleteType) return;
