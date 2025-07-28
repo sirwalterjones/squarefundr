@@ -106,40 +106,7 @@ export async function POST(request: NextRequest) {
       timestamp: new Date().toISOString(),
     });
 
-    const { error: transactionError } = await supabase
-      .from("transactions")
-      .insert({
-        id: transactionId,
-        campaign_id: campaignId,
-        square_ids: squareUUIDs,
-        total: totalAmount,
-        payment_method: "paypal",
-        donor_email: donorEmail,
-        donor_name: donorName,
-        status: "pending",
-        timestamp: new Date().toISOString(),
-      });
-
-    if (transactionError) {
-      console.error("Transaction creation error details:", {
-        error: transactionError,
-        message: transactionError.message,
-        details: transactionError.details,
-        hint: transactionError.hint,
-        code: transactionError.code,
-      });
-      return NextResponse.json(
-        {
-          error: "Failed to create transaction record",
-          details: transactionError.message || "Unknown database error",
-        },
-        { status: 500 },
-      );
-    }
-
-    console.log("Transaction created successfully with ID:", transactionId);
-
-    // Reserve squares permanently when PayPal checkout starts
+    // First, reserve the squares to ensure they're claimed
     console.log(`Reserving ${squares.length} squares for PayPal transaction ${transactionId}`);
     
     const squareUpdates = squares.map((square: SelectedSquare) => ({
@@ -182,6 +149,39 @@ export async function POST(request: NextRequest) {
     }
 
     console.log(`Successfully reserved ${squares.length} squares for PayPal transaction ${transactionId}`);
+
+    const { error: transactionError } = await supabase
+      .from("transactions")
+      .insert({
+        id: transactionId,
+        campaign_id: campaignId,
+        square_ids: squareUUIDs,
+        total: totalAmount,
+        payment_method: "paypal",
+        donor_email: donorEmail,
+        donor_name: donorName,
+        status: "pending",
+        timestamp: new Date().toISOString(),
+      });
+
+    if (transactionError) {
+      console.error("Transaction creation error details:", {
+        error: transactionError,
+        message: transactionError.message,
+        details: transactionError.details,
+        hint: transactionError.hint,
+        code: transactionError.code,
+      });
+      return NextResponse.json(
+        {
+          error: "Failed to create transaction record",
+          details: transactionError.message || "Unknown database error",
+        },
+        { status: 500 },
+      );
+    }
+
+    console.log("Transaction created successfully with ID:", transactionId);
 
     // Create PayPal payment link for personal account
     const baseUrl = request.nextUrl.origin.includes("localhost")
