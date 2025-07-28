@@ -11,6 +11,7 @@ export async function GET(request: NextRequest) {
     const listPayPal = searchParams.get("list_paypal");
     const checkPendingPayPal = searchParams.get("check_pending_paypal");
     const checkDonorEmail = searchParams.get("check_donor_email");
+    const checkCampaign = searchParams.get("check_campaign");
 
     const adminSupabase = createClient(supabaseUrl, supabaseServiceKey, {
       auth: {
@@ -18,6 +19,20 @@ export async function GET(request: NextRequest) {
         persistSession: false,
       },
     });
+
+    // If check_campaign is requested, return campaign details
+    if (checkCampaign) {
+      const { data: campaign, error: campaignError } = await adminSupabase
+        .from("campaigns")
+        .select("*")
+        .eq("id", checkCampaign)
+        .single();
+
+      return NextResponse.json({
+        campaign: campaign || null,
+        campaignError: campaignError?.message || null,
+      });
+    }
 
     // If check_donor_email is requested, return squares for that donor email
     if (checkDonorEmail) {
@@ -64,7 +79,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    if (!transactionId && listPayPal !== "true" && checkPendingPayPal !== "true" && !checkDonorEmail) {
+    if (!transactionId && listPayPal !== "true" && checkPendingPayPal !== "true" && !checkDonorEmail && !checkCampaign) {
       return NextResponse.json({ error: "Transaction ID required" }, { status: 400 });
     }
 
