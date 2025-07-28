@@ -143,7 +143,13 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    console.log("[EDIT-DONATION] Transaction updated successfully");
+    console.log("[EDIT-DONATION] Transaction updated successfully", {
+      transactionId,
+      oldPaymentMethod: transaction.payment_method,
+      newStatus: status,
+      hasSquareIds: !!transaction.square_ids,
+      squareIdsLength: Array.isArray(transaction.square_ids) ? transaction.square_ids.length : typeof transaction.square_ids
+    });
 
     // Also update the squares if donor info changed or status changed
     if (
@@ -437,7 +443,13 @@ export async function PUT(request: NextRequest) {
       }
     }
 
-    console.log("[EDIT-DONATION] Edit donation completed successfully");
+    console.log("[EDIT-DONATION] Edit donation completed successfully", {
+      transactionId,
+      paymentMethod: transaction.payment_method,
+      status,
+      squaresUpdated: updatedSquares?.length || 0,
+      squareUpdateError: squareUpdateError?.message || "none"
+    });
     return NextResponse.json({ 
       success: true,
       squaresReserved: updatedSquares?.length || 0
