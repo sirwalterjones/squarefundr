@@ -10,6 +10,7 @@ export async function GET(request: NextRequest) {
     const transactionId = searchParams.get("transaction_id");
     const listPayPal = searchParams.get("list_paypal");
     const checkPendingPayPal = searchParams.get("check_pending_paypal");
+    const checkDonorEmail = searchParams.get("check_donor_email");
 
     const adminSupabase = createClient(supabaseUrl, supabaseServiceKey, {
       auth: {
@@ -17,6 +18,20 @@ export async function GET(request: NextRequest) {
         persistSession: false,
       },
     });
+
+    // If check_donor_email is requested, return squares for that donor email
+    if (checkDonorEmail) {
+      const { data: donorSquares, error: donorSquareError } = await adminSupabase
+        .from("squares")
+        .select("*")
+        .eq("claimed_by", checkDonorEmail)
+        .order("created_at", { ascending: false });
+
+      return NextResponse.json({
+        donorSquares: donorSquares || [],
+        donorSquareError: donorSquareError?.message || null,
+      });
+    }
 
     // If check_pending_paypal is requested, return pending PayPal squares for a campaign
     if (checkPendingPayPal) {
@@ -49,7 +64,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    if (!transactionId && listPayPal !== "true" && checkPendingPayPal !== "true") {
+    if (!transactionId && listPayPal !== "true" && checkPendingPayPal !== "true" && !checkDonorEmail) {
       return NextResponse.json({ error: "Transaction ID required" }, { status: 400 });
     }
 
