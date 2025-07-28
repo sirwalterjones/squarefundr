@@ -71,7 +71,9 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
       const response = await fetch(url, {
         headers: {
           "Cache-Control": "no-cache",
+          "Pragma": "no-cache",
         },
+        cache: "no-store",
       });
 
       if (response.ok) {
@@ -129,7 +131,11 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
       });
 
       if (response.ok) {
-        loadDonations();
+        // Force refresh with cache busting
+        console.log('[DASHBOARD] Edit successful, refreshing donations...');
+        setTimeout(() => {
+          loadDonations();
+        }, 100);
       } else {
         const errorData = await response.json();
         console.error("Error updating donation:", errorData);

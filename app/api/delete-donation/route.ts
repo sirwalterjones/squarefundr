@@ -266,6 +266,73 @@ export async function DELETE(request: NextRequest) {
           "[DELETE-DONATION] No squares to reset or invalid square_ids:",
           squareIds,
         );
+        
+        // Fallback: Look for squares claimed by the donor email (for PayPal transactions)
+        if (transaction.donor_email) {
+          console.log(
+            "[DELETE-DONATION] Looking for squares claimed by donor email:",
+            transaction.donor_email,
+          );
+          
+          const { data: emailSquares, error: emailSquareError } = await adminSupabase
+            .from("squares")
+            .select("id, number, claimed_by")
+            .eq("campaign_id", transaction.campaign_id)
+            .eq("claimed_by", transaction.donor_email);
+          
+          if (emailSquares && emailSquares.length > 0) {
+            console.log(
+              "[DELETE-DONATION] Found squares claimed by email, resetting:",
+              emailSquares.map(s => ({ id: s.id, number: s.number })),
+            );
+            
+            const { data: resetEmailData, error: resetEmailError } = await adminSupabase
+              .from("squares")
+              .update({
+                claimed_by: null,
+                donor_name: null,
+                payment_status: "pending",
+                payment_type: "cash",
+                claimed_at: null,
+                updated_at: new Date().toISOString(),
+              })
+              .eq("campaign_id", transaction.campaign_id)
+              .eq("claimed_by", transaction.donor_email)
+              .select();
+              
+            console.log("[DELETE-DONATION] Email squares reset result:", {
+              data: resetEmailData,
+              error: resetEmailError,
+              affectedRows: resetEmailData?.length || 0,
+            });
+            
+            if (resetEmailError) {
+              console.error(
+                "[DELETE-DONATION] Error resetting email squares:",
+                resetEmailError,
+              );
+              return NextResponse.json(
+                {
+                  error: "Failed to reset squares",
+                  details: resetEmailError.message || "Database error while resetting email squares",
+                },
+                { status: 500 },
+              );
+            }
+          } else {
+            console.log(
+              "[DELETE-DONATION] No squares found claimed by email:",
+              transaction.donor_email,
+            );
+          }
+          
+          if (emailSquareError) {
+            console.error(
+              "[DELETE-DONATION] Error looking up email squares:",
+              emailSquareError,
+            );
+          }
+        }
       }
 
       // Delete the transaction
