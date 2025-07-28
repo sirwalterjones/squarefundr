@@ -84,42 +84,48 @@ export async function POST(request: NextRequest) {
 
     console.log("[MARK-PAID-NEW] Square update data:", updateData);
 
-    // First, try to find squares with temp prefix
-    console.log("[MARK-PAID-NEW] Looking for temp squares with claimed_by: temp_" + transactionId);
+    // First, try to find squares by donor email (permanent reservation)
+    console.log("[MARK-PAID-NEW] Looking for squares with claimed_by: " + transaction.donor_email);
     
-    const { data: tempSquares, error: tempSquareError } = await adminSupabase
+    const { data: reservedSquares, error: reservedSquareError } = await adminSupabase
       .from("squares")
       .select("*")
-      .eq("claimed_by", `temp_${transactionId}`);
+      .eq("claimed_by", transaction.donor_email)
+      .eq("campaign_id", transaction.campaign_id)
+      .eq("payment_type", "paypal")
+      .eq("payment_status", "pending");
 
-    console.log("[MARK-PAID-NEW] Temp squares query result:", {
-      tempSquares: tempSquares?.length || 0,
-      tempSquareError,
+    console.log("[MARK-PAID-NEW] Reserved squares query result:", {
+      reservedSquares: reservedSquares?.length || 0,
+      reservedSquareError,
     });
 
     let updatedSquares: any[] | null = null;
     let squareUpdateError: any = null;
 
-    // Try updating by temp prefix first
-    if (tempSquares && tempSquares.length > 0) {
-      console.log("[MARK-PAID-NEW] Updating squares by temp prefix");
+    // Try updating by donor email first (permanent reservation)
+    if (reservedSquares && reservedSquares.length > 0) {
+      console.log("[MARK-PAID-NEW] Updating squares by donor email");
       
-      const { data: updatedTempSquares, error: tempUpdateError } = await adminSupabase
+      const { data: updatedReservedSquares, error: reservedUpdateError } = await adminSupabase
         .from("squares")
         .update(updateData)
-        .eq("claimed_by", `temp_${transactionId}`)
+        .eq("claimed_by", transaction.donor_email)
+        .eq("campaign_id", transaction.campaign_id)
+        .eq("payment_type", "paypal")
+        .eq("payment_status", "pending")
         .select();
 
-      console.log("[MARK-PAID-NEW] Temp squares update result:", {
-        updatedTempSquares: updatedTempSquares?.length || 0,
-        tempUpdateError,
+      console.log("[MARK-PAID-NEW] Reserved squares update result:", {
+        updatedReservedSquares: updatedReservedSquares?.length || 0,
+        reservedUpdateError,
       });
 
-      if (!tempUpdateError && updatedTempSquares) {
-        updatedSquares = updatedTempSquares;
+      if (!reservedUpdateError && updatedReservedSquares) {
+        updatedSquares = updatedReservedSquares;
         squareUpdateError = null;
       } else {
-        squareUpdateError = tempUpdateError;
+        squareUpdateError = reservedUpdateError;
       }
     }
 

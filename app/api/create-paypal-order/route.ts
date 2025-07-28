@@ -139,19 +139,21 @@ export async function POST(request: NextRequest) {
 
     console.log("Transaction created successfully with ID:", transactionId);
 
-    // Reserve squares temporarily during checkout
+    // Reserve squares permanently when PayPal checkout starts
+    console.log(`Reserving ${squares.length} squares for PayPal transaction ${transactionId}`);
+    
     const squareUpdates = squares.map((square: SelectedSquare) => ({
       campaign_id: campaignId,
       row: square.row,
       col: square.col,
-      claimed_by: `temp_${transactionId}`,
+      claimed_by: donorEmail, // Use actual email instead of temp prefix
       donor_name: donorName,
       payment_status: "pending" as const,
       payment_type: "paypal" as const,
       claimed_at: new Date().toISOString(),
     }));
 
-    // Update each square with temporary reservation
+    // Update each square with permanent reservation
     for (const update of squareUpdates) {
       const { error: updateError } = await supabase
         .from("squares")
@@ -167,9 +169,19 @@ export async function POST(request: NextRequest) {
         .eq("col", update.col);
 
       if (updateError) {
-        console.error("Error updating square:", updateError);
+        console.error("Error reserving square:", updateError);
+        // If we can't reserve squares, we should fail the transaction
+        return NextResponse.json(
+          {
+            error: "Failed to reserve squares",
+            details: updateError.message || "Unknown database error",
+          },
+          { status: 500 },
+        );
       }
     }
+
+    console.log(`Successfully reserved ${squares.length} squares for PayPal transaction ${transactionId}`);
 
     // Create PayPal payment link for personal account
     const baseUrl = request.nextUrl.origin.includes("localhost")

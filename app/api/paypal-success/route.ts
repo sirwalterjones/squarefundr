@@ -104,42 +104,58 @@ export async function GET(request: NextRequest) {
         );
       }
 
-      // Find squares with temp prefix - try multiple approaches
+      // Find squares for this transaction - try multiple approaches
       console.log(
-        `Looking for temp squares with claimed_by: temp_${transactionId}`,
+        `Looking for squares with claimed_by: ${transaction.donor_email}`,
       );
 
-      const { data: tempSquares, error: tempSquareError } = await supabase
+      const { data: reservedSquares, error: reservedSquareError } = await supabase
         .from("squares")
         .select("*")
-        .eq("claimed_by", `temp_${transactionId}`);
+        .eq("claimed_by", transaction.donor_email)
+        .eq("campaign_id", transaction.campaign_id)
+        .eq("payment_type", "paypal")
+        .eq("payment_status", "pending");
 
-      console.log("Temp squares query result:", {
-        tempSquares,
-        tempSquareError,
-        searchPattern: `temp_${transactionId}`,
+      console.log("Reserved squares query result:", {
+        reservedSquares: reservedSquares?.length || 0,
+        reservedSquareError,
+        searchPattern: transaction.donor_email,
       });
 
-      // Also try to find squares by campaign_id if temp squares not found
-      let squaresToUpdate = tempSquares;
-      if (!tempSquares || tempSquares.length === 0) {
+      // Also try to find squares by square IDs from transaction
+      let squaresToUpdate = reservedSquares;
+      if (!reservedSquares || reservedSquares.length === 0) {
         console.log(
-          `No temp squares found, checking for squares in campaign ${transaction.campaign_id}`,
+          `No reserved squares found, checking for squares by square_ids in transaction`,
         );
 
-        const { data: campaignSquares, error: campaignSquareError } =
-          await supabase
-            .from("squares")
-            .select("*")
-            .eq("campaign_id", transaction.campaign_id)
-            .or(`claimed_by.like.temp_%,payment_status.eq.pending`);
+        if (transaction.square_ids) {
+          let squareIds: string[] = [];
+          try {
+            if (typeof transaction.square_ids === "string") {
+              squareIds = JSON.parse(transaction.square_ids);
+            } else if (Array.isArray(transaction.square_ids)) {
+              squareIds = transaction.square_ids;
+            }
+          } catch (e) {
+            console.error("Error parsing square_ids:", e);
+          }
 
-        console.log("Campaign squares query result:", {
-          campaignSquares: campaignSquares?.length || 0,
-          campaignSquareError,
-        });
+          if (squareIds.length > 0) {
+            const { data: squaresByIds, error: squaresByIdsError } = await supabase
+              .from("squares")
+              .select("*")
+              .in("id", squareIds);
 
-        squaresToUpdate = campaignSquares;
+            console.log("Squares by IDs query result:", {
+              squaresByIds: squaresByIds?.length || 0,
+              squaresByIdsError,
+            });
+
+            squaresToUpdate = squaresByIds;
+          }
+        }
       }
 
       console.log(
@@ -150,8 +166,8 @@ export async function GET(request: NextRequest) {
         ),
       );
 
-      if (tempSquareError) {
-        console.error("Error finding temp squares:", tempSquareError);
+      if (reservedSquareError) {
+        console.error("Error finding reserved squares:", reservedSquareError);
       }
 
       if (squaresToUpdate && squaresToUpdate.length > 0) {
@@ -172,14 +188,17 @@ export async function GET(request: NextRequest) {
 
         console.log("Square update data:", updateData);
 
-        // Try updating by temp prefix first
+        // Try updating by donor email first (permanent reservation)
         let { data: updatedSquares, error: squareUpdateError } = await supabase
           .from("squares")
           .update(updateData)
-          .eq("claimed_by", `temp_${transactionId}`)
+          .eq("claimed_by", transaction.donor_email)
+          .eq("campaign_id", transaction.campaign_id)
+          .eq("payment_type", "paypal")
+          .eq("payment_status", "pending")
           .select();
 
-        console.log("First square update attempt:", {
+        console.log("First square update attempt (by donor email):", {
           updatedSquares: updatedSquares?.length || 0,
           squareUpdateError,
         });

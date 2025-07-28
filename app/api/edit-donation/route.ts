@@ -194,39 +194,45 @@ export async function PUT(request: NextRequest) {
         let updatedSquares: any[] | null = null;
         let squareUpdateError: any = null;
 
-        // First, try to find squares with temp prefix
-        console.log("[EDIT-DONATION] Looking for temp squares with claimed_by: temp_" + transactionId);
+        // First, try to find squares by donor email (permanent reservation)
+        console.log("[EDIT-DONATION] Looking for squares with claimed_by: " + transaction.donor_email);
         
-        const { data: tempSquares, error: tempSquareError } = await adminSupabase
+        const { data: reservedSquares, error: reservedSquareError } = await adminSupabase
           .from("squares")
           .select("*")
-          .eq("claimed_by", `temp_${transactionId}`);
+          .eq("claimed_by", transaction.donor_email)
+          .eq("campaign_id", transaction.campaign_id)
+          .eq("payment_type", "paypal")
+          .eq("payment_status", "pending");
 
-        console.log("[EDIT-DONATION] Temp squares query result:", {
-          tempSquares: tempSquares?.length || 0,
-          tempSquareError: tempSquareError?.message || "none",
+        console.log("[EDIT-DONATION] Reserved squares query result:", {
+          reservedSquares: reservedSquares?.length || 0,
+          reservedSquareError: reservedSquareError?.message || "none",
         });
 
-        // Try updating by temp prefix first
-        if (tempSquares && tempSquares.length > 0) {
-          console.log("[EDIT-DONATION] Updating squares by temp prefix");
+        // Try updating by donor email first (permanent reservation)
+        if (reservedSquares && reservedSquares.length > 0) {
+          console.log("[EDIT-DONATION] Updating squares by donor email");
           
-          const { data: updatedTempSquares, error: tempUpdateError } = await adminSupabase
+          const { data: updatedReservedSquares, error: reservedUpdateError } = await adminSupabase
             .from("squares")
             .update(squareUpdateData)
-            .eq("claimed_by", `temp_${transactionId}`)
+            .eq("claimed_by", transaction.donor_email)
+            .eq("campaign_id", transaction.campaign_id)
+            .eq("payment_type", "paypal")
+            .eq("payment_status", "pending")
             .select();
 
-          console.log("[EDIT-DONATION] Temp squares update result:", {
-            updatedTempSquares: updatedTempSquares?.length || 0,
-            tempUpdateError: tempUpdateError?.message || "none",
+          console.log("[EDIT-DONATION] Reserved squares update result:", {
+            updatedReservedSquares: updatedReservedSquares?.length || 0,
+            reservedUpdateError: reservedUpdateError?.message || "none",
           });
 
-          if (!tempUpdateError && updatedTempSquares) {
-            updatedSquares = updatedTempSquares;
+          if (!reservedUpdateError && updatedReservedSquares) {
+            updatedSquares = updatedReservedSquares;
             squareUpdateError = null;
           } else {
-            squareUpdateError = tempUpdateError;
+            squareUpdateError = reservedUpdateError;
           }
         }
 
