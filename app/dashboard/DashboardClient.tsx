@@ -419,55 +419,55 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-black">
       <div className="container-responsive py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard</h1>
-          <p className="text-gray-600">Welcome back, {user.email}</p>
+          <h1 className="text-3xl font-bold text-white mb-2">Dashboard</h1>
+          <p className="text-gray-300">Welcome back, {user.email}</p>
         </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
-          <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
-            <div className="text-lg sm:text-2xl font-bold text-green-600">
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 sm:p-6">
+            <div className="text-lg sm:text-2xl font-bold text-green-400">
               {formatPrice(totalRaised)}
             </div>
-            <div className="text-xs sm:text-sm text-gray-600">Total Raised</div>
+            <div className="text-xs sm:text-sm text-gray-400">Total Raised</div>
           </div>
-          <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
-            <div className="text-lg sm:text-2xl font-bold text-blue-600">
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 sm:p-6">
+            <div className="text-lg sm:text-2xl font-bold text-blue-400">
               {totalCampaigns}
             </div>
-            <div className="text-xs sm:text-sm text-gray-600">
+            <div className="text-xs sm:text-sm text-gray-400">
               Total Campaigns
             </div>
           </div>
-          <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
-            <div className="text-lg sm:text-2xl font-bold text-blue-600">
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 sm:p-6">
+            <div className="text-lg sm:text-2xl font-bold text-blue-400">
               {activeCampaigns}
             </div>
-            <div className="text-xs sm:text-sm text-gray-600">
+            <div className="text-xs sm:text-sm text-gray-400">
               Active Campaigns
             </div>
           </div>
-          <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
-            <div className="text-lg sm:text-2xl font-bold text-purple-600">
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 sm:p-6">
+            <div className="text-lg sm:text-2xl font-bold text-purple-400">
               {totalSquaresClaimed}
             </div>
-            <div className="text-xs sm:text-sm text-gray-600">
+            <div className="text-xs sm:text-sm text-gray-400">
               Squares Claimed
             </div>
           </div>
         </div>
 
         <div className="mb-6">
-          <div className="border-b border-gray-200">
+          <div className="border-b border-gray-800">
             <nav className="-mb-px flex space-x-8">
               <button
                 onClick={() => setSelectedTab("overview")}
                 className={`py-2 px-1 border-b-2 font-medium text-sm ${
                   selectedTab === "overview"
-                    ? "border-blue-600 text-blue-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                    ? "border-white text-white"
+                    : "border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-600"
                 }`}
               >
                 Overview
@@ -476,8 +476,8 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
                 onClick={() => setSelectedTab("campaigns")}
                 className={`py-2 px-1 border-b-2 font-medium text-sm ${
                   selectedTab === "campaigns"
-                    ? "border-blue-600 text-blue-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                    ? "border-white text-white"
+                    : "border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-600"
                 }`}
               >
                 Campaigns
@@ -489,8 +489,8 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
                 }}
                 className={`py-2 px-1 border-b-2 font-medium text-sm ${
                   selectedTab === "donations"
-                    ? "border-blue-600 text-blue-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                    ? "border-white text-white"
+                    : "border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-600"
                 }`}
               >
                 Donations
@@ -500,10 +500,10 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
         </div>
 
         {successMessage && (
-          <div className="mb-6 bg-green-50 border border-green-200 rounded-lg p-4">
+          <div className="mb-6 bg-green-900/20 border border-green-700 rounded-lg p-4">
             <div className="flex items-center">
               <svg
-                className="w-5 h-5 text-green-600 mr-2"
+                className="w-5 h-5 text-green-400 mr-2"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -515,15 +515,15 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
                   d="M5 13l4 4L19 7"
                 />
               </svg>
-              <p className="text-green-800 font-medium">{successMessage}</p>
+              <p className="text-green-400 font-medium">{successMessage}</p>
             </div>
           </div>
         )}
 
         {selectedTab === "overview" && (
           <div className="space-y-6">
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">
+            <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+              <h2 className="text-xl font-semibold text-white mb-4">
                 Quick Actions
               </h2>
               <div className="flex flex-col sm:flex-row gap-4">
@@ -533,8 +533,8 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
               </div>
             </div>
 
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">
+            <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+              <h2 className="text-xl font-semibold text-white mb-4">
                 Recent Campaigns
               </h2>
               {campaigns.length === 0 ? (
@@ -649,10 +649,10 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
 
         {selectedTab === "campaigns" && (
           <div className="space-y-6">
-            <div className="bg-white rounded-xl shadow-sm">
-              <div className="p-6 border-b border-gray-200">
+            <div className="bg-gray-900 border border-gray-800 rounded-xl">
+              <div className="p-6 border-b border-gray-800">
                 <div className="flex justify-between items-center">
-                  <h2 className="text-xl font-semibold text-gray-900">
+                  <h2 className="text-xl font-semibold text-white">
                     Your Campaigns
                   </h2>
                   <Link href="/create" className="btn-primary">
@@ -663,16 +663,16 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
 
               {campaigns.length === 0 ? (
                 <div className="p-6 text-center">
-                  <p className="text-gray-600">No campaigns found.</p>
+                  <p className="text-gray-400">No campaigns found.</p>
                 </div>
               ) : (
-                <div className="divide-y divide-gray-200">
+                <div className="divide-y divide-gray-800">
                   {campaigns.map((campaign) => (
                     <motion.div
                       key={campaign.id}
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="p-6 hover:bg-gray-50 transition-colors"
+                      className="p-6 hover:bg-gray-800 transition-colors"
                     >
                       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
                         <div className="flex items-start space-x-4">
@@ -709,25 +709,25 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
                             </div>
                           </div>
                           <div className="flex-1 min-w-0">
-                            <h3 className="text-base sm:text-lg font-medium text-gray-900 truncate">
+                            <h3 className="text-base sm:text-lg font-medium text-white truncate">
                               {campaign.title}
                             </h3>
-                            <p className="text-xs sm:text-sm text-gray-600 mb-2">
+                            <p className="text-xs sm:text-sm text-gray-400 mb-2">
                               Created{" "}
                               {new Date(
                                 campaign.created_at,
                               ).toLocaleDateString()}
                             </p>
                             <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4 space-y-1 sm:space-y-0 text-xs sm:text-sm">
-                              <span className="text-gray-600">
+                              <span className="text-gray-400">
                                 {campaign.stats.claimedSquares}/
                                 {campaign.stats.totalSquares} squares
                               </span>
-                              <span className="text-green-600 font-medium">
+                              <span className="text-green-400 font-medium">
                                 {formatPrice(campaign.stats.totalRaised)} raised
                               </span>
                               <span
-                                className={`px-2 py-1 rounded-full text-xs w-fit ${campaign.is_active ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}`}
+                                className={`px-2 py-1 rounded-full text-xs w-fit ${campaign.is_active ? "bg-green-900/50 text-green-400 border border-green-700" : "bg-gray-800 text-gray-400 border border-gray-700"}`}
                               >
                                 {campaign.is_active ? "Active" : "Inactive"}
                               </span>
@@ -742,13 +742,13 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
                                 setSelectedTab("donations");
                                 loadDonations(campaign.id);
                               }}
-                              className="px-3 py-2 text-xs sm:text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex-1 sm:flex-none whitespace-nowrap"
+                              className="px-3 py-2 text-xs sm:text-sm border border-gray-600 rounded-lg hover:bg-gray-800 transition-colors flex-1 sm:flex-none whitespace-nowrap text-gray-300 hover:text-white"
                             >
                               Donations
                             </button>
                             <Link
                               href={`/fundraiser/${campaign.slug}`}
-                              className="px-3 py-2 text-xs sm:text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex-1 sm:flex-none whitespace-nowrap text-center"
+                              className="px-3 py-2 text-xs sm:text-sm border border-gray-600 rounded-lg hover:bg-gray-800 transition-colors flex-1 sm:flex-none whitespace-nowrap text-center text-gray-300 hover:text-white"
                               target="_blank"
                             >
                               View Public
@@ -769,7 +769,7 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
                             </button>
                             <Link
                               href={`/edit/${campaign.id}`}
-                              className="px-3 py-2 text-xs sm:text-sm bg-gray-100 text-gray-900 rounded-lg hover:bg-gray-200 transition-colors flex-1 sm:flex-none whitespace-nowrap text-center"
+                              className="px-3 py-2 text-xs sm:text-sm bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors flex-1 sm:flex-none whitespace-nowrap text-center"
                             >
                               Edit
                             </Link>
@@ -777,16 +777,16 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
                               onClick={() =>
                                 showDeleteCampaignConfirmation(campaign)
                               }
-                              className="px-3 py-2 text-xs sm:text-sm text-red-600 hover:text-red-700 border border-red-300 rounded-lg hover:bg-red-50 transition-colors flex-1 sm:flex-none whitespace-nowrap"
+                              className="px-3 py-2 text-xs sm:text-sm text-red-400 hover:text-red-300 border border-red-600 rounded-lg hover:bg-red-900/20 transition-colors flex-1 sm:flex-none whitespace-nowrap"
                             >
                               Delete
                             </button>
                           </div>
                           <div className="text-center lg:text-right lg:ml-4">
-                            <div className="text-xl sm:text-2xl font-bold text-gray-900">
+                            <div className="text-xl sm:text-2xl font-bold text-white">
                               {Math.round(campaign.stats.progressPercentage)}%
                             </div>
-                            <div className="text-xs text-gray-600">
+                            <div className="text-xs text-gray-400">
                               Complete
                             </div>
                           </div>
@@ -794,9 +794,9 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
                       </div>
 
                       <div className="mt-4">
-                        <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div className="w-full bg-gray-800 rounded-full h-2">
                           <div
-                            className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                            className="bg-blue-500 h-2 rounded-full transition-all duration-300"
                             style={{
                               width: `${campaign.stats.progressPercentage}%`,
                             }}
@@ -813,10 +813,10 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
 
         {selectedTab === "donations" && (
           <div className="space-y-6">
-            <div className="bg-white rounded-xl shadow-sm">
-              <div className="p-6 border-b border-gray-200">
+            <div className="bg-gray-900 border border-gray-800 rounded-xl">
+              <div className="p-6 border-b border-gray-800">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                  <h2 className="text-xl font-semibold text-gray-900">
+                  <h2 className="text-xl font-semibold text-white">
                     Donations ({filteredDonations.length})
                   </h2>
                   <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
@@ -826,7 +826,7 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
                         placeholder="Search donations..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full sm:w-64"
+                        className="pl-10 pr-4 py-2 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full sm:w-64 bg-gray-800 text-white placeholder-gray-400"
                       />
                       <svg
                         className="absolute left-3 top-2.5 h-5 w-5 text-gray-400"
@@ -856,13 +856,13 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
               {loadingDonations ? (
                 <div className="p-6 text-center">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                  <p className="text-gray-600">Loading donations...</p>
+                  <p className="text-gray-400">Loading donations...</p>
                 </div>
               ) : donationsError ? (
                 <div className="p-6 text-center">
-                  <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <div className="w-16 h-16 bg-red-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
                     <svg
-                      className="w-8 h-8 text-red-500"
+                      className="w-8 h-8 text-red-400"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -875,7 +875,7 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
                       />
                     </svg>
                   </div>
-                  <p className="text-red-600 mb-4">{donationsError}</p>
+                  <p className="text-red-400 mb-4">{donationsError}</p>
                   <button
                     onClick={() => loadDonations()}
                     className="btn-primary"
@@ -885,15 +885,15 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
                 </div>
               ) : donations.length === 0 ? (
                 <div className="p-6 text-center">
-                  <p className="text-gray-600">No donations found.</p>
+                  <p className="text-gray-400">No donations found.</p>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="mobile-table min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
+                  <table className="mobile-table min-w-full divide-y divide-gray-800">
+                    <thead className="bg-gray-800">
                       <tr>
                         <th
-                          className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                          className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
                           onClick={() => handleSort("donor_name")}
                         >
                           <div className="flex items-center space-x-1">
@@ -954,24 +954,24 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
+                    <tbody className="bg-gray-900 divide-y divide-gray-800">
                       {sortedDonations.map((donation, index) => (
                         <motion.tr
                           key={`${donation.id}-${index}`}
                           initial={{ opacity: 0 }}
                           animate={{ opacity: 1 }}
                           transition={{ delay: index * 0.05 }}
-                          className="hover:bg-gray-50 transition-colors"
+                          className="hover:bg-gray-800 transition-colors"
                         >
                           <td
                             className="px-3 sm:px-6 py-4 whitespace-nowrap"
                             data-label="Donor"
                           >
                             <div>
-                              <div className="text-sm font-medium text-gray-900">
+                              <div className="text-sm font-medium text-white">
                                 {donation.donor_name || "Anonymous"}
                               </div>
-                              <div className="text-sm text-gray-500">
+                              <div className="text-sm text-gray-400">
                                 {donation.donor_email || "No email"}
                               </div>
                             </div>
@@ -980,7 +980,7 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
                             className="px-3 sm:px-6 py-4 whitespace-nowrap"
                             data-label="Campaign"
                           >
-                            <div className="text-sm text-gray-900">
+                            <div className="text-sm text-white">
                               {donation.campaign?.title || "Unknown Campaign"}
                             </div>
                           </td>
@@ -988,7 +988,7 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
                             className="px-3 sm:px-6 py-4 whitespace-nowrap"
                             data-label="Amount"
                           >
-                            <div className="text-sm font-medium text-green-600">
+                            <div className="text-sm font-medium text-green-400">
                               {formatPrice(donation.total || 0)}
                             </div>
                           </td>
@@ -996,7 +996,7 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
                             className="px-3 sm:px-6 py-4 whitespace-nowrap"
                             data-label="Squares"
                           >
-                            <div className="text-sm text-gray-900">
+                            <div className="text-sm text-white">
                               {Array.isArray(donation.square_ids)
                                 ? donation.square_ids.length
                                 : 0}
@@ -1007,7 +1007,7 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
                             data-label="Status"
                           >
                             <span
-                              className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${donation.status === "completed" ? "bg-green-100 text-green-800" : donation.status === "pending" ? "bg-yellow-100 text-yellow-800" : "bg-red-100 text-red-800"}`}
+                              className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${donation.status === "completed" ? "bg-green-900/50 text-green-400 border border-green-700" : donation.status === "pending" ? "bg-yellow-900/50 text-yellow-400 border border-yellow-700" : "bg-red-900/50 text-red-400 border border-red-700"}`}
                             >
                               {donation.status || "unknown"}
                             </span>
@@ -1017,7 +1017,7 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
                             data-label="Method"
                           >
                             <span
-                              className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${donation.payment_method === "stripe" ? "bg-blue-100 text-blue-800" : "bg-purple-100 text-purple-800"}`}
+                              className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${donation.payment_method === "stripe" ? "bg-blue-900/50 text-blue-400 border border-blue-700" : "bg-purple-900/50 text-purple-400 border border-purple-700"}`}
                             >
                               {donation.payment_method || "unknown"}
                             </span>
@@ -1026,12 +1026,12 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
                             className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500"
                             data-label="Date"
                           >
-                            <div>
+                            <div className="text-white">
                               {new Date(
                                 donation.timestamp,
                               ).toLocaleDateString()}
                             </div>
-                            <div className="text-xs">
+                            <div className="text-xs text-gray-400">
                               {new Date(
                                 donation.timestamp,
                               ).toLocaleTimeString()}
@@ -1044,14 +1044,14 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
                             <div className="flex items-center justify-end space-x-2">
                               <button
                                 onClick={() => downloadReceipt(donation)}
-                                className="text-purple-600 hover:text-purple-700 px-2 py-1 text-xs border border-purple-300 rounded hover:bg-purple-50 transition-colors"
+                                className="text-purple-400 hover:text-purple-300 px-2 py-1 text-xs border border-purple-600 rounded hover:bg-purple-900/20 transition-colors"
                                 title="Download Receipt"
                               >
                                 Receipt
                               </button>
                               <button
                                 onClick={() => editDonation(donation)}
-                                className="text-blue-600 hover:text-blue-700 px-2 py-1 text-xs border border-blue-300 rounded hover:bg-blue-50 transition-colors"
+                                className="text-blue-400 hover:text-blue-300 px-2 py-1 text-xs border border-blue-600 rounded hover:bg-blue-900/20 transition-colors"
                               >
                                 Edit
                               </button>
@@ -1059,14 +1059,14 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
                                 donation.status === "pending" && (
                                   <button
                                     onClick={() => markAsPaid(donation.id)}
-                                    className="text-green-600 hover:text-green-700 px-2 py-1 text-xs border border-green-300 rounded hover:bg-green-50 transition-colors"
+                                    className="text-green-400 hover:text-green-300 px-2 py-1 text-xs border border-green-600 rounded hover:bg-green-900/20 transition-colors"
                                   >
                                     Mark Paid
                                   </button>
                                 )}
                               <button
                                 onClick={() => showDeleteConfirmation(donation)}
-                                className="text-red-600 hover:text-red-700 px-2 py-1 text-xs border border-red-300 rounded hover:bg-red-50 transition-colors"
+                                className="text-red-400 hover:text-red-300 px-2 py-1 text-xs border border-red-600 rounded hover:bg-red-900/20 transition-colors"
                               >
                                 Delete
                               </button>
