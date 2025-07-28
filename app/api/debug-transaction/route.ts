@@ -9,6 +9,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const transactionId = searchParams.get("transaction_id");
     const listPayPal = searchParams.get("list_paypal");
+    const checkPendingPayPal = searchParams.get("check_pending_paypal");
 
     const adminSupabase = createClient(supabaseUrl, supabaseServiceKey, {
       auth: {
@@ -16,6 +17,22 @@ export async function GET(request: NextRequest) {
         persistSession: false,
       },
     });
+
+    // If check_pending_paypal is requested, return pending PayPal squares for a campaign
+    if (checkPendingPayPal) {
+      const { data: pendingPayPalSquares, error: pendingPayPalError } = await adminSupabase
+        .from("squares")
+        .select("*")
+        .eq("payment_type", "paypal")
+        .eq("payment_status", "pending")
+        .order("created_at", { ascending: false })
+        .limit(20);
+
+      return NextResponse.json({
+        pendingPayPalSquares: pendingPayPalSquares || [],
+        pendingPayPalError: pendingPayPalError?.message || null,
+      });
+    }
 
     // If list_paypal is requested, return recent PayPal transactions
     if (listPayPal === "true") {
