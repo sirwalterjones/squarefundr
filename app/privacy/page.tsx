@@ -129,7 +129,7 @@ export default function PrivacyPage() {
 
             <div className="mt-8 p-4 bg-gray-100 rounded-lg border border-gray-200">
               <p className="text-sm text-gray-600">
-                <strong>Last Updated:</strong> December 2025
+                <strong>Last Updated:</strong> June 2025
               </p>
             </div>
           </div>

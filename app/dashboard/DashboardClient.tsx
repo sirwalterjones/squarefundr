@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { User } from "@supabase/supabase-js";
@@ -47,6 +47,11 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
   const [campaignToDelete, setCampaignToDelete] =
     useState<CampaignWithStats | null>(null);
   const [deletingCampaign, setDeletingCampaign] = useState(false);
+
+  // Load donations on component mount to show count in tab header
+  useEffect(() => {
+    loadDonations();
+  }, []);
 
   const totalRaised = campaigns.reduce(
     (sum, campaign) => sum + campaign.stats.totalRaised,
@@ -486,7 +491,7 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
                     : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 hover:bg-gray-50 rounded-t-lg"
                 }`}
               >
-                Campaigns
+                Campaigns ({campaigns.length})
               </button>
               <button
                 onClick={() => {
@@ -499,7 +504,7 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
                     : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 hover:bg-gray-50 rounded-t-lg"
                 }`}
               >
-                Donations
+                Donations ({donations.length})
               </button>
             </nav>
           </div>
