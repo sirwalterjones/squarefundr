@@ -35,35 +35,77 @@ function ResetPasswordContent() {
   });
 
   useEffect(() => {
+    let authListener: any = null;
+    
     // Handle Supabase auth session from URL
     const handleAuthSession = async () => {
       try {
-        // Get the session from URL (Supabase handles this automatically)
+        console.log('Current URL:', window.location.href);
+        console.log('Hash:', window.location.hash);
+        console.log('Search:', window.location.search);
+        
+        // Check if this is a password recovery session
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        const urlParams = new URLSearchParams(window.location.search);
+        
+        // Log all available parameters
+        console.log('Hash params:', Object.fromEntries(hashParams.entries()));
+        console.log('URL params:', Object.fromEntries(urlParams.entries()));
+        
+        // Set up auth state listener for password recovery
+        authListener = supabase.auth.onAuthStateChange(async (event, session) => {
+          console.log('Auth state change:', event, session);
+          
+          if (event === 'PASSWORD_RECOVERY' && session?.access_token) {
+            console.log('🔑 Password recovery session detected');
+            setAccessToken(session.access_token);
+            setMessage('');
+          } else if (event === 'SIGNED_IN' && session?.access_token) {
+            console.log('🔑 Signed in session detected for recovery');
+            setAccessToken(session.access_token);
+            setMessage('');
+          }
+        });
+        
+        // Get the current session
         const { data: { session }, error } = await supabase.auth.getSession();
+        console.log('Supabase session:', session);
+        console.log('Session error:', error);
+        
+        // Check for session from various sources
+        let foundToken: string | null = null;
         
         if (session?.access_token) {
-          setAccessToken(session.access_token);
-          console.log('Reset session found');
+          foundToken = session.access_token;
+          console.log('✅ Token found in session');
+        } else if (hashParams.get('access_token')) {
+          foundToken = hashParams.get('access_token');
+          console.log('✅ Token found in hash');
+        } else if (urlParams.get('access_token')) {
+          foundToken = urlParams.get('access_token');
+          console.log('✅ Token found in URL params');
+        }
+        
+        if (foundToken) {
+          setAccessToken(foundToken);
+          console.log('🔑 Access token set successfully');
         } else {
-          // Fallback: try to get from URL fragment
-          const hashParams = new URLSearchParams(window.location.hash.substring(1));
-          const token = hashParams.get('access_token');
+          console.log('❌ No token found anywhere');
           
-          if (token) {
-            setAccessToken(token);
-            console.log('Token found in URL fragment');
+          // Check if we have a type=recovery parameter indicating this is a reset link
+          if (hashParams.get('type') === 'recovery' || urlParams.get('type') === 'recovery') {
+            console.log('🔄 This is a recovery link, waiting for auth state change...');
+            // The auth listener will handle the session when it becomes available
+            setTimeout(() => {
+              if (!accessToken) {
+                console.log('⏰ Timeout: No session found after waiting');
+                setMessage('Session expired or invalid. Please request a new password reset link.');
+                setIsSuccess(false);
+              }
+            }, 3000);
           } else {
-            console.log('No token found, checking URL search params');
-            // Also check search params as backup
-            const urlParams = new URLSearchParams(window.location.search);
-            const urlToken = urlParams.get('access_token');
-            
-            if (urlToken) {
-              setAccessToken(urlToken);
-            } else {
-              setMessage('Invalid or expired reset link. Please request a new password reset.');
-              setIsSuccess(false);
-            }
+            setMessage('Invalid or expired reset link. Please request a new password reset.');
+            setIsSuccess(false);
           }
         }
       } catch (error) {
@@ -74,7 +116,14 @@ function ResetPasswordContent() {
     };
 
     handleAuthSession();
-  }, []);
+    
+    // Cleanup function
+    return () => {
+      if (authListener) {
+        authListener.data?.subscription?.unsubscribe();
+      }
+    };
+  }, [accessToken]);
 
   const handlePasswordReset = async (data: ResetPasswordFormData) => {
     setIsLoading(true);
