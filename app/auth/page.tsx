@@ -25,14 +25,24 @@ function AuthPageContent() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [showResetPassword, setShowResetPassword] = useState(false);
 
-  // Check for URL message parameter
+  // Check for URL message parameter and handle password recovery
   useEffect(() => {
     const urlMessage = searchParams.get('message');
     if (urlMessage) {
       setMessage(urlMessage);
       setIsSuccess(false);
     }
-  }, [searchParams]);
+
+    // Check if this is a password recovery redirect
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    const urlParams = new URLSearchParams(window.location.search);
+    
+    if (hashParams.get('type') === 'recovery' || urlParams.get('type') === 'recovery') {
+      console.log('Password recovery detected on auth page, redirecting to reset page...');
+      // If somehow the user landed on auth page with recovery parameters, redirect to reset page
+      router.push('/auth/reset-password' + window.location.hash);
+    }
+  }, [searchParams, router]);
 
   const {
     register,
@@ -110,7 +120,7 @@ function AuthPageContent() {
 
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(data.email, {
-        redirectTo: `${window.location.origin}/auth/reset-password`,
+        redirectTo: 'https://squarefundr.com/auth/reset-password',
       });
 
       if (error) {
