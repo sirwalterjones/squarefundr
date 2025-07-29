@@ -34,6 +34,8 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [selectedDonation, setSelectedDonation] = useState<any>(null);
+  const [editUserModalOpen, setEditUserModalOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<any>(null);
   const [deleteType, setDeleteType] = useState<
@@ -183,6 +185,43 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
   const editDonation = (donation: any) => {
     setSelectedDonation(donation);
     setEditModalOpen(true);
+  };
+
+  const editUser = (user: AdminUser) => {
+    setSelectedUser(user);
+    setEditUserModalOpen(true);
+  };
+
+  const saveEditedUser = async (data: {
+    email: string;
+    full_name: string;
+  }) => {
+    if (!selectedUser) return;
+    
+    try {
+      const response = await fetch("/api/master-admin/users", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: selectedUser.id,
+          email: data.email,
+          full_name: data.full_name,
+        }),
+      });
+
+      if (response.ok) {
+        loadUsers();
+        setSuccessMessage("User updated successfully!");
+        setEditUserModalOpen(false);
+        setSelectedUser(null);
+        setTimeout(() => setSuccessMessage(null), 3000);
+      } else {
+        const errorData = await response.json();
+        setError(errorData.error || "Failed to update user");
+      }
+    } catch (err) {
+      setError("Error updating user");
+    }
   };
 
   const saveEditedDonation = async (data: {
@@ -549,6 +588,12 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                           <div className="flex items-center justify-end space-x-2">
                             <button
+                              onClick={() => editUser(user)}
+                              className="text-blue-600 hover:text-blue-700 px-2 py-1 text-xs border border-blue-300 rounded hover:bg-blue-50"
+                            >
+                              Edit
+                            </button>
+                            <button
                               onClick={() =>
                                 showDeleteConfirmation(user, "user")
                               }
@@ -699,6 +744,102 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
         donation={selectedDonation}
         onSave={saveEditedDonation}
       />
+
+      {/* Edit User Modal */}
+      {editUserModalOpen && selectedUser && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-semibold text-gray-900">Edit User</h3>
+              <button
+                onClick={() => {
+                  setEditUserModalOpen(false);
+                  setSelectedUser(null);
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const formData = new FormData(e.currentTarget);
+                saveEditedUser({
+                  email: formData.get('email') as string,
+                  full_name: formData.get('full_name') as string,
+                });
+              }}
+            >
+              <div className="space-y-4">
+                <div>
+                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    defaultValue={selectedUser.email}
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="full_name" className="block text-sm font-medium text-gray-700 mb-2">
+                    Full Name
+                  </label>
+                  <input
+                    type="text"
+                    id="full_name"
+                    name="full_name"
+                    defaultValue={selectedUser.raw_user_meta_data?.full_name || selectedUser.raw_user_meta_data?.name || ''}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+
+                <div className="bg-gray-50 p-3 rounded-lg">
+                  <p className="text-sm text-gray-600">
+                    <strong>User ID:</strong> {selectedUser.id.substring(0, 8)}...
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    <strong>Created:</strong> {new Date(selectedUser.created_at).toLocaleDateString()}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    <strong>Last Sign In:</strong> {selectedUser.last_sign_in_at 
+                      ? new Date(selectedUser.last_sign_in_at).toLocaleDateString() 
+                      : 'Never'
+                    }
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-3 mt-6">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditUserModalOpen(false);
+                    setSelectedUser(null);
+                  }}
+                  className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg transition-colors"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Delete Confirmation Modal */}
       {deleteModalOpen && (

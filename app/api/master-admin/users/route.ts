@@ -100,6 +100,90 @@ export async function GET(request: NextRequest) {
   }
 }
 
+export async function PUT(request: NextRequest) {
+  try {
+    const { userId, email, full_name } = await request.json();
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: "User ID is required" },
+        { status: 400 },
+      );
+    }
+
+    // Create server supabase client for auth
+    const supabase = await createServerSupabaseClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Check if user is admin
+    const { data: userRole, error: roleError } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .eq("role", "admin")
+      .single();
+
+    if (roleError || !userRole) {
+      return NextResponse.json(
+        { error: "Admin access required" },
+        { status: 403 },
+      );
+    }
+
+    // Create admin client for database operations
+    const adminSupabase = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    });
+
+    // Update user
+    const updateData: any = {};
+    
+    if (email) {
+      updateData.email = email;
+    }
+    
+    if (full_name !== undefined) {
+      updateData.user_metadata = { full_name };
+    }
+
+    const { data: updatedUser, error: updateError } =
+      await adminSupabase.auth.admin.updateUserById(userId, updateData);
+
+    if (updateError) {
+      console.error("Error updating user:", updateError);
+      return NextResponse.json(
+        { error: "Failed to update user" },
+        { status: 500 },
+      );
+    }
+
+    return NextResponse.json({ 
+      success: true, 
+      user: {
+        id: updatedUser.user.id,
+        email: updatedUser.user.email,
+        raw_user_meta_data: updatedUser.user.user_metadata || {},
+      }
+    });
+  } catch (error) {
+    console.error("Master admin update user API error:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 },
+    );
+  }
+}
+
 export async function DELETE(request: NextRequest) {
   try {
     const { id } = await request.json();
