@@ -22,10 +22,10 @@ export const metadata: Metadata = {
       "Create engaging fundraising campaigns with interactive square grids. Supporters can select and purchase squares on your images to help reach your goals.",
     images: [
       {
-        url: "/images/baseball.jpg",
-        width: 800,
-        height: 600,
-        alt: "Baseball Team Championship Fund",
+        url: "/images/og-image.jpg",
+        width: 1200,
+        height: 630,
+        alt: "SquareFundr - Interactive Fundraising Made Simple",
       },
     ],
     type: "website",
@@ -35,7 +35,7 @@ export const metadata: Metadata = {
     title: "SquareFundr",
     description:
       "Create engaging fundraising campaigns with interactive square grids.",
-    images: ["/images/baseball.jpg"],
+    images: ["/images/og-image.jpg"],
   },
 };
 
