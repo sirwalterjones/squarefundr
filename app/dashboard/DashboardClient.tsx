@@ -36,6 +36,7 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
   const [loadingDonations, setLoadingDonations] = useState(false);
   const [donationsError, setDonationsError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCampaignFilter, setSelectedCampaignFilter] = useState<string>("");
   const [sortField, setSortField] = useState<string>("timestamp");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -50,7 +51,7 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
 
   // Load donations on component mount to show count in tab header
   useEffect(() => {
-    loadDonations();
+    loadDonations(selectedCampaignFilter || undefined);
   }, []);
 
   const totalRaised = campaigns.reduce(
@@ -496,7 +497,7 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
               <button
                 onClick={() => {
                   setSelectedTab("donations");
-                  loadDonations();
+                  loadDonations(selectedCampaignFilter || undefined);
                 }}
                 className={`py-3 px-4 border-b-2 font-medium text-sm transition-colors ${
                   selectedTab === "donations"
@@ -759,6 +760,7 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
                           <div className="flex flex-wrap gap-2">
                             <button
                               onClick={() => {
+                                setSelectedCampaignFilter(campaign.id);
                                 setSelectedTab("donations");
                                 loadDonations(campaign.id);
                               }}
@@ -838,8 +840,28 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                   <h2 className="text-xl font-semibold text-black">
                     Donations ({filteredDonations.length})
+                    {selectedCampaignFilter && (
+                      <span className="text-sm font-normal text-gray-600 ml-2">
+                        • {campaigns.find(c => c.id === selectedCampaignFilter)?.title || "Filtered"}
+                      </span>
+                    )}
                   </h2>
                   <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                    <select
+                      value={selectedCampaignFilter}
+                      onChange={(e) => {
+                        setSelectedCampaignFilter(e.target.value);
+                        loadDonations(e.target.value || undefined);
+                      }}
+                      className="px-3 py-2 border border-black rounded-lg focus:ring-2 focus:ring-black focus:border-black bg-white text-black w-full sm:w-48"
+                    >
+                      <option value="">All Campaigns</option>
+                      {campaigns.map((campaign) => (
+                        <option key={campaign.id} value={campaign.id}>
+                          {campaign.title}
+                        </option>
+                      ))}
+                    </select>
                     <div className="relative">
                       <input
                         type="text"
@@ -862,8 +884,19 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
                         />
                       </svg>
                     </div>
+                    {selectedCampaignFilter && (
+                      <button
+                        onClick={() => {
+                          setSelectedCampaignFilter("");
+                          loadDonations();
+                        }}
+                        className="px-3 py-2 text-xs border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors whitespace-nowrap"
+                      >
+                        Clear Filter
+                      </button>
+                    )}
                     <button
-                      onClick={() => loadDonations()}
+                      onClick={() => loadDonations(selectedCampaignFilter || undefined)}
                       className="btn-outline whitespace-nowrap"
                       disabled={loadingDonations}
                     >
