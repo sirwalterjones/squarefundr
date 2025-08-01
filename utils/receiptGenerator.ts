@@ -28,49 +28,37 @@ export function generatePDFReceipt(receiptData: ReceiptData): void {
   // Create new PDF document
   const doc = new jsPDF();
 
-  // Set up SquareFundr brand colors
-  const brandBlack: [number, number, number] = [17, 24, 39]; // Gray-900 (nearly black)
-  const brandAccent: [number, number, number] = [55, 65, 81]; // Gray-700  
-  const textColor: [number, number, number] = [31, 41, 55]; // Gray-800
-  const lightGray: [number, number, number] = [243, 244, 246]; // Gray-100
+  // Set up clean SquareFundr brand colors
+  const brandBlack: [number, number, number] = [0, 0, 0]; // True black
+  const primaryColor: [number, number, number] = [17, 24, 39]; // Dark gray
+  const textColor: [number, number, number] = [55, 65, 81]; // Gray-700
+  const lightGray: [number, number, number] = [229, 231, 235]; // Gray-200
 
-  // Professional header with gradient effect
-  doc.setFillColor(...brandBlack);
-  doc.rect(0, 0, 210, 50, "F");
-  
-  // Subtle accent stripe
-  doc.setFillColor(75, 85, 99); // Gray-600
-  doc.rect(0, 45, 210, 5, "F");
+  // Clean header design
+  doc.setFillColor(...primaryColor);
+  doc.rect(0, 0, 210, 35, "F");
 
-  // SF Logo Circle (text-based)
-  doc.setFillColor(255, 255, 255);
-  doc.circle(25, 25, 12, "F");
-  doc.setTextColor(...brandBlack);
-  doc.setFontSize(14);
-  doc.setFont("helvetica", "bold");
-  doc.text("SF", 20, 29);
-
-  // SquareFundr branding
+  // SquareFundr branding - clean and simple
   doc.setTextColor(255, 255, 255);
-  doc.setFontSize(18);
+  doc.setFontSize(20);
   doc.setFont("helvetica", "bold");
-  doc.text("SquareFundr", 45, 22);
+  doc.text("SquareFundr", 20, 15);
   
   // Tagline
-  doc.setFontSize(9);
+  doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
-  doc.text("Square-by-Square Fundraising", 45, 30);
+  doc.text("Square-by-Square Fundraising", 20, 25);
 
-  // Title with professional styling
-  doc.setFontSize(22);
+  // Title
+  doc.setFontSize(24);
   doc.setFont("helvetica", "bold");
-  doc.text("DONATION RECEIPT", 105, 38, { align: "center" });
+  doc.text("DONATION RECEIPT", 105, 20, { align: "center" });
 
   // Reset text color
   doc.setTextColor(...textColor);
 
   // Receipt details section
-  let yPos = 70;
+  let yPos = 55;
 
   // Receipt header info
   doc.setFontSize(12);
@@ -134,19 +122,16 @@ export function generatePDFReceipt(receiptData: ReceiptData): void {
   doc.text("Squares Purchased", 20, yPos);
   yPos += 10;
 
-  // Table header with brand styling
-  doc.setFillColor(...brandAccent);
+  // Table header
+  doc.setFillColor(...lightGray);
   doc.rect(20, yPos - 2, 170, 12, "F");
 
-  doc.setTextColor(255, 255, 255);
+  doc.setTextColor(...textColor);
   doc.setFontSize(10);
   doc.setFont("helvetica", "bold");
   doc.text("Square #", 25, yPos + 6);
   doc.text("Position", 70, yPos + 6);
   doc.text("Amount", 150, yPos + 6);
-  
-  // Reset text color for table content
-  doc.setTextColor(...textColor);
   yPos += 15;
 
   // Table rows
@@ -172,18 +157,17 @@ export function generatePDFReceipt(receiptData: ReceiptData): void {
 
   yPos += 10;
 
-  // Total section with brand styling
-  doc.setFillColor(...brandBlack);
-  doc.rect(20, yPos - 2, 170, 18, "F");
+  // Total section
+  doc.setFillColor(...primaryColor);
+  doc.rect(20, yPos - 2, 170, 15, "F");
 
   doc.setTextColor(255, 255, 255);
-  doc.setFontSize(16);
+  doc.setFontSize(14);
   doc.setFont("helvetica", "bold");
-  doc.text(`Total Donation: ${formatPrice(totalAmount)}`, 25, yPos + 10);
-  doc.setFontSize(12);
-  doc.text(`${squares.length} Square${squares.length !== 1 ? 's' : ''} Purchased`, 120, yPos + 10);
+  doc.text(`Total Donation: ${formatPrice(totalAmount)}`, 25, yPos + 8);
+  doc.text(`Number of Squares: ${squares.length}`, 120, yPos + 8);
 
-  yPos += 28;
+  yPos += 25;
 
   // Footer
   doc.setTextColor(...textColor);
@@ -195,18 +179,8 @@ export function generatePDFReceipt(receiptData: ReceiptData): void {
     yPos = 30;
   }
 
-  // Professional footer with branding
-  doc.setFillColor(...lightGray);
-  doc.rect(20, yPos - 5, 170, 35, "F");
-  
-  doc.setTextColor(...brandBlack);
-  doc.setFontSize(12);
-  doc.setFont("helvetica", "bold");
-  doc.text("Thank you for your generous donation!", 25, yPos + 5);
-  
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "normal");
   const footerText = [
+    "Thank you for your generous donation!",
     "",
     "This receipt serves as confirmation of your contribution to this SquareFundr campaign.",
     paymentMethod === "cash"
@@ -218,10 +192,10 @@ export function generatePDFReceipt(receiptData: ReceiptData): void {
 
   footerText.forEach((line, index) => {
     if (line === "") {
-      yPos += 4;
+      yPos += 6;
     } else {
-      doc.text(line, 25, yPos);
-      yPos += 5;
+      doc.text(line, 20, yPos);
+      yPos += 6;
     }
   });
 
