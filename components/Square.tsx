@@ -34,7 +34,7 @@ export default function Square({
 
   return (
     <motion.div
-      className="relative cursor-pointer flex items-center justify-center"
+      className="relative cursor-pointer flex items-center justify-center touch-manipulation"
       onClick={isAvailable ? onClick : undefined}
       whileHover={
         isAvailable ? { scale: 1.1, zIndex: 20 } : { scale: 1.05, zIndex: 20 }
@@ -56,17 +56,17 @@ export default function Square({
         border: "1px solid rgba(255, 255, 255, 0.6)",
         width: "100%",
         height: "100%",
-        minWidth: "0",
-        minHeight: "0",
+        minWidth: "40px", // Minimum touch target size
+        minHeight: "40px", // Minimum touch target size
         boxSizing: "border-box",
       }}
     >
-      <div className="flex flex-col items-center justify-center text-center w-full h-full p-0.5">
+      <div className="flex flex-col items-center justify-center text-center w-full h-full p-1 sm:p-0.5">
         <span
           className="font-bold text-white leading-none"
           style={{
             textShadow: "0 1px 3px rgba(0,0,0,1)",
-            fontSize: "clamp(6px, 1.2vw, 12px)",
+            fontSize: "clamp(10px, 1.2vw, 14px)", // Increased minimum from 6px to 10px
           }}
         >
           #{getSquareContent()}
@@ -75,7 +75,7 @@ export default function Square({
           className="font-medium text-white leading-none mt-0.5"
           style={{
             textShadow: "0 1px 3px rgba(0,0,0,1)",
-            fontSize: "clamp(4px, 0.8vw, 8px)",
+            fontSize: "clamp(8px, 0.8vw, 10px)", // Increased minimum from 4px to 8px
           }}
         >
           {formatPrice(square.value)}
@@ -94,6 +94,29 @@ export default function Square({
             zIndex: 10,
           }}
         />
+      )}
+
+      {/* Mobile-friendly selection indicator */}
+      {isSelected && (
+        <motion.div
+          className="absolute -top-1 -right-1 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center border-2 border-white"
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ delay: 0.1, type: "spring", stiffness: 400 }}
+          style={{ zIndex: 15 }}
+        >
+          <svg
+            className="w-3 h-3 text-white"
+            fill="currentColor"
+            viewBox="0 0 20 20"
+          >
+            <path
+              fillRule="evenodd"
+              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+              clipRule="evenodd"
+            />
+          </svg>
+        </motion.div>
       )}
 
       {square.claimed_by && (
