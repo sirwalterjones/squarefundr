@@ -56,17 +56,17 @@ export default function Square({
         border: "1px solid rgba(255, 255, 255, 0.6)",
         width: "100%",
         height: "100%",
-        minWidth: "40px", // Minimum touch target size
-        minHeight: "40px", // Minimum touch target size
+        minWidth: "0", // Let grid control sizing
+        minHeight: "0", // Let grid control sizing
         boxSizing: "border-box",
       }}
     >
-      <div className="flex flex-col items-center justify-center text-center w-full h-full p-1 sm:p-0.5">
+      <div className="flex flex-col items-center justify-center text-center w-full h-full p-0.5">
         <span
           className="font-bold text-white leading-none"
           style={{
             textShadow: "0 1px 3px rgba(0,0,0,1)",
-            fontSize: "clamp(10px, 1.2vw, 14px)", // Increased minimum from 6px to 10px
+            fontSize: "clamp(8px, 1.2vw, 14px)", // Better balance for mobile
           }}
         >
           #{getSquareContent()}
@@ -75,7 +75,7 @@ export default function Square({
           className="font-medium text-white leading-none mt-0.5"
           style={{
             textShadow: "0 1px 3px rgba(0,0,0,1)",
-            fontSize: "clamp(8px, 0.8vw, 10px)", // Increased minimum from 4px to 8px
+            fontSize: "clamp(6px, 0.8vw, 10px)", // Better balance for mobile
           }}
         >
           {formatPrice(square.value)}

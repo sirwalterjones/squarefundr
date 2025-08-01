@@ -149,8 +149,7 @@ export default function GridOverlay({
         className="relative w-full bg-gray-100 rounded-lg overflow-hidden"
         style={{
           touchAction: 'pinch-zoom', // Allow pinch-to-zoom on mobile
-          // Ensure good mobile aspect ratio
-          minHeight: '320px',
+          // Maintain aspect ratio but don't force height
         }}
       >
         <img
@@ -179,8 +178,8 @@ export default function GridOverlay({
             gridTemplateRows: `repeat(${campaign.rows}, 1fr)`,
             width: "100%",
             height: "100%",
-            gap: "2px", // Slightly larger gap for mobile touch targets
-            padding: "4px", // Small padding to prevent edge taps from being difficult
+            gap: "1px", // Keep original gap for better fit
+            padding: "2px", // Minimal padding
             pointerEvents: "auto",
           }}
           initial={{ opacity: 0 }}
