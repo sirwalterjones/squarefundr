@@ -579,6 +579,43 @@ export default function FundraiserClient({
                 </div>
               </div>
 
+              {/* Mobile-only Pricing Info */}
+              <div className="block sm:hidden bg-white border border-gray-200 rounded-lg p-3 mb-4">
+                <h4 className="text-sm font-semibold text-gray-900 mb-2">
+                  Pricing
+                </h4>
+                <div className="text-xs text-gray-600">
+                  {campaign.pricing_type === "fixed" && (
+                    <p>
+                      All squares:{" "}
+                      <span className="font-medium text-blue-600">
+                        {formatPrice(campaign.price_data.fixed || 0)}
+                      </span>
+                    </p>
+                  )}
+                  {campaign.pricing_type === "sequential" &&
+                    campaign.price_data.sequential && (
+                      <p>
+                        Starting at{" "}
+                        <span className="font-medium text-blue-600">
+                          {formatPrice(campaign.price_data.sequential.start)}
+                        </span>
+                        , increasing by{" "}
+                        <span className="font-medium">
+                          {formatPrice(campaign.price_data.sequential.increment)}
+                        </span>{" "}
+                        per square
+                      </p>
+                    )}
+                  {campaign.pricing_type === "manual" && (
+                    <p>
+                      Each square has individual pricing - hover over squares to
+                      see prices
+                    </p>
+                  )}
+                </div>
+              </div>
+
               {isLoading ? (
                 <div className="flex items-center justify-center h-48 sm:h-64">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -745,8 +782,8 @@ export default function FundraiserClient({
               </div>
             </div>
 
-            {/* Pricing Info */}
-            <div className="bg-white rounded-xl shadow-sm p-6">
+            {/* Pricing Info - Hidden on mobile since we show it above the grid */}
+            <div className="hidden sm:block bg-white rounded-xl shadow-sm p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
                 Pricing
               </h3>
