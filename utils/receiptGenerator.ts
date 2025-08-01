@@ -28,37 +28,39 @@ export function generatePDFReceipt(receiptData: ReceiptData): void {
   // Create new PDF document
   const doc = new jsPDF();
 
-  // Set up clean SquareFundr brand colors
+  // Set up brand colors
   const brandBlack: [number, number, number] = [0, 0, 0]; // True black
   const primaryColor: [number, number, number] = [17, 24, 39]; // Dark gray
   const textColor: [number, number, number] = [55, 65, 81]; // Gray-700
   const lightGray: [number, number, number] = [229, 231, 235]; // Gray-200
 
-  // Clean header design
-  doc.setFillColor(...primaryColor);
-  doc.rect(0, 0, 210, 35, "F");
+  // Black header background
+  doc.setFillColor(...brandBlack);
+  doc.rect(0, 0, 210, 45, "F");
 
-  // SquareFundr branding - clean and simple
+  // All text in white, centered
   doc.setTextColor(255, 255, 255);
-  doc.setFontSize(20);
-  doc.setFont("helvetica", "bold");
-  doc.text("SquareFundr", 20, 15);
   
-  // Tagline
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "normal");
-  doc.text("Square-by-Square Fundraising", 20, 25);
-
-  // Title
+  // SquareFundr brand name - centered
   doc.setFontSize(24);
   doc.setFont("helvetica", "bold");
-  doc.text("DONATION RECEIPT", 105, 20, { align: "center" });
+  doc.text("SquareFundr", 105, 15, { align: "center" });
+  
+  // Tagline - centered
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "normal");
+  doc.text("Square-by-Square Fundraising", 105, 25, { align: "center" });
+
+  // Title - centered
+  doc.setFontSize(18);
+  doc.setFont("helvetica", "bold");
+  doc.text("DONATION RECEIPT", 105, 37, { align: "center" });
 
   // Reset text color
   doc.setTextColor(...textColor);
 
   // Receipt details section
-  let yPos = 55;
+  let yPos = 65;
 
   // Receipt header info
   doc.setFontSize(12);
