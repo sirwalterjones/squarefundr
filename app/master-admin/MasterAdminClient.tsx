@@ -52,6 +52,7 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
   const [selectedHelpRequest, setSelectedHelpRequest] = useState<any>(null);
   const [adminResponse, setAdminResponse] = useState("");
   const [updatingHelpRequest, setUpdatingHelpRequest] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [completingId, setCompletingId] = useState<string | null>(null);
   const [campaignOwners, setCampaignOwners] = useState<{
@@ -455,6 +456,38 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
     }
   };
 
+  const archiveHelpRequest = async (id: string) => {
+    try {
+      const response = await fetch("/api/help-request", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          id,
+          status: "archived",
+        }),
+      });
+
+      if (response.ok) {
+        setHelpRequests(prev =>
+          prev.map(req =>
+            req.id === id
+              ? { ...req, status: "archived" }
+              : req
+          )
+        );
+        setSuccessMessage("Help request archived successfully");
+        setTimeout(() => setSuccessMessage(null), 3000);
+      } else {
+        throw new Error("Failed to archive help request");
+      }
+    } catch (error) {
+      console.error("Error archiving help request:", error);
+      setError("Failed to archive help request");
+    }
+  };
+
   const filteredCampaigns = campaigns.filter(
     (campaign) =>
       campaign.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -479,11 +512,19 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
   );
 
   const filteredHelpRequests = helpRequests.filter(
-    (request) =>
-      request.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      request.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      request.subject?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      request.message?.toLowerCase().includes(searchTerm.toLowerCase()),
+    (request) => {
+      // Filter by archive status
+      const archiveFilter = showArchived || request.status !== 'archived';
+      
+      // Filter by search term
+      const searchFilter = 
+        request.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        request.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        request.subject?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        request.message?.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      return archiveFilter && searchFilter;
+    }
   );
 
   return (
@@ -540,7 +581,7 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
                     : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                 }`}
               >
-                Help Requests ({initialLoading ? "..." : helpRequests.length})
+                Help Requests ({initialLoading ? "..." : helpRequests.filter(req => req.status !== 'archived').length})
                 {helpRequests.filter(req => req.status === 'new').length > 0 && (
                   <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
                     {helpRequests.filter(req => req.status === 'new').length} new
@@ -964,7 +1005,28 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
               )}
 
               {selectedTab === "help-requests" && (
-                <table className="min-w-full divide-y divide-gray-200">
+                <div>
+                  {/* Archive Toggle */}
+                  <div className="mb-4 flex justify-between items-center">
+                    <button
+                      onClick={() => setShowArchived(!showArchived)}
+                      className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
+                        showArchived 
+                          ? 'bg-gray-600 text-white hover:bg-gray-700' 
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      {showArchived ? 'Hide Archived' : 'Show Archived'}
+                    </button>
+                    <div className="text-sm text-gray-600">
+                      {showArchived 
+                        ? `Showing ${filteredHelpRequests.length} requests (including archived)`
+                        : `Showing ${filteredHelpRequests.length} active requests`
+                      }
+                    </div>
+                  </div>
+                  
+                  <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -1022,6 +1084,8 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
                                 ? 'bg-yellow-100 text-yellow-800'
                                 : request.status === 'resolved'
                                 ? 'bg-green-100 text-green-800'
+                                : request.status === 'archived'
+                                ? 'bg-gray-100 text-gray-600'
                                 : 'bg-gray-100 text-gray-800'
                             }`}
                           >
@@ -1068,12 +1132,22 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
                             >
                               Resolve
                             </button>
+                            {request.status !== 'archived' && (
+                              <button
+                                onClick={() => archiveHelpRequest(request.id)}
+                                className="text-gray-600 hover:text-gray-700 px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50"
+                                title="Archive this request"
+                              >
+                                Archive
+                              </button>
+                            )}
                           </div>
                         </td>
                       </motion.tr>
                     ))}
                   </tbody>
                 </table>
+                </div>
               )}
 
               {/* Empty States */}
@@ -1332,6 +1406,8 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
                             ? 'bg-yellow-100 text-yellow-800'
                             : selectedHelpRequest.status === 'resolved'
                             ? 'bg-green-100 text-green-800'
+                            : selectedHelpRequest.status === 'archived'
+                            ? 'bg-gray-100 text-gray-800'
                             : 'bg-gray-100 text-gray-800'
                         }`}
                       >
@@ -1424,6 +1500,19 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
                       >
                         {selectedHelpRequest.status === 'resolved' ? '✓ Resolved' : 'Mark Resolved'}
                       </button>
+                      {selectedHelpRequest.status !== 'archived' && (
+                        <button
+                          onClick={() => {
+                            archiveHelpRequest(selectedHelpRequest.id);
+                            setHelpRequestModalOpen(false);
+                            setSelectedHelpRequest(null);
+                            setAdminResponse("");
+                          }}
+                          className="w-full px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                        >
+                          Archive Request
+                        </button>
+                      )}
                     </div>
                   </div>
 

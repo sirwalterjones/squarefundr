@@ -50,6 +50,8 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
     useState<CampaignWithStats | null>(null);
   const [helpRequests, setHelpRequests] = useState<any[]>([]);
   const [loadingHelp, setLoadingHelp] = useState(false);
+  const [selectedHelpRequest, setSelectedHelpRequest] = useState<any>(null);
+  const [helpRequestModalOpen, setHelpRequestModalOpen] = useState(false);
   const [deletingCampaign, setDeletingCampaign] = useState(false);
 
   // Load donations on component mount to show count in tab header
@@ -131,6 +133,11 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
     } finally {
       setLoadingHelp(false);
     }
+  };
+
+  const viewHelpRequestDetails = (request: any) => {
+    setSelectedHelpRequest(request);
+    setHelpRequestModalOpen(true);
   };
 
   const markAsPaid = async (transactionId: string) => {
@@ -1235,26 +1242,50 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
                     </a>
                   </div>
                 ) : (
-                  <div className="space-y-6">
-                    {helpRequests.map((request: any) => (
-                      <div
-                        key={request.id}
-                        className="border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow"
-                      >
-                        {/* Header */}
-                        <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
-                          <div className="flex justify-between items-start">
-                            <div className="flex-1">
-                              <h3 className="font-semibold text-lg text-gray-900 mb-1">
-                                {request.subject}
-                              </h3>
-                              <p className="text-sm text-gray-600">
-                                Submitted on {new Date(request.created_at).toLocaleString()}
-                              </p>
-                            </div>
-                            <div className="flex flex-col items-end space-y-2">
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Subject
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Status
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Priority
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Submitted
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Response
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {helpRequests.map((request: any) => (
+                          <tr
+                            key={request.id}
+                            onClick={() => viewHelpRequestDetails(request)}
+                            className="hover:bg-gray-50 cursor-pointer transition-colors"
+                          >
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div>
+                                <div className="text-sm font-medium text-gray-900">
+                                  {request.subject}
+                                </div>
+                                <div className="text-sm text-gray-500 truncate max-w-xs">
+                                  {request.message.length > 100 
+                                    ? request.message.substring(0, 100) + '...'
+                                    : request.message
+                                  }
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
                               <span
-                                className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${
+                                className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                                   request.status === 'new'
                                     ? 'bg-blue-100 text-blue-800'
                                     : request.status === 'in_progress'
@@ -1266,6 +1297,8 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
                               >
                                 {request.status.replace('_', ' ')}
                               </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
                               <span
                                 className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
                                   request.priority === 'urgent'
@@ -1277,53 +1310,33 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
                                     : 'bg-gray-100 text-gray-700'
                                 }`}
                               >
-                                {request.priority} priority
+                                {request.priority}
                               </span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Content */}
-                        <div className="p-6">
-                          <div className="mb-4">
-                            <h4 className="text-sm font-medium text-gray-700 mb-2">Your Message:</h4>
-                            <div className="bg-gray-50 p-4 rounded-lg">
-                              <p className="text-sm text-gray-900 whitespace-pre-wrap">
-                                {request.message}
-                              </p>
-                            </div>
-                          </div>
-
-                          {request.notes && (
-                            <div className="mt-4">
-                              <h4 className="text-sm font-medium text-gray-700 mb-2">Admin Response:</h4>
-                              <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
-                                <p className="text-sm text-blue-900 whitespace-pre-wrap">
-                                  {request.notes}
-                                </p>
-                              </div>
-                            </div>
-                          )}
-
-                          {!request.notes && request.status !== 'resolved' && (
-                            <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                              <p className="text-sm text-yellow-800">
-                                {request.status === 'new' 
-                                  ? "Your request has been received and is waiting for review."
-                                  : "Your request is being worked on. You'll receive a response soon."
-                                }
-                              </p>
-                            </div>
-                          )}
-
-                          {request.resolved_at && (
-                            <div className="mt-4 text-xs text-gray-500 text-center py-2 border-t border-gray-200">
-                              ✅ Resolved on {new Date(request.resolved_at).toLocaleString()}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {new Date(request.created_at).toLocaleDateString()}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              {request.notes ? (
+                                <div className="flex items-center">
+                                  <div className="w-2 h-2 bg-green-400 rounded-full mr-2"></div>
+                                  <span className="text-sm text-green-700 font-medium">
+                                    Response received
+                                  </span>
+                                </div>
+                              ) : (
+                                <div className="flex items-center">
+                                  <div className="w-2 h-2 bg-gray-300 rounded-full mr-2"></div>
+                                  <span className="text-sm text-gray-500">
+                                    Awaiting response
+                                  </span>
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 )}
               </div>
@@ -1473,6 +1486,168 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
                 )}
                 {deletingCampaign ? "Deleting..." : "Delete Campaign"}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Help Request Details Modal */}
+      {helpRequestModalOpen && selectedHelpRequest && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-semibold text-gray-900">
+                  Help Request Details
+                </h3>
+                <button
+                  onClick={() => {
+                    setHelpRequestModalOpen(false);
+                    setSelectedHelpRequest(null);
+                  }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                {/* Request Info */}
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Subject
+                      </label>
+                      <div className="text-sm font-semibold text-gray-900">
+                        {selectedHelpRequest.subject}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Status
+                      </label>
+                      <span
+                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                          selectedHelpRequest.status === 'new'
+                            ? 'bg-blue-100 text-blue-800'
+                            : selectedHelpRequest.status === 'in_progress'
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : selectedHelpRequest.status === 'resolved'
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-gray-100 text-gray-800'
+                        }`}
+                      >
+                        {selectedHelpRequest.status.replace('_', ' ')}
+                      </span>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Priority
+                      </label>
+                      <span
+                        className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                          selectedHelpRequest.priority === 'urgent'
+                            ? 'bg-red-100 text-red-700'
+                            : selectedHelpRequest.priority === 'high'
+                            ? 'bg-orange-100 text-orange-700'
+                            : selectedHelpRequest.priority === 'normal'
+                            ? 'bg-gray-100 text-gray-700'
+                            : 'bg-gray-100 text-gray-700'
+                        }`}
+                      >
+                        {selectedHelpRequest.priority}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Submitted
+                    </label>
+                    <div className="text-sm text-gray-600">
+                      {new Date(selectedHelpRequest.created_at).toLocaleString()}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Your Message */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Your Message
+                  </label>
+                  <div className="bg-white border border-gray-200 p-4 rounded-lg">
+                    <p className="text-sm text-gray-900 whitespace-pre-wrap">
+                      {selectedHelpRequest.message}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Admin Response */}
+                {selectedHelpRequest.notes ? (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Admin Response
+                    </label>
+                    <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+                      <p className="text-sm text-blue-900 whitespace-pre-wrap">
+                        {selectedHelpRequest.notes}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg">
+                    <div className="flex items-center">
+                      <svg className="w-5 h-5 text-yellow-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <div>
+                        <p className="text-sm font-medium text-yellow-800">
+                          {selectedHelpRequest.status === 'new' 
+                            ? "Your request is waiting for review"
+                            : "Your request is being worked on"
+                          }
+                        </p>
+                        <p className="text-xs text-yellow-700 mt-1">
+                          You'll receive a response here when available.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Resolution Info */}
+                {selectedHelpRequest.resolved_at && (
+                  <div className="bg-green-50 border border-green-200 p-4 rounded-lg">
+                    <div className="flex items-center">
+                      <svg className="w-5 h-5 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <div>
+                        <p className="text-sm font-medium text-green-800">
+                          Request Resolved
+                        </p>
+                        <p className="text-xs text-green-700 mt-1">
+                          Resolved on {new Date(selectedHelpRequest.resolved_at).toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-center pt-6 border-t mt-6">
+                <button
+                  onClick={() => {
+                    setHelpRequestModalOpen(false);
+                    setSelectedHelpRequest(null);
+                  }}
+                  className="px-6 py-2 bg-gray-600 text-white hover:bg-gray-700 rounded-lg transition-colors"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         </div>
