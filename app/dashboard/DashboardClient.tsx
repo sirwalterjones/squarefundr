@@ -52,6 +52,8 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
   const [loadingHelp, setLoadingHelp] = useState(false);
   const [selectedHelpRequest, setSelectedHelpRequest] = useState<any>(null);
   const [helpRequestModalOpen, setHelpRequestModalOpen] = useState(false);
+  const [newHelpRequestModalOpen, setNewHelpRequestModalOpen] = useState(false);
+  const [submittingHelpRequest, setSubmittingHelpRequest] = useState(false);
   const [deletingCampaign, setDeletingCampaign] = useState(false);
 
   // Load donations on component mount to show count in tab header
@@ -138,6 +140,40 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
   const viewHelpRequestDetails = (request: any) => {
     setSelectedHelpRequest(request);
     setHelpRequestModalOpen(true);
+  };
+
+  const submitHelpRequest = async (formData: {
+    name: string;
+    email: string;
+    subject: string;
+    message: string;
+  }) => {
+    setSubmittingHelpRequest(true);
+    try {
+      const response = await fetch("/api/help-request", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      });
+
+      if (response.ok) {
+        setNewHelpRequestModalOpen(false);
+        // Refresh help requests list
+        await loadHelpRequests();
+        // Show success message
+        alert("Help request submitted successfully! We'll get back to you soon.");
+      } else {
+        const error = await response.json();
+        alert(error.error || "Failed to submit help request. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error submitting help request:", error);
+      alert("Failed to submit help request. Please try again.");
+    } finally {
+      setSubmittingHelpRequest(false);
+    }
   };
 
   const markAsPaid = async (transactionId: string) => {
@@ -1222,18 +1258,26 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
           <div className="space-y-6">
             <div className="bg-white border border-black rounded-xl shadow-sm">
               <div className="p-6 border-b border-black">
-                <div className="flex justify-between items-center">
-                  <h2 className="text-xl font-semibold text-black">
-                    Your Help Requests ({helpRequests.length})
-                  </h2>
-                  <button
-                    onClick={loadHelpRequests}
-                    className="btn-outline"
-                    disabled={loadingHelp}
-                  >
-                    {loadingHelp ? "Loading..." : "Refresh"}
-                  </button>
-                </div>
+                                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+                      <h2 className="text-xl font-semibold text-black">
+                        Your Help Requests ({helpRequests.length})
+                      </h2>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setNewHelpRequestModalOpen(true)}
+                          className="btn-primary text-sm"
+                        >
+                          New Request
+                        </button>
+                        <button
+                          onClick={loadHelpRequests}
+                          className="btn-outline text-sm"
+                          disabled={loadingHelp}
+                        >
+                          {loadingHelp ? "Loading..." : "Refresh"}
+                        </button>
+                      </div>
+                    </div>
               </div>
 
               <div className="p-6">
@@ -1253,35 +1297,37 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
                     <p className="text-gray-600 mb-4">
                       When you submit help requests, they'll appear here.
                     </p>
-                    <a
-                      href="/help"
+                    <button
+                      onClick={() => setNewHelpRequestModalOpen(true)}
                       className="inline-flex items-center px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
                     >
                       Submit Help Request
-                    </a>
+                    </button>
                   </div>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Subject
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Status
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Priority
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Submitted
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Response
-                          </th>
-                        </tr>
-                      </thead>
+                  <>
+                    {/* Desktop Table */}
+                    <div className="hidden md:block overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Subject
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Status
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Priority
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Submitted
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Response
+                            </th>
+                          </tr>
+                        </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
                         {helpRequests.map((request: any) => (
                           <tr
@@ -1354,9 +1400,69 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
                             </td>
                           </tr>
                         ))}
-                      </tbody>
-                    </table>
-                  </div>
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Mobile Cards */}
+                    <div className="md:hidden space-y-4">
+                      {helpRequests.map((request: any) => (
+                        <div
+                          key={request.id}
+                          onClick={() => viewHelpRequestDetails(request)}
+                          className="bg-white border border-gray-200 rounded-lg p-4 cursor-pointer hover:shadow-md transition-shadow"
+                        >
+                          <div className="flex justify-between items-start mb-2">
+                            <h3 className="font-medium text-gray-900 text-sm pr-2 flex-1">{request.subject}</h3>
+                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full whitespace-nowrap ${
+                              request.status === 'new'
+                                ? 'bg-red-100 text-red-800'
+                                : request.status === 'in_progress'
+                                ? 'bg-yellow-100 text-yellow-800'
+                                : request.status === 'resolved'
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-gray-100 text-gray-800'
+                            }`}>
+                              {request.status.replace('_', ' ')}
+                            </span>
+                          </div>
+                          
+                          <p className="text-sm text-gray-600 mb-3">
+                            {request.message.length > 120 ? request.message.substring(0, 120) + '...' : request.message}
+                          </p>
+                          
+                          <div className="flex justify-between items-center text-xs">
+                            <div className="flex items-center gap-3">
+                              <span className={`px-2 py-1 rounded-full font-medium ${
+                                request.priority === 'urgent'
+                                  ? 'bg-red-100 text-red-700'
+                                  : request.priority === 'high'
+                                  ? 'bg-orange-100 text-orange-700'
+                                  : request.priority === 'normal'
+                                  ? 'bg-gray-100 text-gray-700'
+                                  : 'bg-gray-100 text-gray-700'
+                              }`}>
+                                {request.priority}
+                              </span>
+                              <span className="text-gray-500">{new Date(request.created_at).toLocaleDateString()}</span>
+                            </div>
+                            
+                            {request.notes ? (
+                              <div className="flex items-center">
+                                <div className="w-2 h-2 bg-green-400 rounded-full mr-1"></div>
+                                <span className="text-green-700 font-medium">Response</span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center">
+                                <div className="w-2 h-2 bg-gray-300 rounded-full mr-1"></div>
+                                <span className="text-gray-500">Awaiting</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
                 )}
               </div>
             </div>
@@ -1668,6 +1774,124 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* New Help Request Modal */}
+      {newHelpRequestModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const formData = new FormData(e.currentTarget);
+                submitHelpRequest({
+                  name: formData.get('name') as string,
+                  email: formData.get('email') as string,
+                  subject: formData.get('subject') as string,
+                  message: formData.get('message') as string,
+                });
+              }}
+              className="p-6"
+            >
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-semibold text-gray-900">Submit Help Request</h3>
+                <button
+                  type="button"
+                  onClick={() => setNewHelpRequestModalOpen(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+                      Your Name *
+                    </label>
+                    <input
+                      type="text"
+                      id="name"
+                      name="name"
+                      required
+                      defaultValue={user?.user_metadata?.full_name || user?.email?.split('@')[0] || ''}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black"
+                      placeholder="Enter your full name"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                      Email Address *
+                    </label>
+                    <input
+                      type="email"
+                      id="email"
+                      name="email"
+                      required
+                      defaultValue={user?.email || ''}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black"
+                      placeholder="Enter your email address"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="subject" className="block text-sm font-medium text-gray-700 mb-2">
+                    Subject *
+                  </label>
+                  <input
+                    type="text"
+                    id="subject"
+                    name="subject"
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black"
+                    placeholder="Brief description of your issue"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="message" className="block text-sm font-medium text-gray-700 mb-2">
+                    Message *
+                  </label>
+                  <textarea
+                    id="message"
+                    name="message"
+                    required
+                    rows={6}
+                    minLength={10}
+                    maxLength={2000}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black resize-none"
+                    placeholder="Please describe your issue in detail. Include any relevant information that might help us assist you better."
+                  />
+                  <div className="text-xs text-gray-500 mt-1">
+                    Minimum 10 characters, maximum 2000 characters
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row justify-end gap-3 mt-6 pt-6 border-t">
+                <button
+                  type="button"
+                  onClick={() => setNewHelpRequestModalOpen(false)}
+                  className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingHelpRequest}
+                  className="px-6 py-2 bg-black text-white rounded-lg hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {submittingHelpRequest ? "Submitting..." : "Submit Request"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

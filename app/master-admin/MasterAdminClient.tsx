@@ -465,7 +465,7 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
         },
         body: JSON.stringify({
           id,
-          status: "archived",
+          status: "closed",
         }),
       });
 
@@ -473,7 +473,7 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
         setHelpRequests(prev =>
           prev.map(req =>
             req.id === id
-              ? { ...req, status: "archived" }
+              ? { ...req, status: "closed" }
               : req
           )
         );
@@ -514,7 +514,7 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
   const filteredHelpRequests = helpRequests.filter(
     (request) => {
       // Filter by archive status
-      const archiveFilter = showArchived || request.status !== 'archived';
+      const archiveFilter = showArchived || request.status !== 'closed';
       
       // Filter by search term
       const searchFilter = 
@@ -581,7 +581,7 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
                     : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                 }`}
               >
-                Help Requests ({initialLoading ? "..." : helpRequests.filter(req => req.status !== 'archived').length})
+                Help Requests ({initialLoading ? "..." : helpRequests.filter(req => req.status !== 'closed').length})
                 {helpRequests.filter(req => req.status === 'new').length > 0 && (
                   <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
                     {helpRequests.filter(req => req.status === 'new').length} new
@@ -1020,7 +1020,7 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
                     </button>
                     <div className="text-sm text-gray-600">
                       {showArchived 
-                        ? `Showing ${filteredHelpRequests.length} requests (including archived)`
+                        ? `Showing ${filteredHelpRequests.length} requests (including closed)`
                         : `Showing ${filteredHelpRequests.length} active requests`
                       }
                     </div>
@@ -1084,7 +1084,7 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
                                 ? 'bg-yellow-100 text-yellow-800'
                                 : request.status === 'resolved'
                                 ? 'bg-green-100 text-green-800'
-                                : request.status === 'archived'
+                                : request.status === 'closed'
                                 ? 'bg-gray-100 text-gray-600'
                                 : 'bg-gray-100 text-gray-800'
                             }`}
@@ -1132,7 +1132,7 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
                             >
                               Resolve
                             </button>
-                            {request.status !== 'archived' && (
+                            {request.status !== 'closed' && (
                               <button
                                 onClick={() => archiveHelpRequest(request.id)}
                                 className="text-gray-600 hover:text-gray-700 px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50"
@@ -1406,7 +1406,7 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
                             ? 'bg-yellow-100 text-yellow-800'
                             : selectedHelpRequest.status === 'resolved'
                             ? 'bg-green-100 text-green-800'
-                            : selectedHelpRequest.status === 'archived'
+                            : selectedHelpRequest.status === 'closed'
                             ? 'bg-gray-100 text-gray-800'
                             : 'bg-gray-100 text-gray-800'
                         }`}
@@ -1500,7 +1500,7 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
                       >
                         {selectedHelpRequest.status === 'resolved' ? '✓ Resolved' : 'Mark Resolved'}
                       </button>
-                      {selectedHelpRequest.status !== 'archived' && (
+                      {selectedHelpRequest.status !== 'closed' && (
                         <button
                           onClick={() => {
                             archiveHelpRequest(selectedHelpRequest.id);
