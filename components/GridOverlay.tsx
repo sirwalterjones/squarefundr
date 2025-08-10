@@ -41,17 +41,11 @@ export default function GridOverlay({
   };
 
   const isSquareAvailable = (square: SquareType) => {
-    // A square is available if:
-    // 1. It has no claimed_by value (null or undefined)
-    // 2. AND payment_status is not "completed"
-    // 3. AND claimed_by doesn't start with "temp_" (temporary reservations)
-    const isNotClaimed = !square.claimed_by || square.claimed_by === null;
-    const isNotCompleted = square.payment_status !== "completed";
-    const isNotTempReserved = !square.claimed_by?.startsWith("temp_");
+    // A square is available if it has no claimed_by value (null, undefined, or empty string)
+    // We don't need to check other conditions if the square is already claimed
+    const available = !square.claimed_by || square.claimed_by === null || square.claimed_by === "";
 
-    const available = isNotClaimed && isNotCompleted && isNotTempReserved;
-
-    // Debug logging for claimed squares
+    // Debug logging for claimed squares only
     if (!available) {
       console.log(`Square ${square.number} is NOT available:`, {
         claimed_by: square.claimed_by,
