@@ -278,8 +278,28 @@ export async function POST(request: NextRequest) {
         }
 
         console.log("[MARK-PAID-NEW] Square IDs to update:", squareIds);
+        console.log("[MARK-PAID-NEW] Square IDs type:", typeof squareIds);
+        console.log("[MARK-PAID-NEW] Square IDs is array:", Array.isArray(squareIds));
 
         if (Array.isArray(squareIds) && squareIds.length > 0) {
+          // First, let's see what these squares look like currently
+          const { data: currentSquares, error: currentSquaresError } = await adminSupabase
+            .from("squares")
+            .select("*")
+            .in("id", squareIds);
+          
+          console.log("[MARK-PAID-NEW] Current state of squares to update:", {
+            count: currentSquares?.length || 0,
+            squares: currentSquares?.map(s => ({
+              id: s.id,
+              number: s.number,
+              claimed_by: s.claimed_by,
+              payment_status: s.payment_status,
+              payment_type: s.payment_type
+            })),
+            error: currentSquaresError?.message || null
+          });
+
           const { data: squaresByIds, error: squaresByIdsError } = await adminSupabase
             .from("squares")
             .update(updateData)
