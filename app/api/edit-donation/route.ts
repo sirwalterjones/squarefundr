@@ -136,25 +136,36 @@ export async function PUT(request: NextRequest) {
         });
 
         if (availableSquares && availableSquares.length > 0) {
-          // Calculate how many squares we need based on transaction total and square value
-          const squareValue = availableSquares[0].value;
-          const squaresNeeded = Math.ceil(transaction.total / squareValue);
+          // Calculate how many squares we need - use proper logic that accumulates square values
+          // instead of assuming all squares have the same price
+          let selectedSquares: any[] = [];
+          let currentTotal = 0;
+          
+          for (const square of availableSquares) {
+            if (currentTotal < transaction.total) {
+              selectedSquares.push(square);
+              currentTotal += square.value;
+              
+              if (currentTotal >= transaction.total) {
+                break;
+              }
+            }
+          }
           
           console.log("[EDIT-DONATION] Square calculation:", {
-            squareValue,
             transactionTotal: transaction.total,
-            squaresNeeded,
+            selectedSquares: selectedSquares.length,
+            selectedTotal: currentTotal,
             availableCount: availableSquares.length
           });
 
-          if (availableSquares.length >= squaresNeeded) {
-            // Select the squares to reserve
-            const squaresToReserve = availableSquares.slice(0, squaresNeeded);
-            const squareIds = squaresToReserve.map(s => s.id);
+          if (selectedSquares.length > 0 && currentTotal >= transaction.total) {
+            // Use the selected squares that match the transaction total
+            const squareIds = selectedSquares.map(s => s.id);
 
             console.log("[EDIT-DONATION] Reserving squares:", {
               squareIds,
-              squareNumbers: squaresToReserve.map(s => s.number)
+              squareNumbers: selectedSquares.map(s => s.number)
             });
 
             // Reserve the squares
