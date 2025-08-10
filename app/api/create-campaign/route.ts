@@ -65,7 +65,7 @@ async function createSquaresBulk(supabase: any, campaignId: string, rows: number
     claimed_by: null;
     donor_name: null;
     payment_status: 'pending';
-    payment_type: 'stripe';
+    payment_type: 'cash';
     claimed_at: null;
   }> = [];
 
@@ -86,7 +86,7 @@ async function createSquaresBulk(supabase: any, campaignId: string, rows: number
         claimed_by: null,
         donor_name: null,
         payment_status: 'pending',
-        payment_type: 'stripe',
+        payment_type: 'cash',
         claimed_at: null
       });
     }
@@ -129,7 +129,7 @@ async function createSquaresLegacy(supabase: any, campaignId: string, rows: numb
     claimed_by: null;
     donor_name: null;
     payment_status: 'pending';
-    payment_type: 'stripe';
+    payment_type: 'cash';
     claimed_at: null;
   }> = [];
 
@@ -150,7 +150,7 @@ async function createSquaresLegacy(supabase: any, campaignId: string, rows: numb
         claimed_by: null,
         donor_name: null,
         payment_status: 'pending',
-        payment_type: 'stripe',
+        payment_type: 'cash',
         claimed_at: null
       });
     }
