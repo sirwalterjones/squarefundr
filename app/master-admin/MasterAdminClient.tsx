@@ -42,6 +42,7 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
     "campaign" | "user" | "donation" | null
   >(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [completingId, setCompletingId] = useState<string | null>(null);
   const [campaignOwners, setCampaignOwners] = useState<{
     [key: string]: string;
   }>({});
@@ -251,6 +252,33 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
       }
     } catch (err) {
       setError("Error updating donation");
+    }
+  };
+
+  const completeSquaresNow = async (donation: any) => {
+    try {
+      setCompletingId(donation.id);
+      const response = await fetch("/api/mark-donation-paid", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ transactionId: donation.id }),
+      });
+
+      const result = await response.json().catch(() => ({}));
+
+      if (response.ok) {
+        setSuccessMessage(
+          `Squares updated${typeof result.squaresReserved === "number" ? ` (${result.squaresReserved} affected)` : ""}.`,
+        );
+        loadDonations();
+        setTimeout(() => setSuccessMessage(null), 3000);
+      } else {
+        setError(result?.error || "Failed to complete squares");
+      }
+    } catch (e) {
+      setError("Error completing squares");
+    } finally {
+      setCompletingId(null);
     }
   };
 
@@ -692,6 +720,16 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                           <div className="flex items-center justify-end space-x-2">
+                            {donation.payment_method === "paypal" && (
+                              <button
+                                onClick={() => completeSquaresNow(donation)}
+                                disabled={completingId === donation.id}
+                                className="text-purple-600 hover:text-purple-700 px-2 py-1 text-xs border border-purple-300 rounded hover:bg-purple-50 transition-colors disabled:opacity-60"
+                                title="Force-complete squares for this PayPal transaction"
+                              >
+                                {completingId === donation.id ? "Working..." : "Complete Squares"}
+                              </button>
+                            )}
                             <button
                               onClick={() => editDonation(donation)}
                               className="text-blue-600 hover:text-blue-700 px-2 py-1 text-xs border border-blue-300 rounded hover:bg-blue-50"
