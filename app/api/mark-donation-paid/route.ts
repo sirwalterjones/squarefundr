@@ -214,6 +214,37 @@ export async function POST(request: NextRequest) {
           }
         }
       }
+
+      // Stage 5: legacy temp_ reservation (older flows)
+      if (!updatedSquares || updatedSquares.length === 0) {
+        const tempKey = `temp_${transaction.id}`;
+        const { data: tempSquares, error: tempSquaresErr } = await adminSupabase
+          .from("squares")
+          .select("id")
+          .eq("claimed_by", tempKey)
+          .eq("campaign_id", transaction.campaign_id)
+          .neq("payment_status", "completed");
+
+        console.log("[MARK-PAID-NEW] temp_ reservation count:", tempSquares?.length || 0, tempSquaresErr);
+
+        if (tempSquares && tempSquares.length > 0) {
+          const { data: updatedTempSquares, error: tempUpdateErr } = await adminSupabase
+            .from("squares")
+            .update(updateData)
+            .eq("claimed_by", tempKey)
+            .eq("campaign_id", transaction.campaign_id)
+            .neq("payment_status", "completed")
+            .select();
+
+          console.log("[MARK-PAID-NEW] Updated temp_ reservations:", updatedTempSquares?.length || 0, tempUpdateErr);
+
+          if (!tempUpdateErr && updatedTempSquares) {
+            updatedSquares = updatedTempSquares;
+          } else {
+            squareUpdateError = tempUpdateErr;
+          }
+        }
+      }
     }
 
     // If no squares were updated by temp prefix, try updating by square IDs from transaction
