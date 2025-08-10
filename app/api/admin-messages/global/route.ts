@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
     // Insert all messages in batches to avoid payload limits
     const batchSize = 100;
     let totalSent = 0;
-    let errors = [];
+    let errors: string[] = [];
 
     for (let i = 0; i < messageRecords.length; i += batchSize) {
       const batch = messageRecords.slice(i, i + batchSize);
