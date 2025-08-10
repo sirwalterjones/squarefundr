@@ -61,13 +61,14 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
 
   // Messaging state
   const [messageModalOpen, setMessageModalOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [selectedMessageUser, setSelectedMessageUser] = useState<any>(null);
   const [messageSubject, setMessageSubject] = useState("");
   const [messageContent, setMessageContent] = useState("");
   const [sendingMessage, setSendingMessage] = useState(false);
   const [userSearchQuery, setUserSearchQuery] = useState("");
   const [userSearchResults, setUserSearchResults] = useState<any[]>([]);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const [isGlobalMessage, setIsGlobalMessage] = useState(false);
 
   const loadCampaigns = async () => {
     setLoading(true);
@@ -519,54 +520,74 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
   };
 
   const selectUser = (user: any) => {
-    setSelectedUser(user);
+    setSelectedMessageUser(user);
     setUserSearchQuery(user.display);
     setShowUserDropdown(false);
   };
 
-  const openMessageModal = (user?: any) => {
+  const openMessageModal = (user?: any, isGlobal: boolean = false) => {
     if (user) {
-      setSelectedUser(user);
+      setSelectedMessageUser(user);
       setUserSearchQuery(user.display || `${user.name} (${user.email})`);
     } else {
-      setSelectedUser(null);
+      setSelectedMessageUser(null);
       setUserSearchQuery("");
     }
+    setIsGlobalMessage(isGlobal);
     setMessageSubject("");
     setMessageContent("");
     setMessageModalOpen(true);
   };
 
   const sendMessage = async () => {
-    if (!selectedUser || !messageSubject.trim() || !messageContent.trim()) {
-      setError("Please select a user and fill in both subject and message");
-      return;
+    if (isGlobalMessage) {
+      if (!messageSubject.trim() || !messageContent.trim()) {
+        setError("Please fill in both subject and message for global message");
+        return;
+      }
+    } else {
+      if (!selectedMessageUser || !messageSubject.trim() || !messageContent.trim()) {
+        setError("Please select a user and fill in both subject and message");
+        return;
+      }
     }
 
     setSendingMessage(true);
     try {
-      const response = await fetch("/api/admin-messages", {
+      const endpoint = isGlobalMessage ? "/api/admin-messages/global" : "/api/admin-messages";
+      const body = isGlobalMessage 
+        ? {
+            subject: messageSubject,
+            message: messageContent,
+          }
+        : {
+            to_user_id: selectedMessageUser.id,
+            subject: messageSubject,
+            message: messageContent,
+          };
+
+      const response = await fetch(endpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          to_user_id: selectedUser.id,
-          subject: messageSubject,
-          message: messageContent,
-        }),
+        body: JSON.stringify(body),
       });
 
       if (response.ok) {
         setMessageModalOpen(false);
-        setSuccessMessage("Message sent successfully!");
+        const successMsg = isGlobalMessage 
+          ? "Global message sent to all users successfully!" 
+          : "Message sent successfully!";
+        setSuccessMessage(successMsg);
         setTimeout(() => setSuccessMessage(null), 3000);
         
         // Reset form
-        setSelectedUser(null);
+        setSelectedMessageUser(null);
         setUserSearchQuery("");
         setMessageSubject("");
         setMessageContent("");
+        setIsGlobalMessage(false);
       } else {
         const errorData = await response.json();
         throw new Error(errorData.error || "Failed to send message");
@@ -678,6 +699,16 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
                     {helpRequests.filter(req => req.status === 'new').length} new
                   </span>
                 )}
+              </button>
+              <button
+                onClick={() => setSelectedTab("messaging")}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  selectedTab === "messaging"
+                    ? "border-blue-600 text-blue-600"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                }`}
+              >
+                Messaging
               </button>
             </nav>
           </div>
@@ -1241,8 +1272,57 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
                 </div>
               )}
 
+              {/* Messaging Section */}
+              {selectedTab === "messaging" && (
+                <div>
+                  <div className="mb-6 flex flex-col sm:flex-row gap-4">
+                    <button
+                      onClick={() => openMessageModal(null, false)}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      📧 Send Individual Message
+                    </button>
+                    <button
+                      onClick={() => openMessageModal(null, true)}
+                      className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                    >
+                      📢 Send Global Announcement
+                    </button>
+                  </div>
+
+                  <div className="bg-white rounded-lg border p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                      Admin Messaging Center
+                    </h3>
+                    <div className="space-y-4">
+                      <div className="p-4 bg-blue-50 rounded-lg">
+                        <h4 className="font-medium text-blue-900 mb-2">📧 Individual Messages</h4>
+                        <p className="text-blue-700 text-sm">
+                          Send targeted messages to specific users. Use the user autocomplete to find and select recipients.
+                        </p>
+                      </div>
+                      <div className="p-4 bg-purple-50 rounded-lg">
+                        <h4 className="font-medium text-purple-900 mb-2">📢 Global Announcements</h4>
+                        <p className="text-purple-700 text-sm">
+                          Send important announcements to all users at once. Messages will be prefixed with "[ANNOUNCEMENT]" and delivered to every user's help section.
+                        </p>
+                      </div>
+                      <div className="p-4 bg-yellow-50 rounded-lg">
+                        <h4 className="font-medium text-yellow-900 mb-2">💡 Tips</h4>
+                        <ul className="text-yellow-700 text-sm space-y-1">
+                          <li>• Users will see messages in their dashboard help section</li>
+                          <li>• Global messages are great for maintenance notices, feature updates, or important announcements</li>
+                          <li>• Individual messages are perfect for customer support or personalized communication</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Empty States */}
               {!loading &&
+                selectedTab !== "messaging" &&
                 ((selectedTab === "campaigns" &&
                   filteredCampaigns.length === 0) ||
                   (selectedTab === "users" && filteredUsers.length === 0) ||
@@ -1626,6 +1706,137 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
                 >
                   Close
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Message Modal */}
+      {messageModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-semibold text-gray-900">
+                  {isGlobalMessage ? "📢 Send Global Announcement" : "📧 Send Message"}
+                </h3>
+                <button
+                  onClick={() => {
+                    setMessageModalOpen(false);
+                    setSelectedMessageUser(null);
+                    setUserSearchQuery("");
+                    setMessageSubject("");
+                    setMessageContent("");
+                    setIsGlobalMessage(false);
+                  }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {!isGlobalMessage && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Recipient
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={userSearchQuery}
+                        onChange={(e) => {
+                          setUserSearchQuery(e.target.value);
+                          searchUsers(e.target.value);
+                        }}
+                        placeholder="Type to search for users..."
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                      
+                      {/* User Dropdown */}
+                      {showUserDropdown && userSearchResults.length > 0 && (
+                        <div className="absolute top-full left-0 right-0 bg-white border border-gray-300 rounded-lg mt-1 max-h-60 overflow-y-auto z-10 shadow-lg">
+                          {userSearchResults.map((user, index) => (
+                            <button
+                              key={user.id || index}
+                              onClick={() => selectUser(user)}
+                              className="w-full px-3 py-2 text-left hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
+                            >
+                              <div className="font-medium text-gray-900">{user.name}</div>
+                              <div className="text-sm text-gray-500">{user.email}</div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    {selectedMessageUser && (
+                      <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded text-sm">
+                        ✓ Selected: <strong>{selectedMessageUser.name}</strong> ({selectedMessageUser.email})
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {isGlobalMessage && (
+                  <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                    <p className="text-purple-800 text-sm">
+                      <strong>Global Announcement:</strong> This message will be sent to all users and will appear in their help section with the prefix "[ANNOUNCEMENT]".
+                    </p>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Subject
+                  </label>
+                  <input
+                    type="text"
+                    value={messageSubject}
+                    onChange={(e) => setMessageSubject(e.target.value)}
+                    placeholder="Enter message subject..."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Message
+                  </label>
+                  <textarea
+                    value={messageContent}
+                    onChange={(e) => setMessageContent(e.target.value)}
+                    placeholder="Enter your message..."
+                    rows={6}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                  <div className="text-sm text-gray-500 mt-1">
+                    {messageContent.length} characters
+                  </div>
+                </div>
+
+                <div className="flex justify-end space-x-3 pt-4">
+                  <button
+                    onClick={() => {
+                      setMessageModalOpen(false);
+                      setSelectedMessageUser(null);
+                      setUserSearchQuery("");
+                      setMessageSubject("");
+                      setMessageContent("");
+                      setIsGlobalMessage(false);
+                    }}
+                    className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={sendMessage}
+                    disabled={sendingMessage || (!isGlobalMessage && !selectedMessageUser) || !messageSubject.trim() || !messageContent.trim()}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {sendingMessage ? "Sending..." : (isGlobalMessage ? "Send to All Users" : "Send Message")}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
