@@ -28,7 +28,9 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { transactionId } = body;
 
+    console.log("[MARK-PAID-NEW] ===== DEBUGGING COMPLETE SQUARES =====");
     console.log("[MARK-PAID-NEW] Transaction ID:", transactionId);
+    console.log("[MARK-PAID-NEW] Request body:", body);
 
     if (!transactionId) {
       return NextResponse.json(
@@ -59,7 +61,23 @@ export async function POST(request: NextRequest) {
       donor_email: transaction.donor_email,
       total: transaction.total,
       square_ids: transaction.square_ids,
+      square_ids_type: typeof transaction.square_ids,
+      square_ids_length: Array.isArray(transaction.square_ids) ? transaction.square_ids.length : 'not_array',
       status: transaction.status
+    });
+
+    // Check what squares exist in the campaign for this donor
+    console.log("[MARK-PAID-NEW] Checking existing squares for donor email:", transaction.donor_email);
+    const { data: existingSquares, error: existingSquareError } = await adminSupabase
+      .from("squares")
+      .select("id, number, claimed_by, payment_status, payment_type")
+      .eq("campaign_id", transaction.campaign_id)
+      .ilike("claimed_by", transaction.donor_email || "");
+    
+    console.log("[MARK-PAID-NEW] Existing squares for donor:", {
+      count: existingSquares?.length || 0,
+      squares: existingSquares?.slice(0, 5),
+      error: existingSquareError?.message || null
     });
 
     // Update transaction status to completed
