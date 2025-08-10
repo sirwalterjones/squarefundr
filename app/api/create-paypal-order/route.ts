@@ -101,13 +101,13 @@ export async function POST(request: NextRequest) {
       payment_method: "paypal",
       donor_email: donorEmail,
       donor_name: donorName,
-      status: "pending",
+      status: "completed", // Mark PayPal transactions as completed immediately
       timestamp: new Date().toISOString(),
     });
 
-    // First, reserve the squares to ensure they're claimed
-    console.log(`[PAYPAL-ORDER] ===== RESERVING SQUARES =====`);
-    console.log(`[PAYPAL-ORDER] Reserving ${squares.length} squares for PayPal transaction ${transactionId}`);
+    // Reserve the squares as completed (no more pending status for PayPal)
+    console.log(`[PAYPAL-ORDER] ===== CLAIMING SQUARES AS COMPLETED =====`);
+    console.log(`[PAYPAL-ORDER] Claiming ${squares.length} squares as COMPLETED for PayPal transaction ${transactionId}`);
     console.log(`[PAYPAL-ORDER] Donor: ${donorName} (${donorEmail})`);
     
     const squareUpdates = squares.map((square: SelectedSquare) => ({
@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
       col: square.col,
       claimed_by: donorEmail, // Use actual email instead of temp prefix
       donor_name: donorName,
-      payment_status: "pending" as const,
+      payment_status: "completed" as const, // Mark PayPal squares as completed immediately
       payment_type: "paypal" as const,
       claimed_at: new Date().toISOString(),
     }));
@@ -207,7 +207,7 @@ export async function POST(request: NextRequest) {
       payment_method: "paypal",
       donor_email: donorEmail,
       donor_name: donorName,
-      status: "pending",
+      status: "completed", // Mark PayPal transactions as completed immediately
       timestamp: new Date().toISOString(),
     };
     
