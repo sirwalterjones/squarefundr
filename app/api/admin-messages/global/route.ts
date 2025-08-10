@@ -88,14 +88,18 @@ export async function POST(request: NextRequest) {
 
         if (insertError) {
           console.error(`Batch ${Math.floor(i / batchSize) + 1} failed:`, insertError);
-          errors.push(`Batch ${Math.floor(i / batchSize) + 1}: ${insertError.message}`);
+          const errorMsg = typeof insertError === 'object' && insertError !== null && 'message' in insertError 
+            ? String(insertError.message) 
+            : 'Unknown error';
+          errors.push(`Batch ${Math.floor(i / batchSize) + 1}: ${errorMsg}`);
         } else {
           totalSent += insertedMessages?.length || 0;
           console.log(`✅ Sent global message to ${insertedMessages?.length || 0} users in batch ${Math.floor(i / batchSize) + 1}`);
         }
       } catch (batchError) {
         console.error(`Batch ${Math.floor(i / batchSize) + 1} error:`, batchError);
-        errors.push(`Batch ${Math.floor(i / batchSize) + 1}: ${batchError}`);
+        const errorMsg = batchError instanceof Error ? batchError.message : String(batchError);
+        errors.push(`Batch ${Math.floor(i / batchSize) + 1}: ${errorMsg}`);
       }
     }
 
