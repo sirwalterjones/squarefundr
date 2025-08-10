@@ -651,6 +651,9 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
                         Amount
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Squares
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Status
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -688,6 +691,9 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">
                           {formatPrice(donation.total || 0)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {Array.isArray(donation.square_ids) ? donation.square_ids.length : 0}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span

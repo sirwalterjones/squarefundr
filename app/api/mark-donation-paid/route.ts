@@ -93,47 +93,104 @@ export async function POST(request: NextRequest) {
     console.log("[MARK-PAID-NEW] Square update data:", updateData);
 
     // First, try to find squares by donor email (permanent reservation)
-    console.log("[MARK-PAID-NEW] Looking for squares with claimed_by: " + transaction.donor_email);
-    
-    const { data: reservedSquares, error: reservedSquareError } = await adminSupabase
-      .from("squares")
-      .select("*")
-      .eq("claimed_by", transaction.donor_email)
-      .eq("campaign_id", transaction.campaign_id)
-      .eq("payment_type", "paypal")
-      .eq("payment_status", "pending");
-
-    console.log("[MARK-PAID-NEW] Reserved squares query result:", {
-      reservedSquares: reservedSquares?.length || 0,
-      reservedSquareError,
-    });
+    console.log("[MARK-PAID-NEW] Looking for squares with claimed_by:", transaction.donor_email);
 
     let updatedSquares: any[] | null = null;
     let squareUpdateError: any = null;
 
-    // Try updating by donor email first (permanent reservation)
-    if (reservedSquares && reservedSquares.length > 0) {
-      console.log("[MARK-PAID-NEW] Updating squares by donor email");
-      
-      const { data: updatedReservedSquares, error: reservedUpdateError } = await adminSupabase
+    if (transaction.donor_email) {
+      // Stage 1: claimed_by + pending
+      const { data: reservedPending, error: reservedPendingErr } = await adminSupabase
         .from("squares")
-        .update(updateData)
+        .select("id")
         .eq("claimed_by", transaction.donor_email)
         .eq("campaign_id", transaction.campaign_id)
         .eq("payment_type", "paypal")
-        .eq("payment_status", "pending")
-        .select();
+        .eq("payment_status", "pending");
 
-      console.log("[MARK-PAID-NEW] Reserved squares update result:", {
-        updatedReservedSquares: updatedReservedSquares?.length || 0,
-        reservedUpdateError,
-      });
+      console.log("[MARK-PAID-NEW] claimed_by + pending count:", reservedPending?.length || 0, reservedPendingErr);
 
-      if (!reservedUpdateError && updatedReservedSquares) {
-        updatedSquares = updatedReservedSquares;
-        squareUpdateError = null;
-      } else {
-        squareUpdateError = reservedUpdateError;
+      if (reservedPending && reservedPending.length > 0) {
+        const { data: updatedReservedSquares, error: reservedUpdateError } = await adminSupabase
+          .from("squares")
+          .update(updateData)
+          .eq("claimed_by", transaction.donor_email)
+          .eq("campaign_id", transaction.campaign_id)
+          .eq("payment_type", "paypal")
+          .eq("payment_status", "pending")
+          .select();
+
+        console.log("[MARK-PAID-NEW] Updated claimed_by + pending:", updatedReservedSquares?.length || 0, reservedUpdateError);
+
+        if (!reservedUpdateError && updatedReservedSquares) {
+          updatedSquares = updatedReservedSquares;
+        } else {
+          squareUpdateError = reservedUpdateError;
+        }
+      }
+
+      // Stage 2: claimed_by + any status not completed (handles null/"reserved")
+      if (!updatedSquares || updatedSquares.length === 0) {
+        const { data: reservedAny, error: reservedAnyErr } = await adminSupabase
+          .from("squares")
+          .select("id")
+          .eq("claimed_by", transaction.donor_email)
+          .eq("campaign_id", transaction.campaign_id)
+          .eq("payment_type", "paypal")
+          .neq("payment_status", "completed");
+
+        console.log("[MARK-PAID-NEW] claimed_by + !completed count:", reservedAny?.length || 0, reservedAnyErr);
+
+        if (reservedAny && reservedAny.length > 0) {
+          const { data: updatedReservedAny, error: reservedAnyUpdateErr } = await adminSupabase
+            .from("squares")
+            .update(updateData)
+            .eq("claimed_by", transaction.donor_email)
+            .eq("campaign_id", transaction.campaign_id)
+            .eq("payment_type", "paypal")
+            .neq("payment_status", "completed")
+            .select();
+
+          console.log("[MARK-PAID-NEW] Updated claimed_by + !completed:", updatedReservedAny?.length || 0, reservedAnyUpdateErr);
+
+          if (!reservedAnyUpdateErr && updatedReservedAny) {
+            updatedSquares = updatedReservedAny;
+          } else {
+            squareUpdateError = reservedAnyUpdateErr;
+          }
+        }
+      }
+
+      // Stage 3: buyer_email + any status not completed (older schema flows)
+      if (!updatedSquares || updatedSquares.length === 0) {
+        const { data: buyerAny, error: buyerAnyErr } = await adminSupabase
+          .from("squares")
+          .select("id")
+          .eq("buyer_email", transaction.donor_email)
+          .eq("campaign_id", transaction.campaign_id)
+          .eq("payment_type", "paypal")
+          .neq("payment_status", "completed");
+
+        console.log("[MARK-PAID-NEW] buyer_email + !completed count:", buyerAny?.length || 0, buyerAnyErr);
+
+        if (buyerAny && buyerAny.length > 0) {
+          const { data: updatedBuyerAny, error: buyerAnyUpdateErr } = await adminSupabase
+            .from("squares")
+            .update(updateData)
+            .eq("buyer_email", transaction.donor_email)
+            .eq("campaign_id", transaction.campaign_id)
+            .eq("payment_type", "paypal")
+            .neq("payment_status", "completed")
+            .select();
+
+          console.log("[MARK-PAID-NEW] Updated buyer_email + !completed:", updatedBuyerAny?.length || 0, buyerAnyUpdateErr);
+
+          if (!buyerAnyUpdateErr && updatedBuyerAny) {
+            updatedSquares = updatedBuyerAny;
+          } else {
+            squareUpdateError = buyerAnyUpdateErr;
+          }
+        }
       }
     }
 
