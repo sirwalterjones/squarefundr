@@ -52,47 +52,67 @@ async function createSquaresBulk(supabase: any, campaignId: string, rows: number
     return await createSquaresLegacy(supabase, campaignId, rows, columns, pricingType, priceData);
   }
 
-  // For large grids, use SQL bulk insert
-  const values: string[] = [];
+  // For large grids, use proper Supabase bulk insert
+  const squares: Array<{
+    campaign_id: string;
+    row: number;
+    col: number;
+    row_num: number;
+    col_num: number;
+    number: number;
+    position: number;
+    value: number;
+    claimed_by: null;
+    donor_name: null;
+    payment_status: 'pending';
+    payment_type: 'stripe';
+    claimed_at: null;
+  }> = [];
+
   for (let row = 0; row < rows; row++) {
     for (let col = 0; col < columns; col++) {
       const position = row * columns + col + 1;
       const price = calculateSquarePrice(position, pricingType, priceData);
       
-      values.push(`(
-        '${campaignId}',
-        ${row},
-        ${col},
-        ${row},
-        ${col},
-        ${position},
-        ${position},
-        ${price},
-        NULL,
-        NULL,
-        'pending',
-        'stripe',
-        NULL
-      )`);
+      squares.push({
+        campaign_id: campaignId,
+        row: row,
+        col: col,
+        row_num: row,
+        col_num: col,
+        number: position,
+        position: position,
+        value: price,
+        claimed_by: null,
+        donor_name: null,
+        payment_status: 'pending',
+        payment_type: 'stripe',
+        claimed_at: null
+      });
     }
   }
 
-  // Insert all squares at once using raw SQL
-  const sql = `
-    INSERT INTO squares (
-      campaign_id, row, col, row_num, col_num, number, position, 
-      value, claimed_by, donor_name, payment_status, payment_type, claimed_at
-    ) VALUES ${values.join(', ')}
-  `;
+  console.log(`🎯 Creating ${squares.length} squares with calculated prices. First 3 examples:`);
+  squares.slice(0, 3).forEach(square => {
+    console.log(`   Square ${square.position}: $${square.value}`);
+  });
 
-  try {
-    const { error } = await supabase.rpc('exec_sql', { sql_query: sql });
-    if (error) throw error;
-    return { success: true };
-  } catch (error) {
-    console.error('Bulk insert failed, falling back to batch method:', error);
-    return await createSquaresLegacy(supabase, campaignId, rows, columns, pricingType, priceData);
+  // Insert squares in batches to avoid payload limits
+  const batchSize = 100;
+  for (let i = 0; i < squares.length; i += batchSize) {
+    const batch = squares.slice(i, i + batchSize);
+    const { error } = await supabase
+      .from('squares')
+      .insert(batch);
+    
+    if (error) {
+      console.error(`❌ Batch insert failed for squares ${i + 1}-${i + batch.length}:`, error);
+      throw error;
+    }
+    console.log(`✅ Inserted squares ${i + 1}-${i + batch.length}`);
   }
+
+  return { success: true };
 }
 
 // Legacy method for smaller grids or fallback
@@ -136,7 +156,11 @@ async function createSquaresLegacy(supabase: any, campaignId: string, rows: numb
     }
   }
 
-  console.log(`Created ${squares.length} squares, now inserting into database in batches`);
+  console.log(`🎯 Created ${squares.length} squares with calculated prices. First 3 examples:`);
+  squares.slice(0, 3).forEach(square => {
+    console.log(`   Square ${square.position}: $${square.value}`);
+  });
+  console.log(`Now inserting into database in batches`);
 
   // Use smaller batch sizes to avoid timeouts
   const BATCH_SIZE = 50;
