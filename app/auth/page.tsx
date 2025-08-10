@@ -96,15 +96,13 @@ function AuthPageContent() {
         if (authData.user) {
           setMessage('Signed in successfully!');
           setIsSuccess(true);
+          
+          // Fast redirect without delay
+          router.push('/dashboard');
         } else {
           throw new Error('Authentication failed');
         }
       }
-
-      // Redirect to dashboard after successful authentication
-      setTimeout(() => {
-        router.push('/dashboard');
-      }, 1500);
 
     } catch (error: any) {
       setMessage(error.message || 'An error occurred. Please try again.');

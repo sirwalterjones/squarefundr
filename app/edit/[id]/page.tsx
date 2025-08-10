@@ -19,13 +19,28 @@ export default async function EditCampaignPage({ params }: EditCampaignPageProps
     redirect('/auth');
   }
 
-  // Fetch the campaign
-  const { data: campaign, error: campaignError } = await supabase
+  // Check if user is admin
+  const { data: userRole } = await supabase
+    .from('user_roles')
+    .select('role')
+    .eq('user_id', user.id)
+    .eq('role', 'admin')
+    .single();
+
+  const isAdmin = !!userRole;
+
+  // Fetch the campaign - admins can edit any campaign, regular users only their own
+  let query = supabase
     .from('campaigns')
     .select('*')
-    .eq('id', resolvedParams.id)
-    .eq('user_id', user.id) // Ensure user owns this campaign
-    .single();
+    .eq('id', resolvedParams.id);
+
+  // Only restrict to user's campaigns if they're not an admin
+  if (!isAdmin) {
+    query = query.eq('user_id', user.id);
+  }
+
+  const { data: campaign, error: campaignError } = await query.single();
 
   if (campaignError || !campaign) {
     redirect('/dashboard');

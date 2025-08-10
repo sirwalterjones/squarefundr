@@ -17,38 +17,44 @@ export default function HomePage() {
     
     const loadRealData = async () => {
       try {
-        // Fetch real campaign data
-        const campaignsResponse = await fetch('/api/master-admin/campaigns');
-        let totalCampaigns = 15; // Base count
+        console.log('📊 Loading live campaign statistics...');
         
-        if (campaignsResponse.ok) {
-          const campaignsData = await campaignsResponse.json();
-          const activeCampaigns = campaignsData.campaigns?.filter((c: any) => c.is_active) || [];
-          totalCampaigns = Math.max(15, activeCampaigns.length); // Never go below 15
-        }
-
-        // Fetch real donation data to calculate total raised
-        const donationsResponse = await fetch('/api/master-admin/donations');
-        let totalRaised = 1500; // Base amount
+        // Fetch real data from public stats endpoint
+        const response = await fetch('/api/public-stats', {
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+          },
+        });
         
-        if (donationsResponse.ok) {
-          const donationsData = await donationsResponse.json();
-          const completedDonations = donationsData.donations?.filter((d: any) => d.status === 'completed') || [];
-          const realTotal = completedDonations.reduce((sum: number, donation: any) => {
-            return sum + (parseFloat(donation.total) || 0);
-          }, 0);
-          totalRaised = Math.max(1500, Math.round(realTotal + 1500)); // Add base amount to real total
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.stats) {
+            const { totalCampaigns, totalRaised } = data.stats;
+            
+            console.log(`✅ Loaded live stats: ${totalCampaigns} campaigns, $${totalRaised} raised`);
+            
+            // Use real data with a minimum baseline for presentation
+            const displayCampaigns = Math.max(15, totalCampaigns);
+            const displayRaised = Math.max(1500, totalRaised + 1500); // Add baseline for presentation
+            
+            // Animate to real numbers with a short delay for visual effect
+            setTimeout(() => {
+              setCampaigns(displayCampaigns);
+              setMoneyRaised(displayRaised);
+            }, 800);
+          } else {
+            console.warn('Invalid response from public stats API');
+            // Keep defaults if API response is invalid
+          }
+        } else {
+          console.error('Failed to fetch public stats:', response.status, response.statusText);
+          // Keep defaults if API fails
         }
-
-        // Animate to real numbers
-        setTimeout(() => {
-          setCampaigns(totalCampaigns);
-          setMoneyRaised(totalRaised);
-        }, 1000);
 
       } catch (error) {
-        console.error('Error loading campaign data:', error);
-        // Keep base numbers if API fails
+        console.error('Error loading live data:', error);
+        // Keep defaults if there's an error
       }
     };
 

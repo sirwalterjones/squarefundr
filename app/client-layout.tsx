@@ -80,19 +80,64 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const signOut = async () => {
     try {
-      // Immediately update UI state
+      console.log("🚪 Starting sign out process...");
+      
+      // Immediately update UI state for fast response
       setUser(null);
+      setIsAdmin(false);
+      setLoading(true);
+      
+      // Perform the actual sign out to clear session/cookies
+      const { error } = await supabase.auth.signOut({ scope: 'global' });
+      if (error) {
+        console.error("Supabase sign out error:", error);
+      }
+      
+      // Clear any additional storage that might be hanging around
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.clear();
+          sessionStorage.clear();
+          
+          // Clear any supabase-specific storage
+          Object.keys(localStorage).forEach(key => {
+            if (key.startsWith('supabase.')) {
+              localStorage.removeItem(key);
+            }
+          });
+          
+          // Force clear cookies by setting them to expire
+          document.cookie.split(";").forEach(cookie => {
+            const eqPos = cookie.indexOf("=");
+            const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim();
+            if (name.includes('supabase') || name.includes('auth')) {
+              document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=${window.location.hostname}`;
+              document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
+            }
+          });
+        } catch (storageError) {
+          console.warn("Storage clearing error:", storageError);
+        }
+      }
+      
+      console.log("✅ Sign out completed, redirecting...");
+      
+      // Fast redirect without delay
+      window.location.replace("/");
+      
+    } catch (error) {
+      console.error("Error during sign out:", error);
+      
+      // Even if sign out fails, clear everything and redirect
+      setUser(null);
+      setIsAdmin(false);
       setLoading(false);
       
-      // Then perform the actual sign out
-      await supabase.auth.signOut();
-      window.location.href = "/";
-    } catch (error) {
-              console.error("Error signing out:", error);
-      // Even if sign out fails, clear the user state
-      setUser(null);
-      setLoading(false);
-      window.location.href = "/";
+      if (typeof window !== 'undefined') {
+        localStorage.clear();
+        sessionStorage.clear();
+        window.location.replace("/");
+      }
     }
   };
 

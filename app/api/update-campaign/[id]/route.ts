@@ -63,13 +63,27 @@ export async function PUT(
       );
     }
 
-    // First check if campaign exists and user owns it
-    const { data: existingCampaign, error: fetchError } = await supabase
+    // Check if user is admin
+    const { data: userRole } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .eq('role', 'admin')
+      .single();
+
+    const isAdmin = !!userRole;
+
+    // Check if campaign exists - admins can edit any campaign, regular users only their own
+    let campaignQuery = supabase
       .from('campaigns')
       .select('*')
-      .eq('id', id)
-      .eq('user_id', user.id)
-      .single();
+      .eq('id', id);
+
+    if (!isAdmin) {
+      campaignQuery = campaignQuery.eq('user_id', user.id);
+    }
+
+    const { data: existingCampaign, error: fetchError } = await campaignQuery.single();
 
     if (fetchError || !existingCampaign) {
       console.error('Campaign not found or access denied:', fetchError);
@@ -79,8 +93,8 @@ export async function PUT(
       );
     }
 
-    // Update the campaign
-    const { data: updatedCampaign, error: updateError } = await supabase
+    // Update the campaign - admins can update any campaign, regular users only their own
+    let updateQuery = supabase
       .from('campaigns')
       .update({
         title,
@@ -95,8 +109,13 @@ export async function PUT(
         og_focus_point: focusPoint,
         updated_at: new Date().toISOString(),
       })
-      .eq('id', id)
-      .eq('user_id', user.id)
+      .eq('id', id);
+
+    if (!isAdmin) {
+      updateQuery = updateQuery.eq('user_id', user.id);
+    }
+
+    const { data: updatedCampaign, error: updateError } = await updateQuery
       .select()
       .single();
 
