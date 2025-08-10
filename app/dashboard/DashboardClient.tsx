@@ -1235,58 +1235,93 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
                     </a>
                   </div>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="space-y-6">
                     {helpRequests.map((request: any) => (
                       <div
                         key={request.id}
-                        className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors"
+                        className="border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow"
                       >
-                        <div className="flex justify-between items-start mb-3">
-                          <div className="flex-1">
-                            <h3 className="font-medium text-gray-900 mb-1">
-                              {request.subject}
-                            </h3>
-                            <p className="text-sm text-gray-600 mb-2">
-                              Submitted on {new Date(request.created_at).toLocaleDateString()}
-                            </p>
+                        {/* Header */}
+                        <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
+                          <div className="flex justify-between items-start">
+                            <div className="flex-1">
+                              <h3 className="font-semibold text-lg text-gray-900 mb-1">
+                                {request.subject}
+                              </h3>
+                              <p className="text-sm text-gray-600">
+                                Submitted on {new Date(request.created_at).toLocaleString()}
+                              </p>
+                            </div>
+                            <div className="flex flex-col items-end space-y-2">
+                              <span
+                                className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${
+                                  request.status === 'new'
+                                    ? 'bg-blue-100 text-blue-800'
+                                    : request.status === 'in_progress'
+                                    ? 'bg-yellow-100 text-yellow-800'
+                                    : request.status === 'resolved'
+                                    ? 'bg-green-100 text-green-800'
+                                    : 'bg-gray-100 text-gray-800'
+                                }`}
+                              >
+                                {request.status.replace('_', ' ')}
+                              </span>
+                              <span
+                                className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                                  request.priority === 'urgent'
+                                    ? 'bg-red-100 text-red-700'
+                                    : request.priority === 'high'
+                                    ? 'bg-orange-100 text-orange-700'
+                                    : request.priority === 'normal'
+                                    ? 'bg-gray-100 text-gray-700'
+                                    : 'bg-gray-100 text-gray-700'
+                                }`}
+                              >
+                                {request.priority} priority
+                              </span>
+                            </div>
                           </div>
-                          <span
-                            className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                              request.status === 'new'
-                                ? 'bg-blue-100 text-blue-800'
-                                : request.status === 'in_progress'
-                                ? 'bg-yellow-100 text-yellow-800'
-                                : request.status === 'resolved'
-                                ? 'bg-green-100 text-green-800'
-                                : 'bg-gray-100 text-gray-800'
-                            }`}
-                          >
-                            {request.status.replace('_', ' ')}
-                          </span>
-                        </div>
-                        
-                        <div className="mb-3">
-                          <p className="text-sm text-gray-700 line-clamp-3">
-                            {request.message}
-                          </p>
                         </div>
 
-                        {request.notes && (
-                          <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                            <h4 className="text-sm font-medium text-blue-900 mb-1">
-                              Admin Response:
-                            </h4>
-                            <p className="text-sm text-blue-800">
-                              {request.notes}
-                            </p>
+                        {/* Content */}
+                        <div className="p-6">
+                          <div className="mb-4">
+                            <h4 className="text-sm font-medium text-gray-700 mb-2">Your Message:</h4>
+                            <div className="bg-gray-50 p-4 rounded-lg">
+                              <p className="text-sm text-gray-900 whitespace-pre-wrap">
+                                {request.message}
+                              </p>
+                            </div>
                           </div>
-                        )}
 
-                        {request.resolved_at && (
-                          <div className="mt-2 text-xs text-gray-500">
-                            Resolved on {new Date(request.resolved_at).toLocaleDateString()}
-                          </div>
-                        )}
+                          {request.notes && (
+                            <div className="mt-4">
+                              <h4 className="text-sm font-medium text-gray-700 mb-2">Admin Response:</h4>
+                              <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+                                <p className="text-sm text-blue-900 whitespace-pre-wrap">
+                                  {request.notes}
+                                </p>
+                              </div>
+                            </div>
+                          )}
+
+                          {!request.notes && request.status !== 'resolved' && (
+                            <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                              <p className="text-sm text-yellow-800">
+                                {request.status === 'new' 
+                                  ? "Your request has been received and is waiting for review."
+                                  : "Your request is being worked on. You'll receive a response soon."
+                                }
+                              </p>
+                            </div>
+                          )}
+
+                          {request.resolved_at && (
+                            <div className="mt-4 text-xs text-gray-500 text-center py-2 border-t border-gray-200">
+                              ✅ Resolved on {new Date(request.resolved_at).toLocaleString()}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>

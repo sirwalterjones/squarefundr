@@ -50,6 +50,8 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
   >(null);
   const [helpRequestModalOpen, setHelpRequestModalOpen] = useState(false);
   const [selectedHelpRequest, setSelectedHelpRequest] = useState<any>(null);
+  const [adminResponse, setAdminResponse] = useState("");
+  const [updatingHelpRequest, setUpdatingHelpRequest] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [completingId, setCompletingId] = useState<string | null>(null);
   const [campaignOwners, setCampaignOwners] = useState<{
@@ -378,6 +380,7 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
 
   const viewHelpRequest = (request: any) => {
     setSelectedHelpRequest(request);
+    setAdminResponse(request.notes || "");
     setHelpRequestModalOpen(true);
   };
 
@@ -411,6 +414,44 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
     } catch (error) {
       console.error("Error updating help request:", error);
       setError("Failed to update help request");
+    }
+  };
+
+  const saveAdminResponse = async () => {
+    if (!selectedHelpRequest || !adminResponse.trim()) return;
+    
+    setUpdatingHelpRequest(true);
+    try {
+      const response = await fetch("/api/help-request", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          id: selectedHelpRequest.id,
+          notes: adminResponse.trim(),
+        }),
+      });
+
+      if (response.ok) {
+        setHelpRequests(prev =>
+          prev.map(req =>
+            req.id === selectedHelpRequest.id
+              ? { ...req, notes: adminResponse.trim() }
+              : req
+          )
+        );
+        setSelectedHelpRequest(prev => ({ ...prev, notes: adminResponse.trim() }));
+        setSuccessMessage("Response saved successfully");
+        setTimeout(() => setSuccessMessage(null), 3000);
+      } else {
+        throw new Error("Failed to save response");
+      }
+    } catch (error) {
+      console.error("Error saving response:", error);
+      setError("Failed to save response");
+    } finally {
+      setUpdatingHelpRequest(false);
     }
   };
 
@@ -1233,16 +1274,17 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
       {/* Help Request Modal */}
       {helpRequestModalOpen && selectedHelpRequest && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-semibold text-gray-900">
                   Help Request Details
                 </h3>
                 <button
                   onClick={() => {
                     setHelpRequestModalOpen(false);
                     setSelectedHelpRequest(null);
+                    setAdminResponse("");
                   }}
                   className="text-gray-400 hover:text-gray-600"
                 >
@@ -1252,117 +1294,155 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
                 </button>
               </div>
 
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    From
-                  </label>
-                  <div className="bg-gray-50 p-3 rounded-lg">
-                    <div className="font-medium">{selectedHelpRequest.name}</div>
-                    <div className="text-sm text-gray-600">{selectedHelpRequest.email}</div>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Subject
-                  </label>
-                  <div className="bg-gray-50 p-3 rounded-lg">
-                    {selectedHelpRequest.subject}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Message
-                  </label>
-                  <div className="bg-gray-50 p-3 rounded-lg whitespace-pre-wrap">
-                    {selectedHelpRequest.message}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Left Column - Request Details */}
+                <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Status
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      From
                     </label>
-                    <span
-                      className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        selectedHelpRequest.status === 'new'
-                          ? 'bg-red-100 text-red-800'
-                          : selectedHelpRequest.status === 'in_progress'
-                          ? 'bg-yellow-100 text-yellow-800'
-                          : selectedHelpRequest.status === 'resolved'
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-gray-100 text-gray-800'
-                      }`}
-                    >
-                      {selectedHelpRequest.status.replace('_', ' ')}
-                    </span>
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <div className="font-medium text-lg text-gray-900">{selectedHelpRequest.name}</div>
+                      <div className="text-gray-600">{selectedHelpRequest.email}</div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        Submitted on {new Date(selectedHelpRequest.created_at).toLocaleString()}
+                      </div>
+                    </div>
                   </div>
+
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Priority
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Subject
                     </label>
-                    <span
-                      className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        selectedHelpRequest.priority === 'urgent'
-                          ? 'bg-red-100 text-red-800'
-                          : selectedHelpRequest.priority === 'high'
-                          ? 'bg-orange-100 text-orange-800'
-                          : selectedHelpRequest.priority === 'normal'
-                          ? 'bg-blue-100 text-blue-800'
-                          : 'bg-gray-100 text-gray-800'
-                      }`}
-                    >
-                      {selectedHelpRequest.priority}
-                    </span>
+                    <div className="bg-gray-50 p-4 rounded-lg font-medium text-gray-900">
+                      {selectedHelpRequest.subject}
+                    </div>
                   </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Status
+                      </label>
+                      <span
+                        className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${
+                          selectedHelpRequest.status === 'new'
+                            ? 'bg-red-100 text-red-800'
+                            : selectedHelpRequest.status === 'in_progress'
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : selectedHelpRequest.status === 'resolved'
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-gray-100 text-gray-800'
+                        }`}
+                      >
+                        {selectedHelpRequest.status.replace('_', ' ')}
+                      </span>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Priority
+                      </label>
+                      <span
+                        className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${
+                          selectedHelpRequest.priority === 'urgent'
+                            ? 'bg-red-100 text-red-800'
+                            : selectedHelpRequest.priority === 'high'
+                            ? 'bg-orange-100 text-orange-800'
+                            : selectedHelpRequest.priority === 'normal'
+                            ? 'bg-blue-100 text-blue-800'
+                            : 'bg-gray-100 text-gray-800'
+                        }`}
+                      >
+                        {selectedHelpRequest.priority}
+                      </span>
+                    </div>
+                  </div>
+
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Created
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Full Message
                     </label>
-                    <div className="text-sm text-gray-600">
-                      {new Date(selectedHelpRequest.created_at).toLocaleString()}
+                    <div className="bg-gray-50 p-4 rounded-lg min-h-[120px] whitespace-pre-wrap text-sm text-gray-900">
+                      {selectedHelpRequest.message}
                     </div>
                   </div>
                 </div>
 
-                {selectedHelpRequest.notes && (
+                {/* Right Column - Admin Response */}
+                <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Admin Notes
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Admin Response
                     </label>
-                    <div className="bg-blue-50 p-3 rounded-lg whitespace-pre-wrap">
-                      {selectedHelpRequest.notes}
+                    <textarea
+                      value={adminResponse}
+                      onChange={(e) => setAdminResponse(e.target.value)}
+                      placeholder="Type your response to the user here..."
+                      className="w-full h-40 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                    />
+                    <div className="flex justify-between items-center mt-2">
+                      <div className="text-xs text-gray-500">
+                        {adminResponse.length}/2000 characters
+                      </div>
+                      <button
+                        onClick={saveAdminResponse}
+                        disabled={!adminResponse.trim() || updatingHelpRequest}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        {updatingHelpRequest ? "Saving..." : "Save Response"}
+                      </button>
                     </div>
                   </div>
-                )}
+
+                  {selectedHelpRequest.notes && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Previous Responses
+                      </label>
+                      <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+                        <div className="whitespace-pre-wrap text-sm text-blue-900">
+                          {selectedHelpRequest.notes}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <h4 className="font-medium text-gray-900 mb-2">Quick Actions</h4>
+                    <div className="space-y-2">
+                      <button
+                        onClick={() => updateHelpRequestStatus(selectedHelpRequest.id, 'in_progress')}
+                        disabled={selectedHelpRequest.status === 'in_progress'}
+                        className="w-full px-4 py-2 text-yellow-700 bg-yellow-100 hover:bg-yellow-200 rounded-lg transition-colors disabled:opacity-50"
+                      >
+                        {selectedHelpRequest.status === 'in_progress' ? '✓ In Progress' : 'Mark In Progress'}
+                      </button>
+                      <button
+                        onClick={() => updateHelpRequestStatus(selectedHelpRequest.id, 'resolved')}
+                        disabled={selectedHelpRequest.status === 'resolved'}
+                        className="w-full px-4 py-2 text-green-700 bg-green-100 hover:bg-green-200 rounded-lg transition-colors disabled:opacity-50"
+                      >
+                        {selectedHelpRequest.status === 'resolved' ? '✓ Resolved' : 'Mark Resolved'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {selectedHelpRequest.resolved_at && (
+                    <div className="text-xs text-gray-500 text-center">
+                      Resolved on {new Date(selectedHelpRequest.resolved_at).toLocaleString()}
+                    </div>
+                  )}
+                </div>
               </div>
 
-              <div className="flex justify-between items-center pt-6 border-t mt-6">
-                <div className="flex space-x-2">
-                  <button
-                    onClick={() => updateHelpRequestStatus(selectedHelpRequest.id, 'in_progress')}
-                    disabled={selectedHelpRequest.status === 'in_progress'}
-                    className="px-4 py-2 text-yellow-700 bg-yellow-100 hover:bg-yellow-200 rounded-lg transition-colors disabled:opacity-50"
-                  >
-                    Mark In Progress
-                  </button>
-                  <button
-                    onClick={() => updateHelpRequestStatus(selectedHelpRequest.id, 'resolved')}
-                    disabled={selectedHelpRequest.status === 'resolved'}
-                    className="px-4 py-2 text-green-700 bg-green-100 hover:bg-green-200 rounded-lg transition-colors disabled:opacity-50"
-                  >
-                    Mark Resolved
-                  </button>
-                </div>
+              <div className="flex justify-center pt-6 border-t mt-6">
                 <button
                   onClick={() => {
                     setHelpRequestModalOpen(false);
                     setSelectedHelpRequest(null);
+                    setAdminResponse("");
                   }}
-                  className="px-4 py-2 bg-gray-600 text-white hover:bg-gray-700 rounded-lg transition-colors"
+                  className="px-6 py-2 bg-gray-600 text-white hover:bg-gray-700 rounded-lg transition-colors"
                 >
                   Close
                 </button>
