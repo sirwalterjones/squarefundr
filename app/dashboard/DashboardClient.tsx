@@ -393,7 +393,7 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
     }
   };
 
-  const downloadReceipt = (donation: any) => {
+  const downloadReceipt = async (donation: any) => {
     try {
       // Find the campaign for this donation
       const campaign =
@@ -405,18 +405,37 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
         return;
       }
 
-      // Convert square_ids to SelectedSquare format
-      const squareIds = Array.isArray(donation.square_ids)
-        ? donation.square_ids
-        : [];
-      const squares: SelectedSquare[] = squareIds.map(
-        (id: string, index: number) => ({
-          row: Math.floor(index / campaign.columns),
-          col: index % campaign.columns,
+      // Get the actual squares data for this transaction
+      let squares: SelectedSquare[] = [];
+      
+      if (donation.square_ids && donation.square_ids.length > 0) {
+        // Fetch actual square data from the database
+        const response = await fetch(`/api/campaigns/${campaign.slug}`);
+        if (response.ok) {
+          const { squares: campaignSquares } = await response.json();
+          
+          // Filter to get only the squares for this transaction
+          squares = campaignSquares
+            .filter((square: any) => donation.square_ids.includes(square.id))
+            .map((square: any) => ({
+              row: square.row,
+              col: square.col,
+              number: square.number,
+              value: square.value || square.price, // Use actual square value from database
+            }));
+        }
+      }
+      
+      // If no squares found, create placeholder data
+      if (squares.length === 0) {
+        const squareIds = donation.square_ids || [];
+        squares = squareIds.map((id: string, index: number) => ({
+          row: 0,
+          col: index,
           number: index + 1,
-          value: donation.total / squareIds.length, // Distribute total evenly across squares
-        }),
-      );
+          value: donation.total / squareIds.length,
+        }));
+      }
 
       // Create receipt data
       const receiptData = createReceiptData(
