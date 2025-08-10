@@ -53,18 +53,14 @@ export async function POST(request: NextRequest) {
 
     // Check if squares are still available and get their UUIDs
     const squareKeys = squares.map((s: SelectedSquare) => `${s.row},${s.col}`);
-    const { data: existingSquares, error: squareError } = await supabase
+    
+    console.log("[PAYPAL-ORDER] Checking availability for squares:", squares.map(s => `(${s.row},${s.col})`));
+    
+    // Get all squares for this campaign and filter client-side for exact matches
+    const { data: allCampaignSquares, error: squareError } = await supabase
       .from("squares")
       .select("*")
-      .eq("campaign_id", campaignId)
-      .in(
-        "row",
-        squares.map((s: SelectedSquare) => s.row),
-      )
-      .in(
-        "col",
-        squares.map((s: SelectedSquare) => s.col),
-      );
+      .eq("campaign_id", campaignId);
 
     if (squareError) {
       return NextResponse.json(
@@ -72,6 +68,13 @@ export async function POST(request: NextRequest) {
         { status: 500 },
       );
     }
+
+    // Filter to get only the exact squares we need
+    const existingSquares = allCampaignSquares?.filter(square => 
+      squares.some(s => s.row === square.row && s.col === square.col)
+    ) || [];
+
+    console.log("[PAYPAL-ORDER] Found existing squares:", existingSquares.map(s => `(${s.row},${s.col}) - claimed_by: ${s.claimed_by}`));
 
     // Check if any squares are already claimed
     const unavailableSquares = existingSquares?.filter(
@@ -103,7 +106,9 @@ export async function POST(request: NextRequest) {
     });
 
     // First, reserve the squares to ensure they're claimed
-    console.log(`Reserving ${squares.length} squares for PayPal transaction ${transactionId}`);
+    console.log(`[PAYPAL-ORDER] ===== RESERVING SQUARES =====`);
+    console.log(`[PAYPAL-ORDER] Reserving ${squares.length} squares for PayPal transaction ${transactionId}`);
+    console.log(`[PAYPAL-ORDER] Donor: ${donorName} (${donorEmail})`);
     
     const squareUpdates = squares.map((square: SelectedSquare) => ({
       campaign_id: campaignId,
@@ -116,13 +121,14 @@ export async function POST(request: NextRequest) {
       claimed_at: new Date().toISOString(),
     }));
 
-    console.log("Square updates to apply:", squareUpdates);
+    console.log("[PAYPAL-ORDER] Square updates to apply:", squareUpdates);
 
     // Update each square with permanent reservation
+    let successCount = 0;
     for (const update of squareUpdates) {
-      console.log(`Updating square at row ${update.row}, col ${update.col} for campaign ${update.campaign_id}`);
+      console.log(`[PAYPAL-ORDER] Updating square at row ${update.row}, col ${update.col} for campaign ${update.campaign_id}`);
       
-      const { error: updateError } = await supabase
+      const { data: updatedSquare, error: updateError } = await supabase
         .from("squares")
         .update({
           claimed_by: update.claimed_by,
@@ -133,11 +139,12 @@ export async function POST(request: NextRequest) {
         })
         .eq("campaign_id", update.campaign_id)
         .eq("row", update.row)
-        .eq("col", update.col);
+        .eq("col", update.col)
+        .select();
 
       if (updateError) {
-        console.error("Error reserving square:", updateError);
-        console.error("Square update details:", {
+        console.error("[PAYPAL-ORDER] Error reserving square:", updateError);
+        console.error("[PAYPAL-ORDER] Square update details:", {
           campaign_id: update.campaign_id,
           row: update.row,
           col: update.col,
@@ -155,11 +162,12 @@ export async function POST(request: NextRequest) {
           { status: 500 },
         );
       } else {
-        console.log(`Successfully reserved square at row ${update.row}, col ${update.col}`);
+        successCount++;
+        console.log(`[PAYPAL-ORDER] Successfully reserved square at row ${update.row}, col ${update.col}:`, updatedSquare);
       }
     }
-
-    console.log(`Successfully reserved ${squares.length} squares for PayPal transaction ${transactionId}`);
+    
+    console.log(`[PAYPAL-ORDER] Successfully reserved ${successCount}/${squares.length} squares for PayPal transaction ${transactionId}`);
 
     // Now get the square UUIDs after they've been reserved
     const { data: reservedSquares, error: reservedSquareError } = await supabase
