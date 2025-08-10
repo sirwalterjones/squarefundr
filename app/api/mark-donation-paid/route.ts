@@ -103,9 +103,8 @@ export async function POST(request: NextRequest) {
       const { data: reservedPending, error: reservedPendingErr } = await adminSupabase
         .from("squares")
         .select("id")
-        .eq("claimed_by", transaction.donor_email)
+        .ilike("claimed_by", transaction.donor_email)
         .eq("campaign_id", transaction.campaign_id)
-        .eq("payment_type", "paypal")
         .eq("payment_status", "pending");
 
       console.log("[MARK-PAID-NEW] claimed_by + pending count:", reservedPending?.length || 0, reservedPendingErr);
@@ -114,9 +113,8 @@ export async function POST(request: NextRequest) {
         const { data: updatedReservedSquares, error: reservedUpdateError } = await adminSupabase
           .from("squares")
           .update(updateData)
-          .eq("claimed_by", transaction.donor_email)
+          .ilike("claimed_by", transaction.donor_email)
           .eq("campaign_id", transaction.campaign_id)
-          .eq("payment_type", "paypal")
           .eq("payment_status", "pending")
           .select();
 
@@ -134,9 +132,8 @@ export async function POST(request: NextRequest) {
         const { data: reservedAny, error: reservedAnyErr } = await adminSupabase
           .from("squares")
           .select("id")
-          .eq("claimed_by", transaction.donor_email)
+          .ilike("claimed_by", transaction.donor_email)
           .eq("campaign_id", transaction.campaign_id)
-          .eq("payment_type", "paypal")
           .neq("payment_status", "completed");
 
         console.log("[MARK-PAID-NEW] claimed_by + !completed count:", reservedAny?.length || 0, reservedAnyErr);
@@ -145,9 +142,8 @@ export async function POST(request: NextRequest) {
           const { data: updatedReservedAny, error: reservedAnyUpdateErr } = await adminSupabase
             .from("squares")
             .update(updateData)
-            .eq("claimed_by", transaction.donor_email)
+            .ilike("claimed_by", transaction.donor_email)
             .eq("campaign_id", transaction.campaign_id)
-            .eq("payment_type", "paypal")
             .neq("payment_status", "completed")
             .select();
 
@@ -166,9 +162,8 @@ export async function POST(request: NextRequest) {
         const { data: buyerAny, error: buyerAnyErr } = await adminSupabase
           .from("squares")
           .select("id")
-          .eq("buyer_email", transaction.donor_email)
+          .ilike("buyer_email", transaction.donor_email)
           .eq("campaign_id", transaction.campaign_id)
-          .eq("payment_type", "paypal")
           .neq("payment_status", "completed");
 
         console.log("[MARK-PAID-NEW] buyer_email + !completed count:", buyerAny?.length || 0, buyerAnyErr);
@@ -177,9 +172,8 @@ export async function POST(request: NextRequest) {
           const { data: updatedBuyerAny, error: buyerAnyUpdateErr } = await adminSupabase
             .from("squares")
             .update(updateData)
-            .eq("buyer_email", transaction.donor_email)
+            .ilike("buyer_email", transaction.donor_email)
             .eq("campaign_id", transaction.campaign_id)
-            .eq("payment_type", "paypal")
             .neq("payment_status", "completed")
             .select();
 
@@ -189,6 +183,34 @@ export async function POST(request: NextRequest) {
             updatedSquares = updatedBuyerAny;
           } else {
             squareUpdateError = buyerAnyUpdateErr;
+          }
+        }
+      }
+
+      // Stage 4: claimed_by + any status (no payment_status filter), no payment_type filter
+      if (!updatedSquares || updatedSquares.length === 0) {
+        const { data: claimedAny, error: claimedAnyErr } = await adminSupabase
+          .from("squares")
+          .select("id")
+          .ilike("claimed_by", transaction.donor_email)
+          .eq("campaign_id", transaction.campaign_id);
+
+        console.log("[MARK-PAID-NEW] claimed_by (any status/type) count:", claimedAny?.length || 0, claimedAnyErr);
+
+        if (claimedAny && claimedAny.length > 0) {
+          const { data: updatedClaimedAny, error: claimedAnyUpdateErr } = await adminSupabase
+            .from("squares")
+            .update(updateData)
+            .ilike("claimed_by", transaction.donor_email)
+            .eq("campaign_id", transaction.campaign_id)
+            .select();
+
+          console.log("[MARK-PAID-NEW] Updated claimed_by (any status/type):", updatedClaimedAny?.length || 0, claimedAnyUpdateErr);
+
+          if (!claimedAnyUpdateErr && updatedClaimedAny) {
+            updatedSquares = updatedClaimedAny;
+          } else {
+            squareUpdateError = claimedAnyUpdateErr;
           }
         }
       }
