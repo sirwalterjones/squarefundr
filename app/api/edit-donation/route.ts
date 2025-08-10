@@ -47,15 +47,31 @@ export async function PUT(request: NextRequest) {
       campaign_id: transaction.campaign_id
     });
 
-    // Verify campaign ownership
-    const { data: campaign, error: campaignError } = await adminSupabase
-      .from("campaigns")
-      .select("user_id")
-      .eq("id", transaction.campaign_id)
-      .single();
+    // Check if requester is a global admin
+    let isGlobalAdmin = false;
+    try {
+      const { data: roleRow } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .eq("role", "admin")
+        .single();
+      isGlobalAdmin = !!roleRow;
+    } catch (e) {
+      isGlobalAdmin = false;
+    }
 
-    if (campaignError || !campaign || campaign.user_id !== user.id) {
-      return NextResponse.json({ error: "Access denied" }, { status: 404 });
+    // Verify campaign ownership unless global admin
+    if (!isGlobalAdmin) {
+      const { data: campaign, error: campaignError } = await adminSupabase
+        .from("campaigns")
+        .select("user_id")
+        .eq("id", transaction.campaign_id)
+        .single();
+
+      if (campaignError || !campaign || campaign.user_id !== user.id) {
+        return NextResponse.json({ error: "Access denied" }, { status: 403 });
+      }
     }
 
     // Update transaction
