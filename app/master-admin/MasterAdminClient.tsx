@@ -6,6 +6,11 @@ import { Campaign, Transaction } from "@/types";
 import { formatPrice } from "@/utils/pricingUtils";
 import { motion } from "framer-motion";
 import EditDonationModal from "@/components/EditDonationModal";
+import {
+  generatePDFReceipt,
+  createReceiptData,
+} from "@/utils/receiptGenerator";
+import { SelectedSquare } from "@/types";
 
 interface AdminUser {
   id: string;
@@ -286,6 +291,66 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
       setError("Error completing squares");
     } finally {
       setCompletingId(null);
+    }
+  };
+
+  const downloadReceipt = async (donation: any) => {
+    try {
+      // Find the campaign for this donation
+      const campaign = campaigns.find((c) => c.id === donation.campaign_id);
+      
+      if (!campaign) {
+        alert("Campaign not found for this donation.");
+        return;
+      }
+
+      // Get the actual squares data for this transaction
+      let squares: SelectedSquare[] = [];
+      
+      if (donation.square_ids && donation.square_ids.length > 0) {
+        // Fetch actual square data from the database
+        const response = await fetch(`/api/campaigns/${campaign.slug}`);
+        if (response.ok) {
+          const { squares: campaignSquares } = await response.json();
+          
+          // Filter to get only the squares for this transaction
+          squares = campaignSquares
+            .filter((square: any) => donation.square_ids.includes(square.id))
+            .map((square: any) => ({
+              row: square.row,
+              col: square.col,
+              number: square.number,
+              value: square.value || square.price,
+            }));
+        }
+      }
+      
+      // If no squares found, create placeholder data
+      if (squares.length === 0) {
+        const squareIds = donation.square_ids || [];
+        squares = squareIds.map((id: string, index: number) => ({
+          row: 0,
+          col: index,
+          number: index + 1,
+          value: donation.total / squareIds.length,
+        }));
+      }
+
+      // Create receipt data
+      const receiptData = createReceiptData(
+        campaign,
+        squares,
+        donation.donor_name || "Anonymous",
+        donation.donor_email || "No email provided",
+        donation.payment_method === "paypal" ? "paypal" : "cash",
+        donation.id,
+      );
+
+      // Generate and download PDF
+      generatePDFReceipt(receiptData);
+    } catch (error) {
+      console.error("Error generating receipt:", error);
+      alert("Failed to generate receipt. Please try again.");
     }
   };
 
@@ -733,6 +798,14 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                           <div className="flex items-center justify-end space-x-2">
+                            <button
+                              onClick={() => downloadReceipt(donation)}
+                              className="text-purple-600 hover:text-purple-700 px-2 py-1 text-xs border border-purple-300 rounded hover:bg-purple-50 transition-colors"
+                              title="Download Receipt"
+                            >
+                              Receipt
+                            </button>
+                            {/* Complete Squares button hidden but kept for emergency use
                             {donation.payment_method === "paypal" && (
                               <button
                                 onClick={() => completeSquaresNow(donation)}
@@ -743,6 +816,7 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
                                 {completingId === donation.id ? "Working..." : "Complete Squares"}
                               </button>
                             )}
+                            */}
                             <button
                               onClick={() => editDonation(donation)}
                               className="text-blue-600 hover:text-blue-700 px-2 py-1 text-xs border border-blue-300 rounded hover:bg-blue-50"
