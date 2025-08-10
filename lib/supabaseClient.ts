@@ -387,48 +387,62 @@ function isDemoMode(): boolean {
 
 // Function to check if current user is admin
 export async function isCurrentUserAdmin(): Promise<boolean> {
-  try {
-    const {
-      data: { user },
-      error,
-    } = await supabase.auth.getUser();
+  // Create timeout promise to prevent hanging
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    setTimeout(() => reject(new Error('Admin check timeout after 8 seconds')), 8000);
+  });
 
-    if (error) {
-      console.error("Error getting user:", error);
-      return false;
-    }
+  const adminCheckPromise = async () => {
+    try {
+      const {
+        data: { user },
+        error,
+      } = await supabase.auth.getUser();
 
-    if (!user) {
-      console.log("No authenticated user");
-      return false;
-    }
-
-    console.log(`Checking admin status for user ID: ${user.id} (${user.email})`);
-
-    const { data, error: roleError } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", user.id)
-      .eq("role", "admin")
-      .single();
-
-    if (roleError) {
-      console.error("Error checking user role:", roleError);
-      // Special case: if it's "row not found", that just means they're not an admin
-      if (roleError.code === 'PGRST116') {
-        console.log("User is not an admin (no role record found)");
+      if (error) {
+        console.error("Error getting user:", error);
         return false;
       }
-      // For other errors, throw to trigger retry logic in caller
-      throw roleError;
-    }
 
-    const isAdmin = data !== null;
-    console.log(`Admin check result: ${isAdmin} for ${user.email}`);
-    return isAdmin;
+      if (!user) {
+        console.log("No authenticated user");
+        return false;
+      }
+
+      console.log(`Checking admin status for user ID: ${user.id} (${user.email})`);
+
+      const { data, error: roleError } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .eq("role", "admin")
+        .single();
+
+      if (roleError) {
+        console.error("Error checking user role:", roleError);
+        // Special case: if it's "row not found", that just means they're not an admin
+        if (roleError.code === 'PGRST116') {
+          console.log("User is not an admin (no role record found)");
+          return false;
+        }
+        // For other errors, throw to trigger retry logic in caller
+        throw roleError;
+      }
+
+      const isAdmin = data !== null;
+      console.log(`Admin check result: ${isAdmin} for ${user.email}`);
+      return isAdmin;
+    } catch (error) {
+      console.error("Error checking admin status:", error);
+      // Re-throw to allow caller to handle retry logic
+      throw error;
+    }
+  };
+
+  try {
+    return await Promise.race([adminCheckPromise(), timeoutPromise]);
   } catch (error) {
-    console.error("Error checking admin status:", error);
-    // Re-throw to allow caller to handle retry logic
+    console.error("Admin check failed or timed out:", error);
     throw error;
   }
 }

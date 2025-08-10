@@ -18,21 +18,21 @@ export default function Navbar() {
         console.log(`🔍 Checking admin status for user: ${user.email}`);
         
         // Retry logic for admin check
-        let retries = 3;
+        let retries = 2; // Reduced from 3 to 2 for faster login
         let adminStatus = false;
         
         while (retries > 0) {
           try {
             adminStatus = await isCurrentUserAdmin();
-            console.log(`✅ Admin status result: ${adminStatus} (attempt ${4 - retries})`);
+            console.log(`✅ Admin status result: ${adminStatus} (attempt ${3 - retries})`);
             break; // Success, exit retry loop
           } catch (error) {
             retries--;
             console.error(`❌ Admin check failed for ${user.email} (${retries} retries left):`, error);
             
             if (retries > 0) {
-              // Wait before retry (exponential backoff: 500ms, 1s, 2s)
-              await new Promise(resolve => setTimeout(resolve, 500 * Math.pow(2, 3 - retries)));
+              // Wait before retry (shorter backoff: 300ms, 600ms)
+              await new Promise(resolve => setTimeout(resolve, 300 * Math.pow(2, 2 - retries)));
             } else {
               // All retries failed - keep previous state to prevent admin link disappearing
               console.error(`🚨 All admin check retries failed for ${user.email}. Keeping previous admin state.`);
