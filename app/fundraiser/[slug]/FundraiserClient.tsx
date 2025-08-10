@@ -38,6 +38,26 @@ export default function FundraiserClient({
   // Check if this is a demo campaign
   const isDemoMode = slug === "team-championship-fund";
 
+  // Function to refresh squares data from the server
+  const refreshSquares = async () => {
+    if (!campaign || isDemoMode) return;
+    
+    try {
+      console.log("Refreshing squares data for campaign:", campaign.id);
+      const response = await fetch(`/api/campaigns/${slug}`);
+      
+      if (response.ok) {
+        const { squares: freshSquares } = await response.json();
+        console.log("Received fresh squares data:", freshSquares?.length || 0, "squares");
+        setSquares(freshSquares || []);
+      } else {
+        console.error("Failed to refresh squares data:", response.status);
+      }
+    } catch (error) {
+      console.error("Error refreshing squares:", error);
+    }
+  };
+
   // Check for success/error messages from URL params
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -61,6 +81,10 @@ export default function FundraiserClient({
         setSuccessMessage(
           "Payment successful! Your squares have been reserved.",
         );
+
+        // CRITICAL: Refresh squares data to show newly reserved squares
+        console.log("Payment successful - refreshing squares data...");
+        refreshSquares();
 
         // If we have receipt data from URL params, prepare receipt download
         if (donorName && donorEmail && paymentMethod && transactionId) {
