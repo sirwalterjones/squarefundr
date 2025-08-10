@@ -162,8 +162,9 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
         setNewHelpRequestModalOpen(false);
         // Refresh help requests list
         await loadHelpRequests();
-        // Show success message
-        alert("Help request submitted successfully! We'll get back to you soon.");
+        // Show beautiful success message
+        setSuccessMessage("🎉 Help request submitted successfully! Our team will get back to you soon.");
+        setTimeout(() => setSuccessMessage(null), 5000);
       } else {
         const error = await response.json();
         alert(error.error || "Failed to submit help request. Please try again.");
