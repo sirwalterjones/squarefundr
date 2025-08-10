@@ -393,9 +393,17 @@ export async function isCurrentUserAdmin(): Promise<boolean> {
       error,
     } = await supabase.auth.getUser();
 
-    if (error || !user) {
+    if (error) {
+      console.error("Error getting user:", error);
       return false;
     }
+
+    if (!user) {
+      console.log("No authenticated user");
+      return false;
+    }
+
+    console.log(`Checking admin status for user ID: ${user.id} (${user.email})`);
 
     const { data, error: roleError } = await supabase
       .from("user_roles")
@@ -404,10 +412,24 @@ export async function isCurrentUserAdmin(): Promise<boolean> {
       .eq("role", "admin")
       .single();
 
-    return !roleError && data !== null;
+    if (roleError) {
+      console.error("Error checking user role:", roleError);
+      // Special case: if it's "row not found", that just means they're not an admin
+      if (roleError.code === 'PGRST116') {
+        console.log("User is not an admin (no role record found)");
+        return false;
+      }
+      // For other errors, throw to trigger retry logic in caller
+      throw roleError;
+    }
+
+    const isAdmin = data !== null;
+    console.log(`Admin check result: ${isAdmin} for ${user.email}`);
+    return isAdmin;
   } catch (error) {
     console.error("Error checking admin status:", error);
-    return false;
+    // Re-throw to allow caller to handle retry logic
+    throw error;
   }
 }
 

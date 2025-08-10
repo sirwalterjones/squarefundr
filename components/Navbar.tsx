@@ -15,7 +15,32 @@ export default function Navbar() {
   useEffect(() => {
     const checkAdminStatus = async () => {
       if (user) {
-        const adminStatus = await isCurrentUserAdmin();
+        console.log(`🔍 Checking admin status for user: ${user.email}`);
+        
+        // Retry logic for admin check
+        let retries = 3;
+        let adminStatus = false;
+        
+        while (retries > 0) {
+          try {
+            adminStatus = await isCurrentUserAdmin();
+            console.log(`✅ Admin status result: ${adminStatus} (attempt ${4 - retries})`);
+            break; // Success, exit retry loop
+          } catch (error) {
+            retries--;
+            console.error(`❌ Admin check failed for ${user.email} (${retries} retries left):`, error);
+            
+            if (retries > 0) {
+              // Wait before retry (exponential backoff: 500ms, 1s, 2s)
+              await new Promise(resolve => setTimeout(resolve, 500 * Math.pow(2, 3 - retries)));
+            } else {
+              // All retries failed - keep previous state to prevent admin link disappearing
+              console.error(`🚨 All admin check retries failed for ${user.email}. Keeping previous admin state.`);
+              return; // Exit without changing isAdmin state
+            }
+          }
+        }
+        
         setIsAdmin(adminStatus);
         
         // Fetch new help requests count for admins
@@ -32,12 +57,18 @@ export default function Navbar() {
           }
         }
       } else {
+        console.log(`👤 No user, setting admin status to false`);
         setIsAdmin(false);
         setNewHelpRequests(0);
       }
     };
 
-    checkAdminStatus();
+    // Add a small delay to ensure user auth is fully loaded
+    const timer = setTimeout(() => {
+      checkAdminStatus();
+    }, 100);
+
+    return () => clearTimeout(timer);
   }, [user]);
 
   return (
