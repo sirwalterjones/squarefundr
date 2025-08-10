@@ -114,8 +114,8 @@ export async function GET(request: NextRequest) {
         .select("*")
         .eq("claimed_by", transaction.donor_email)
         .eq("campaign_id", transaction.campaign_id)
-        .eq("payment_type", "paypal")
-        .eq("payment_status", "pending");
+        .eq("payment_type", "paypal");
+        // Remove payment_status filter - squares might already be completed by order creation
 
       console.log("Reserved squares query result:", {
         reservedSquares: reservedSquares?.length || 0,
@@ -188,14 +188,14 @@ export async function GET(request: NextRequest) {
 
         console.log("Square update data:", updateData);
 
-        // Try updating by donor email first (permanent reservation)
+        // Try updating by donor email first (for both pending and already completed squares)
         let { data: updatedSquares, error: squareUpdateError } = await supabase
           .from("squares")
           .update(updateData)
           .eq("claimed_by", transaction.donor_email)
           .eq("campaign_id", transaction.campaign_id)
           .eq("payment_type", "paypal")
-          .eq("payment_status", "pending")
+          // Remove payment_status filter - squares might already be completed
           .select();
 
         console.log("First square update attempt (by donor email):", {
