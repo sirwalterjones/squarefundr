@@ -34,6 +34,7 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
   >("overview");
   const [donations, setDonations] = useState<any[]>([]);
   const [loadingDonations, setLoadingDonations] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [donationsError, setDonationsError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCampaignFilter, setSelectedCampaignFilter] = useState<string>("");
@@ -51,7 +52,11 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
 
   // Load donations on component mount to show count in tab header
   useEffect(() => {
-    loadDonations(selectedCampaignFilter || undefined);
+    const loadInitialData = async () => {
+      await loadDonations(selectedCampaignFilter || undefined);
+      setInitialLoading(false);
+    };
+    loadInitialData();
   }, []);
 
   const totalRaised = campaigns.reduce(
@@ -505,7 +510,7 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
                     : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 hover:bg-gray-50 rounded-t-lg"
                 }`}
               >
-                Donations ({donations.length})
+                Donations ({initialLoading ? "..." : donations.length})
               </button>
             </nav>
           </div>

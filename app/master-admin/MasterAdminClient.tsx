@@ -30,6 +30,7 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [donations, setDonations] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -136,9 +137,15 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
 
   // Load all data on component mount to show counts immediately
   useEffect(() => {
-    loadCampaigns();
-    loadUsers();
-    loadDonations();
+    const loadAllData = async () => {
+      await Promise.all([
+        loadCampaigns(),
+        loadUsers(), 
+        loadDonations()
+      ]);
+      setInitialLoading(false);
+    };
+    loadAllData();
   }, []);
 
   const handleDelete = async () => {
@@ -329,7 +336,7 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
                     : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                 }`}
               >
-                Campaigns ({campaigns.length})
+                Campaigns ({initialLoading ? "..." : campaigns.length})
               </button>
               <button
                 onClick={() => setSelectedTab("users")}
@@ -339,7 +346,7 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
                     : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                 }`}
               >
-                Users ({users.length})
+                Users ({initialLoading ? "..." : users.length})
               </button>
               <button
                 onClick={() => setSelectedTab("donations")}
@@ -349,7 +356,7 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
                     : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                 }`}
               >
-                Donations ({donations.length})
+                Donations ({initialLoading ? "..." : donations.length})
               </button>
             </nav>
           </div>
