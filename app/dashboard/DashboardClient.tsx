@@ -30,7 +30,7 @@ interface DashboardClientProps {
 
 function DashboardClient({ campaigns, user }: DashboardClientProps) {
   const [selectedTab, setSelectedTab] = useState<
-    "overview" | "campaigns" | "donations"
+    "overview" | "campaigns" | "donations" | "help"
   >("overview");
   const [donations, setDonations] = useState<any[]>([]);
   const [loadingDonations, setLoadingDonations] = useState(false);
@@ -48,6 +48,8 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
   const [deleteCampaignModalOpen, setDeleteCampaignModalOpen] = useState(false);
   const [campaignToDelete, setCampaignToDelete] =
     useState<CampaignWithStats | null>(null);
+  const [helpRequests, setHelpRequests] = useState<any[]>([]);
+  const [loadingHelp, setLoadingHelp] = useState(false);
   const [deletingCampaign, setDeletingCampaign] = useState(false);
 
   // Load donations on component mount to show count in tab header
@@ -101,6 +103,33 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
       setDonationsError("Failed to load donations. Please try again.");
     } finally {
       setLoadingDonations(false);
+    }
+  };
+
+  const loadHelpRequests = async () => {
+    setLoadingHelp(true);
+
+    try {
+      const response = await fetch("/api/help-request", {
+        headers: {
+          "Cache-Control": "no-cache",
+          "Pragma": "no-cache",
+        },
+        cache: "no-store",
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        // Filter to only show current user's help requests
+        const userRequests = data.helpRequests?.filter((req: any) => req.email === user.email) || [];
+        setHelpRequests(userRequests);
+      } else {
+        console.error("Failed to load help requests");
+      }
+    } catch (error: any) {
+      console.error("Error loading help requests:", error);
+    } finally {
+      setLoadingHelp(false);
     }
   };
 
@@ -511,6 +540,21 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
                 }`}
               >
                 Donations ({initialLoading ? "..." : donations.length})
+              </button>
+              <button
+                onClick={() => {
+                  setSelectedTab("help");
+                  if (helpRequests.length === 0) {
+                    loadHelpRequests();
+                  }
+                }}
+                className={`py-3 px-4 border-b-2 font-medium text-sm transition-colors ${
+                  selectedTab === "help"
+                    ? "border-blue-500 text-blue-600 bg-blue-50 rounded-t-lg"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 hover:bg-gray-50 rounded-t-lg"
+                }`}
+              >
+                Help Requests ({helpRequests.length})
               </button>
             </nav>
           </div>
@@ -1144,6 +1188,110 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
                   )}
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {selectedTab === "help" && (
+          <div className="space-y-6">
+            <div className="bg-white border border-black rounded-xl shadow-sm">
+              <div className="p-6 border-b border-black">
+                <div className="flex justify-between items-center">
+                  <h2 className="text-xl font-semibold text-black">
+                    Your Help Requests ({helpRequests.length})
+                  </h2>
+                  <button
+                    onClick={loadHelpRequests}
+                    className="btn-outline"
+                    disabled={loadingHelp}
+                  >
+                    {loadingHelp ? "Loading..." : "Refresh"}
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-6">
+                {loadingHelp ? (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black mx-auto mb-4"></div>
+                    <p className="text-gray-600">Loading help requests...</p>
+                  </div>
+                ) : helpRequests.length === 0 ? (
+                  <div className="text-center py-8">
+                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No help requests yet</h3>
+                    <p className="text-gray-600 mb-4">
+                      When you submit help requests, they'll appear here.
+                    </p>
+                    <a
+                      href="/help"
+                      className="inline-flex items-center px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
+                    >
+                      Submit Help Request
+                    </a>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {helpRequests.map((request: any) => (
+                      <div
+                        key={request.id}
+                        className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors"
+                      >
+                        <div className="flex justify-between items-start mb-3">
+                          <div className="flex-1">
+                            <h3 className="font-medium text-gray-900 mb-1">
+                              {request.subject}
+                            </h3>
+                            <p className="text-sm text-gray-600 mb-2">
+                              Submitted on {new Date(request.created_at).toLocaleDateString()}
+                            </p>
+                          </div>
+                          <span
+                            className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                              request.status === 'new'
+                                ? 'bg-blue-100 text-blue-800'
+                                : request.status === 'in_progress'
+                                ? 'bg-yellow-100 text-yellow-800'
+                                : request.status === 'resolved'
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-gray-100 text-gray-800'
+                            }`}
+                          >
+                            {request.status.replace('_', ' ')}
+                          </span>
+                        </div>
+                        
+                        <div className="mb-3">
+                          <p className="text-sm text-gray-700 line-clamp-3">
+                            {request.message}
+                          </p>
+                        </div>
+
+                        {request.notes && (
+                          <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                            <h4 className="text-sm font-medium text-blue-900 mb-1">
+                              Admin Response:
+                            </h4>
+                            <p className="text-sm text-blue-800">
+                              {request.notes}
+                            </p>
+                          </div>
+                        )}
+
+                        {request.resolved_at && (
+                          <div className="mt-2 text-xs text-gray-500">
+                            Resolved on {new Date(request.resolved_at).toLocaleDateString()}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}

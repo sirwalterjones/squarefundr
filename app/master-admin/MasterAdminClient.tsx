@@ -29,11 +29,12 @@ interface MasterAdminClientProps {
 
 function MasterAdminClient({ user }: MasterAdminClientProps) {
   const [selectedTab, setSelectedTab] = useState<
-    "campaigns" | "users" | "donations"
+    "campaigns" | "users" | "donations" | "help-requests"
   >("campaigns");
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [donations, setDonations] = useState<any[]>([]);
+  const [helpRequests, setHelpRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -47,6 +48,8 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
   const [deleteType, setDeleteType] = useState<
     "campaign" | "user" | "donation" | null
   >(null);
+  const [helpRequestModalOpen, setHelpRequestModalOpen] = useState(false);
+  const [selectedHelpRequest, setSelectedHelpRequest] = useState<any>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [completingId, setCompletingId] = useState<string | null>(null);
   const [campaignOwners, setCampaignOwners] = useState<{
@@ -140,13 +143,32 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
     }
   };
 
+  const loadHelpRequests = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/help-request");
+      if (response.ok) {
+        const data = await response.json();
+        setHelpRequests(data.helpRequests || []);
+      } else {
+        setError("Failed to load help requests");
+      }
+    } catch (err) {
+      setError("Error loading help requests");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Load all data on component mount to show counts immediately
   useEffect(() => {
     const loadAllData = async () => {
       await Promise.all([
         loadCampaigns(),
         loadUsers(), 
-        loadDonations()
+        loadDonations(),
+        loadHelpRequests()
       ]);
       setInitialLoading(false);
     };
@@ -354,6 +376,44 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
     }
   };
 
+  const viewHelpRequest = (request: any) => {
+    setSelectedHelpRequest(request);
+    setHelpRequestModalOpen(true);
+  };
+
+  const updateHelpRequestStatus = async (id: string, status: string) => {
+    try {
+      const response = await fetch("/api/help-request", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          id,
+          status,
+          resolved_at: status === 'resolved' ? new Date().toISOString() : null,
+        }),
+      });
+
+      if (response.ok) {
+        setHelpRequests(prev =>
+          prev.map(req =>
+            req.id === id
+              ? { ...req, status, resolved_at: status === 'resolved' ? new Date().toISOString() : req.resolved_at }
+              : req
+          )
+        );
+        setSuccessMessage(`Help request ${status === 'resolved' ? 'resolved' : 'updated'} successfully`);
+        setTimeout(() => setSuccessMessage(null), 3000);
+      } else {
+        throw new Error("Failed to update help request");
+      }
+    } catch (error) {
+      console.error("Error updating help request:", error);
+      setError("Failed to update help request");
+    }
+  };
+
   const filteredCampaigns = campaigns.filter(
     (campaign) =>
       campaign.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -375,6 +435,14 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
       (donation.campaign?.title || "")
         .toLowerCase()
         .includes(searchTerm.toLowerCase()),
+  );
+
+  const filteredHelpRequests = helpRequests.filter(
+    (request) =>
+      request.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      request.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      request.subject?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      request.message?.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   return (
@@ -422,6 +490,21 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
                 }`}
               >
                 Donations ({initialLoading ? "..." : donations.length})
+              </button>
+              <button
+                onClick={() => setSelectedTab("help-requests")}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  selectedTab === "help-requests"
+                    ? "border-blue-600 text-blue-600"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                }`}
+              >
+                Help Requests ({initialLoading ? "..." : helpRequests.length})
+                {helpRequests.filter(req => req.status === 'new').length > 0 && (
+                  <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                    {helpRequests.filter(req => req.status === 'new').length} new
+                  </span>
+                )}
               </button>
             </nav>
           </div>
@@ -839,13 +922,128 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
                 </table>
               )}
 
+              {selectedTab === "help-requests" && (
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Name & Email
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Subject
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Status
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Priority
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Created
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {filteredHelpRequests.map((request: any) => (
+                      <motion.tr
+                        key={request.id}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="hover:bg-gray-50"
+                      >
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div>
+                            <div className="text-sm font-medium text-gray-900">
+                              {request.name}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              {request.email}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-sm text-gray-900 max-w-xs truncate">
+                            {request.subject}
+                          </div>
+                          <div className="text-xs text-gray-500 max-w-xs truncate">
+                            {request.message}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span
+                            className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                              request.status === 'new'
+                                ? 'bg-red-100 text-red-800'
+                                : request.status === 'in_progress'
+                                ? 'bg-yellow-100 text-yellow-800'
+                                : request.status === 'resolved'
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-gray-100 text-gray-800'
+                            }`}
+                          >
+                            {request.status.replace('_', ' ')}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span
+                            className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                              request.priority === 'urgent'
+                                ? 'bg-red-100 text-red-800'
+                                : request.priority === 'high'
+                                ? 'bg-orange-100 text-orange-800'
+                                : request.priority === 'normal'
+                                ? 'bg-blue-100 text-blue-800'
+                                : 'bg-gray-100 text-gray-800'
+                            }`}
+                          >
+                            {request.priority}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {new Date(request.created_at).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <div className="flex space-x-2">
+                            <button
+                              onClick={() => viewHelpRequest(request)}
+                              className="text-blue-600 hover:text-blue-700 px-2 py-1 text-xs border border-blue-300 rounded hover:bg-blue-50"
+                            >
+                              View
+                            </button>
+                            <button
+                              onClick={() => updateHelpRequestStatus(request.id, 'in_progress')}
+                              disabled={request.status === 'in_progress'}
+                              className="text-yellow-600 hover:text-yellow-700 px-2 py-1 text-xs border border-yellow-300 rounded hover:bg-yellow-50 disabled:opacity-50"
+                            >
+                              Start
+                            </button>
+                            <button
+                              onClick={() => updateHelpRequestStatus(request.id, 'resolved')}
+                              disabled={request.status === 'resolved'}
+                              className="text-green-600 hover:text-green-700 px-2 py-1 text-xs border border-green-300 rounded hover:bg-green-50 disabled:opacity-50"
+                            >
+                              Resolve
+                            </button>
+                          </div>
+                        </td>
+                      </motion.tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+
               {/* Empty States */}
               {!loading &&
                 ((selectedTab === "campaigns" &&
                   filteredCampaigns.length === 0) ||
                   (selectedTab === "users" && filteredUsers.length === 0) ||
                   (selectedTab === "donations" &&
-                    filteredDonations.length === 0)) && (
+                    filteredDonations.length === 0) ||
+                  (selectedTab === "help-requests" &&
+                    filteredHelpRequests.length === 0)) && (
                   <div className="p-6 text-center">
                     <p className="text-gray-600">
                       {searchTerm
@@ -1027,6 +1225,148 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
                 Delete {deleteType?.charAt(0).toUpperCase()}
                 {deleteType?.slice(1)}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Help Request Modal */}
+      {helpRequestModalOpen && selectedHelpRequest && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Help Request Details
+                </h3>
+                <button
+                  onClick={() => {
+                    setHelpRequestModalOpen(false);
+                    setSelectedHelpRequest(null);
+                  }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    From
+                  </label>
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <div className="font-medium">{selectedHelpRequest.name}</div>
+                    <div className="text-sm text-gray-600">{selectedHelpRequest.email}</div>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Subject
+                  </label>
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    {selectedHelpRequest.subject}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Message
+                  </label>
+                  <div className="bg-gray-50 p-3 rounded-lg whitespace-pre-wrap">
+                    {selectedHelpRequest.message}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Status
+                    </label>
+                    <span
+                      className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        selectedHelpRequest.status === 'new'
+                          ? 'bg-red-100 text-red-800'
+                          : selectedHelpRequest.status === 'in_progress'
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : selectedHelpRequest.status === 'resolved'
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-gray-100 text-gray-800'
+                      }`}
+                    >
+                      {selectedHelpRequest.status.replace('_', ' ')}
+                    </span>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Priority
+                    </label>
+                    <span
+                      className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        selectedHelpRequest.priority === 'urgent'
+                          ? 'bg-red-100 text-red-800'
+                          : selectedHelpRequest.priority === 'high'
+                          ? 'bg-orange-100 text-orange-800'
+                          : selectedHelpRequest.priority === 'normal'
+                          ? 'bg-blue-100 text-blue-800'
+                          : 'bg-gray-100 text-gray-800'
+                      }`}
+                    >
+                      {selectedHelpRequest.priority}
+                    </span>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Created
+                    </label>
+                    <div className="text-sm text-gray-600">
+                      {new Date(selectedHelpRequest.created_at).toLocaleString()}
+                    </div>
+                  </div>
+                </div>
+
+                {selectedHelpRequest.notes && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Admin Notes
+                    </label>
+                    <div className="bg-blue-50 p-3 rounded-lg whitespace-pre-wrap">
+                      {selectedHelpRequest.notes}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-between items-center pt-6 border-t mt-6">
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => updateHelpRequestStatus(selectedHelpRequest.id, 'in_progress')}
+                    disabled={selectedHelpRequest.status === 'in_progress'}
+                    className="px-4 py-2 text-yellow-700 bg-yellow-100 hover:bg-yellow-200 rounded-lg transition-colors disabled:opacity-50"
+                  >
+                    Mark In Progress
+                  </button>
+                  <button
+                    onClick={() => updateHelpRequestStatus(selectedHelpRequest.id, 'resolved')}
+                    disabled={selectedHelpRequest.status === 'resolved'}
+                    className="px-4 py-2 text-green-700 bg-green-100 hover:bg-green-200 rounded-lg transition-colors disabled:opacity-50"
+                  >
+                    Mark Resolved
+                  </button>
+                </div>
+                <button
+                  onClick={() => {
+                    setHelpRequestModalOpen(false);
+                    setSelectedHelpRequest(null);
+                  }}
+                  className="px-4 py-2 bg-gray-600 text-white hover:bg-gray-700 rounded-lg transition-colors"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -9,6 +9,7 @@ export default function Navbar() {
   const { user, signOut } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [newHelpRequests, setNewHelpRequests] = useState(0);
 
   // Check admin status when user changes
   useEffect(() => {
@@ -16,8 +17,23 @@ export default function Navbar() {
       if (user) {
         const adminStatus = await isCurrentUserAdmin();
         setIsAdmin(adminStatus);
+        
+        // Fetch new help requests count for admins
+        if (adminStatus) {
+          try {
+            const response = await fetch("/api/help-request");
+            if (response.ok) {
+              const data = await response.json();
+              const newCount = data.helpRequests?.filter((req: any) => req.status === 'new').length || 0;
+              setNewHelpRequests(newCount);
+            }
+          } catch (error) {
+            console.error("Error fetching help requests:", error);
+          }
+        }
       } else {
         setIsAdmin(false);
+        setNewHelpRequests(0);
       }
     };
 
@@ -56,6 +72,14 @@ export default function Navbar() {
               <div className="absolute inset-0 bg-gradient-to-r from-green-500 to-blue-500 opacity-0 group-hover:opacity-10 transition-opacity duration-300"></div>
               <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-green-500 to-blue-500 group-hover:w-full transition-all duration-300"></div>
             </Link>
+            <Link
+              href="/help"
+              className="relative px-4 py-2 text-gray-600 font-medium rounded-lg hover:text-black transition-all duration-300 hover:bg-gray-50 group overflow-hidden"
+            >
+              <span className="relative z-10">Help</span>
+              <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-purple-500 opacity-0 group-hover:opacity-10 transition-opacity duration-300"></div>
+              <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-indigo-500 to-purple-500 group-hover:w-full transition-all duration-300"></div>
+            </Link>
 
             {user ? (
               <>
@@ -73,6 +97,11 @@ export default function Navbar() {
                     className="relative px-4 py-2 text-gray-600 font-medium rounded-lg hover:text-black transition-all duration-300 hover:bg-gray-50 group overflow-hidden"
                   >
                     <span className="relative z-10">Admin</span>
+                    {newHelpRequests > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold shadow-lg">
+                        {newHelpRequests}
+                      </span>
+                    )}
                     <div className="absolute inset-0 bg-gradient-to-r from-red-500 to-orange-500 opacity-0 group-hover:opacity-10 transition-opacity duration-300"></div>
                     <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-red-500 to-orange-500 group-hover:w-full transition-all duration-300"></div>
                   </Link>

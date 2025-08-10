@@ -27,6 +27,12 @@ export default function Footer() {
             >
               Privacy Policy
             </Link>
+            <Link 
+              href="/help" 
+              className="text-gray-600 hover:text-black transition-colors"
+            >
+              Help & Support
+            </Link>
           </div>
         </div>
       </div>

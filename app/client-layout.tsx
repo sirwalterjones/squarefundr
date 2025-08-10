@@ -4,7 +4,9 @@ import { createContext, useContext, useEffect, useState, ReactNode } from "react
 import { User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabaseClient";
 import Navbar from "@/components/Navbar";
+import NotificationBanner from "@/components/NotificationBanner";
 import { TempoInit } from "./tempo-init";
+import { isCurrentUserAdmin } from "@/lib/supabaseClient";
 
 interface AuthContextType {
   user: User | null;
@@ -29,6 +31,7 @@ interface AuthProviderProps {
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [authInitialized, setAuthInitialized] = useState(false);
 
   useEffect(() => {
@@ -53,6 +56,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
       async (event, session) => {
         console.log("Auth state changed:", event, session?.user?.email || 'none');
         setUser(session?.user ?? null);
+        
+        // Check admin status
+        if (session?.user) {
+          try {
+            const adminStatus = await isCurrentUserAdmin();
+            setIsAdmin(adminStatus);
+          } catch (error) {
+            console.error("Error checking admin status:", error);
+            setIsAdmin(false);
+          }
+        } else {
+          setIsAdmin(false);
+        }
+        
         setLoading(false);
         setAuthInitialized(true);
       }
@@ -96,8 +113,38 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
   return (
     <AuthProvider>
       <TempoInit />
-      <Navbar />
-      <main className="min-h-screen">{children}</main>
+      <ClientLayoutInner>{children}</ClientLayoutInner>
     </AuthProvider>
+  );
+}
+
+function ClientLayoutInner({ children }: ClientLayoutProps) {
+  const { user } = useAuth();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      if (user) {
+        try {
+          const adminStatus = await isCurrentUserAdmin();
+          setIsAdmin(adminStatus);
+        } catch (error) {
+          console.error("Error checking admin status:", error);
+          setIsAdmin(false);
+        }
+      } else {
+        setIsAdmin(false);
+      }
+    };
+
+    checkAdminStatus();
+  }, [user]);
+
+  return (
+    <>
+      <Navbar />
+      <NotificationBanner isAdmin={isAdmin} user={user} />
+      <main className="min-h-screen">{children}</main>
+    </>
   );
 }
