@@ -29,7 +29,7 @@ interface MasterAdminClientProps {
 
 function MasterAdminClient({ user }: MasterAdminClientProps) {
   const [selectedTab, setSelectedTab] = useState<
-    "campaigns" | "users" | "donations" | "help-requests"
+    "campaigns" | "users" | "donations" | "help-requests" | "messaging"
   >("campaigns");
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -58,6 +58,16 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
   const [campaignOwners, setCampaignOwners] = useState<{
     [key: string]: string;
   }>({});
+
+  // Messaging state
+  const [messageModalOpen, setMessageModalOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [messageSubject, setMessageSubject] = useState("");
+  const [messageContent, setMessageContent] = useState("");
+  const [sendingMessage, setSendingMessage] = useState(false);
+  const [userSearchQuery, setUserSearchQuery] = useState("");
+  const [userSearchResults, setUserSearchResults] = useState<any[]>([]);
+  const [showUserDropdown, setShowUserDropdown] = useState(false);
 
   const loadCampaigns = async () => {
     setLoading(true);
@@ -485,6 +495,87 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
     } catch (error) {
       console.error("Error archiving help request:", error);
       setError("Failed to archive help request");
+    }
+  };
+
+  // Messaging functions
+  const searchUsers = async (query: string) => {
+    if (query.length < 2) {
+      setUserSearchResults([]);
+      setShowUserDropdown(false);
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/users-autocomplete?q=${encodeURIComponent(query)}`);
+      if (response.ok) {
+        const data = await response.json();
+        setUserSearchResults(data.users || []);
+        setShowUserDropdown(true);
+      }
+    } catch (error) {
+      console.error("Error searching users:", error);
+    }
+  };
+
+  const selectUser = (user: any) => {
+    setSelectedUser(user);
+    setUserSearchQuery(user.display);
+    setShowUserDropdown(false);
+  };
+
+  const openMessageModal = (user?: any) => {
+    if (user) {
+      setSelectedUser(user);
+      setUserSearchQuery(user.display || `${user.name} (${user.email})`);
+    } else {
+      setSelectedUser(null);
+      setUserSearchQuery("");
+    }
+    setMessageSubject("");
+    setMessageContent("");
+    setMessageModalOpen(true);
+  };
+
+  const sendMessage = async () => {
+    if (!selectedUser || !messageSubject.trim() || !messageContent.trim()) {
+      setError("Please select a user and fill in both subject and message");
+      return;
+    }
+
+    setSendingMessage(true);
+    try {
+      const response = await fetch("/api/admin-messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          to_user_id: selectedUser.id,
+          subject: messageSubject,
+          message: messageContent,
+        }),
+      });
+
+      if (response.ok) {
+        setMessageModalOpen(false);
+        setSuccessMessage("Message sent successfully!");
+        setTimeout(() => setSuccessMessage(null), 3000);
+        
+        // Reset form
+        setSelectedUser(null);
+        setUserSearchQuery("");
+        setMessageSubject("");
+        setMessageContent("");
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to send message");
+      }
+    } catch (error) {
+      console.error("Error sending message:", error);
+      setError(error instanceof Error ? error.message : "Failed to send message");
+    } finally {
+      setSendingMessage(false);
     }
   };
 
