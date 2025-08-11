@@ -43,6 +43,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // First, test if we can access the table at all
+    console.log("🔍 Testing table access first...");
+    const { data: tableTest, error: tableError } = await supabase
+      .from("admin_messages")
+      .select("count")
+      .limit(1);
+    
+    if (tableError) {
+      console.error("❌ Table access test failed:", tableError);
+      return NextResponse.json(
+        { error: "Table access failed", details: tableError.message },
+        { status: 500 }
+      );
+    }
+    
+    console.log("✅ Table access successful, proceeding with insert...");
+
     // Insert the message
     console.log("🚀 Attempting to insert message into admin_messages table...");
     const { data: adminMessage, error: insertError } = await supabase
@@ -65,8 +82,12 @@ export async function POST(request: NextRequest) {
         details: insertError.details,
         hint: insertError.hint
       });
+      console.error("Insert error type:", typeof insertError);
+      console.error("Insert error stringified:", JSON.stringify(insertError));
+      
+      const errorMessage = insertError.message || "Unknown database error";
       return NextResponse.json(
-        { error: "Failed to send message", details: insertError.message },
+        { error: "Failed to send message", details: errorMessage, rawError: insertError },
         { status: 500 }
       );
     }
