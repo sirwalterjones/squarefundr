@@ -13,62 +13,35 @@ export default function Navbar() {
 
   // Check admin status when user changes
   useEffect(() => {
-    const checkAdminStatus = async () => {
-      if (user) {
-        console.log(`🔍 Checking admin status for user: ${user.email}`);
-        
-        // Retry logic for admin check
-        let retries = 2; // Reduced from 3 to 2 for faster login
-        let adminStatus = false;
-        
-        while (retries > 0) {
-          try {
-            adminStatus = await isCurrentUserAdmin();
-            console.log(`✅ Admin status result: ${adminStatus} (attempt ${3 - retries})`);
-            break; // Success, exit retry loop
-          } catch (error) {
-            retries--;
-            console.error(`❌ Admin check failed for ${user.email} (${retries} retries left):`, error);
-            
-            if (retries > 0) {
-              // Wait before retry (shorter backoff: 300ms, 600ms)
-              await new Promise(resolve => setTimeout(resolve, 300 * Math.pow(2, 2 - retries)));
-            } else {
-              // All retries failed - keep previous state to prevent admin link disappearing
-              console.error(`🚨 All admin check retries failed for ${user.email}. Keeping previous admin state.`);
-              return; // Exit without changing isAdmin state
-            }
-          }
-        }
-        
+    let mounted = true;
+    const run = async () => {
+      if (!user) {
+        setIsAdmin(false);
+        setNewHelpRequests(0);
+        return;
+      }
+      try {
+        const adminStatus = await isCurrentUserAdmin();
+        if (!mounted) return;
         setIsAdmin(adminStatus);
-        
-        // Fetch new help requests count for admins
         if (adminStatus) {
           try {
-            const response = await fetch("/api/help-request");
+            const response = await fetch("/api/help-request", { cache: "no-store" });
             if (response.ok) {
               const data = await response.json();
               const newCount = data.helpRequests?.filter((req: any) => req.status === 'new').length || 0;
               setNewHelpRequests(newCount);
             }
-          } catch (error) {
-            console.error("Error fetching help requests:", error);
+          } catch (err) {
+            // ignore
           }
         }
-      } else {
-        console.log(`👤 No user, setting admin status to false`);
-        setIsAdmin(false);
-        setNewHelpRequests(0);
+      } catch (e) {
+        // ignore
       }
     };
-
-    // Add a small delay to ensure user auth is fully loaded
-    const timer = setTimeout(() => {
-      checkAdminStatus();
-    }, 100);
-
-    return () => clearTimeout(timer);
+    run();
+    return () => { mounted = false; };
   }, [user]);
 
   return (
@@ -112,7 +85,7 @@ export default function Navbar() {
               <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-indigo-500 to-purple-500 group-hover:w-full transition-all duration-300"></div>
             </Link>
 
-            {user ? (
+            {(user || typeof document !== 'undefined' && document.cookie.includes('sf_is_admin=1')) ? (
               <>
                 <Link
                   href="/dashboard"
@@ -122,7 +95,7 @@ export default function Navbar() {
                   <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 opacity-0 group-hover:opacity-10 transition-opacity duration-300"></div>
                   <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-purple-500 to-pink-500 group-hover:w-full transition-all duration-300"></div>
                 </Link>
-                {isAdmin && (
+                {(isAdmin || (typeof document !== 'undefined' && document.cookie.includes('sf_is_admin=1'))) && (
                   <Link
                     href="/master-admin"
                     className="relative px-4 py-2 text-gray-600 font-medium rounded-lg hover:text-black transition-all duration-300 hover:bg-gray-50 group overflow-hidden"

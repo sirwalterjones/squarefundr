@@ -391,28 +391,42 @@ const CACHE_DURATION = 30000; // 30 seconds
 
 // Function to check if current user is admin
 export async function isCurrentUserAdmin(): Promise<boolean> {
-  // Call a dedicated API that uses service-role server client for fast, reliable result
+  // Pure API-based check to avoid any client auth hangups
   try {
-    const { data: { user }, error } = await supabase.auth.getUser();
-    if (error || !user) return false;
-
-    const cached = adminCheckCache[user.id];
-    if (cached && (Date.now() - cached.timestamp) < CACHE_DURATION) {
-      console.log(`✅ Using cached admin status for ${user.email}: ${cached.result}`);
-      return cached.result;
+    // LocalStorage cache for fast UI on reloads
+    if (typeof window !== "undefined") {
+      try {
+        const cachedRaw = localStorage.getItem("sf:isAdminCache");
+        if (cachedRaw) {
+          const cached = JSON.parse(cachedRaw) as { result: boolean; ts: number };
+          if (Date.now() - cached.ts < CACHE_DURATION) {
+            return cached.result;
+          }
+        }
+      } catch (_) {
+        // ignore storage errors
+      }
     }
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 4000);
-    const resp = await fetch("/api/is-admin", { signal: controller.signal });
+    const resp = await fetch("/api/is-admin", { signal: controller.signal, cache: "no-store" });
     clearTimeout(timeout);
-    if (!resp.ok) {
-      console.warn("/api/is-admin returned non-OK status:", resp.status);
-      return false;
-    }
+    if (!resp.ok) return false;
     const json = await resp.json();
     const result = !!json?.isAdmin;
-    adminCheckCache[user.id] = { result, timestamp: Date.now() };
+
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem(
+          "sf:isAdminCache",
+          JSON.stringify({ result, ts: Date.now() })
+        );
+      } catch (_) {
+        // ignore storage errors
+      }
+    }
+
     return result;
   } catch (e) {
     console.error("Admin check failed:", e);

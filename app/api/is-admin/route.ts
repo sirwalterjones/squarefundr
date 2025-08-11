@@ -7,7 +7,10 @@ export async function GET(_request: NextRequest) {
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return NextResponse.json({ isAdmin: false }, { status: 200 });
+      const res = NextResponse.json({ isAdmin: false }, { status: 200 });
+      // Clear cookie if present
+      res.cookies.set('sf_is_admin', '', { path: '/', maxAge: 0 });
+      return res;
     }
 
     // Use admin client to avoid RLS latency and ensure deterministic result
@@ -24,10 +27,20 @@ export async function GET(_request: NextRequest) {
       console.error("/api/is-admin role check error:", error);
     }
 
-    return NextResponse.json({ isAdmin: !!data }, { status: 200 });
+    const isAdmin = !!data;
+    const res = NextResponse.json({ isAdmin }, { status: 200 });
+    // Set short-lived cookie so client can render nav immediately on hard refresh
+    if (isAdmin) {
+      res.cookies.set('sf_is_admin', '1', { path: '/', maxAge: 60, httpOnly: false, sameSite: 'lax' });
+    } else {
+      res.cookies.set('sf_is_admin', '', { path: '/', maxAge: 0 });
+    }
+    return res;
   } catch (e) {
     console.error("/api/is-admin unexpected error:", e);
-    return NextResponse.json({ isAdmin: false }, { status: 200 });
+    const res = NextResponse.json({ isAdmin: false }, { status: 200 });
+    res.cookies.set('sf_is_admin', '', { path: '/', maxAge: 0 });
+    return res;
   }
 }
 
