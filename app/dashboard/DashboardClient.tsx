@@ -570,7 +570,7 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
 
         <div className="mb-6">
           <div className="border-b border-gray-200">
-            <nav className="-mb-px flex space-x-8">
+            <nav className="-mb-px flex flex-wrap gap-2 sm:gap-4 lg:space-x-8 lg:gap-0">
               <button
                 onClick={() => setSelectedTab("overview")}
                 className={`py-3 px-4 border-b-2 font-medium text-sm transition-colors ${
