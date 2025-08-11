@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabaseClient, createAdminSupabaseClient } from "@/lib/supabaseServer";
+export const runtime = "nodejs";
 
 // POST - Send a message from admin to user
 export async function POST(request: NextRequest) {
@@ -58,17 +59,39 @@ export async function POST(request: NextRequest) {
     );
 
     if (rpcError) {
-      console.error("Error sending admin message via RPC:", rpcError);
-      return NextResponse.json(
-        {
-          error: "Failed to send message",
-          details: rpcError.message || "RPC error",
-          code: (rpcError as any).code,
-          hint: (rpcError as any).hint,
-          raw: rpcError,
-        },
-        { status: 500 }
-      );
+      console.error("Error sending admin message via RPC, attempting direct insert:", rpcError);
+      // Fallback: direct insert via service-role client
+      const { data: inserted, error: insertError } = await adminSupabase
+        .from("admin_messages")
+        .insert({
+          from_admin_id: user.id,
+          to_user_id,
+          subject,
+          message,
+          is_read: false,
+        })
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error("Direct insert failed:", insertError);
+        return NextResponse.json(
+          {
+            error: "Failed to send message",
+            details: insertError.message || rpcError.message || "Unknown error",
+            code: (insertError as any).code || (rpcError as any).code,
+            hint: (insertError as any).hint || (rpcError as any).hint,
+            raw: { rpcError, insertError },
+          },
+          { status: 500 }
+        );
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: "Message sent successfully",
+        data: inserted,
+      });
     }
 
     return NextResponse.json({
@@ -114,13 +137,10 @@ export async function GET(request: NextRequest) {
 
     const isAdmin = !!userRole;
 
+    // Keep selection minimal to avoid relationship issues without FKs
     let query = supabase
       .from("admin_messages")
-      .select(`
-        *,
-        from_admin:from_admin_id(email, raw_user_meta_data),
-        to_user:to_user_id(email, raw_user_meta_data)
-      `)
+      .select("id, from_admin_id, to_user_id, subject, message, is_read, created_at")
       .order("created_at", { ascending: false });
 
     if (isAdmin && for_user_id) {
