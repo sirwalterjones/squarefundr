@@ -385,11 +385,15 @@ function isDemoMode(): boolean {
   return singleton.isDemoMode();
 }
 
+// Cache for admin status to prevent multiple simultaneous checks
+let adminCheckCache: { [userId: string]: { result: boolean; timestamp: number } } = {};
+const CACHE_DURATION = 30000; // 30 seconds
+
 // Function to check if current user is admin
 export async function isCurrentUserAdmin(): Promise<boolean> {
   // Create timeout promise to prevent hanging
   const timeoutPromise = new Promise<never>((_, reject) => {
-    setTimeout(() => reject(new Error('Admin check timeout after 8 seconds')), 8000);
+    setTimeout(() => reject(new Error('Admin check timeout after 5 seconds')), 5000); // Reduced to 5 seconds
   });
 
   const adminCheckPromise = async () => {
@@ -407,6 +411,13 @@ export async function isCurrentUserAdmin(): Promise<boolean> {
       if (!user) {
         console.log("No authenticated user");
         return false;
+      }
+
+      // Check cache first
+      const cached = adminCheckCache[user.id];
+      if (cached && (Date.now() - cached.timestamp) < CACHE_DURATION) {
+        console.log(`✅ Using cached admin status for ${user.email}: ${cached.result}`);
+        return cached.result;
       }
 
       console.log(`Checking admin status for user ID: ${user.id} (${user.email})`);
@@ -431,6 +442,13 @@ export async function isCurrentUserAdmin(): Promise<boolean> {
 
       const isAdmin = data !== null;
       console.log(`Admin check result: ${isAdmin} for ${user.email}`);
+      
+      // Cache the result
+      adminCheckCache[user.id] = {
+        result: isAdmin,
+        timestamp: Date.now()
+      };
+      
       return isAdmin;
     } catch (error) {
       console.error("Error checking admin status:", error);
