@@ -1771,7 +1771,7 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
                       )}
                     </div>
                     {selectedMessageUser && (
-                      <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded text-sm">
+                      <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded text-sm text-green-800">
                         ✓ Selected: <strong>{selectedMessageUser.name}</strong> ({selectedMessageUser.email})
                       </div>
                     )}
