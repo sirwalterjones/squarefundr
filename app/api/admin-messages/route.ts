@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerSupabaseClient, createAdminSupabaseClient } from "@/lib/supabaseServer";
+import { createServerSupabaseClient } from "@/lib/supabaseServer";
+import { createClient } from "@supabase/supabase-js";
 
 // POST - Send a message from admin to user
 export async function POST(request: NextRequest) {
@@ -43,9 +44,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Prefer RPC to bypass PostgREST table visibility issues
-    console.log("🚀 Attempting to insert message via RPC admin_send_message...");
-    const adminSupabase = await createAdminSupabaseClient();
+    // Prefer RPC via service-role node client to bypass PostgREST visibility issues
+    console.log("🚀 Attempting to insert message via RPC admin_send_message (service client)...");
+    const adminSupabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      { auth: { persistSession: false } }
+    );
+
     const { data: adminMessage, error: rpcError } = await adminSupabase.rpc(
       "admin_send_message",
       {
@@ -59,7 +65,7 @@ export async function POST(request: NextRequest) {
     if (rpcError) {
       console.error("Error sending admin message via RPC:", rpcError);
       return NextResponse.json(
-        { error: "Failed to send message", details: rpcError.message || "RPC error" },
+        { error: "Failed to send message", details: rpcError.message || "RPC error", raw: rpcError },
         { status: 500 }
       );
     }
