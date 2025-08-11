@@ -554,7 +554,7 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
 
     setSendingMessage(true);
     try {
-      const endpoint = isGlobalMessage ? "/api/admin-messages/global" : "/api/admin-messages";
+      const endpoint = (isGlobalMessage ? "/api/admin-messages/global" : "/api/admin-messages2") + `?t=${Date.now()}`;
       const body = isGlobalMessage 
         ? {
             subject: messageSubject,
@@ -589,8 +589,36 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
         setMessageContent("");
         setIsGlobalMessage(false);
       } else {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to send message");
+        const errorData = await response.json().catch(() => null);
+        // Fallback for individual messages: deliver via help requests immediately from frontend
+        if (!isGlobalMessage && selectedMessageUser?.email) {
+          try {
+            const helpRes = await fetch("/api/help-request", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                name: "Admin",
+                email: selectedMessageUser.email,
+                subject: `[ADMIN MESSAGE] ${messageSubject}`,
+                message: messageContent,
+              }),
+            });
+            if (helpRes.ok) {
+              setMessageModalOpen(false);
+              setSuccessMessage("Message sent via help requests");
+              setTimeout(() => setSuccessMessage(null), 3000);
+              setSelectedMessageUser(null);
+              setUserSearchQuery("");
+              setMessageSubject("");
+              setMessageContent("");
+              setIsGlobalMessage(false);
+              return;
+            }
+          } catch (fallbackErr) {
+            // ignore and throw original error below
+          }
+        }
+        throw new Error(errorData?.error || "Failed to send message");
       }
     } catch (error) {
       console.error("Error sending message:", error);

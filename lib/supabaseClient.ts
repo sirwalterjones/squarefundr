@@ -393,6 +393,11 @@ const CACHE_DURATION = 30000; // 30 seconds
 export async function isCurrentUserAdmin(): Promise<boolean> {
   // Pure API-based check to avoid any client auth hangups
   try {
+    // If cookie is present, immediately trust and return
+    if (typeof document !== "undefined" && document.cookie.includes("sf_is_admin=1")) {
+      return true;
+    }
+
     // LocalStorage cache for fast UI on reloads
     if (typeof window !== "undefined") {
       try {

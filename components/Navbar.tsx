@@ -8,7 +8,9 @@ import { useAuth } from "@/app/client-layout";
 export default function Navbar() {
   const { user, signOut } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(
+    typeof document !== 'undefined' && document.cookie.includes('sf_is_admin=1')
+  );
   const [newHelpRequests, setNewHelpRequests] = useState(0);
 
   // Check admin status when user changes

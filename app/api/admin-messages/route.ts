@@ -44,60 +44,46 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Prefer RPC via service-role server client to bypass PostgREST visibility issues
-    console.log("🚀 Attempting to insert message via RPC admin_send_message (service server client)...");
     const adminSupabase = await createAdminSupabaseClient();
+    // NEW IMPLEMENTATION: write admin messages as help requests (works reliably)
+    const { data: targetUserResp, error: targetUserErr } = await adminSupabase.auth.admin.getUserById(to_user_id);
+    if (targetUserErr) {
+      console.error("getUserById failed:", targetUserErr);
+    }
+    const targetEmail = targetUserResp?.user?.email;
 
-    const { data: adminMessage, error: rpcError } = await adminSupabase.rpc(
-      "admin_send_message",
-      {
-        p_from_admin_id: user.id,
-        p_to_user_id: to_user_id,
-        p_subject: subject,
-        p_message: message,
-      }
-    );
+    if (!targetEmail) {
+      return NextResponse.json(
+        { error: "Target user not found" },
+        { status: 400 }
+      );
+    }
 
-    if (rpcError) {
-      console.error("Error sending admin message via RPC, attempting direct insert:", rpcError);
-      // Fallback: direct insert via service-role client
-      const { data: inserted, error: insertError } = await adminSupabase
-        .from("admin_messages")
-        .insert({
-          from_admin_id: user.id,
-          to_user_id,
-          subject,
-          message,
-          is_read: false,
-        })
-        .select()
-        .single();
+    const { data: helpRow, error: helpErr } = await adminSupabase
+      .from("help_requests")
+      .insert({
+        name: "Admin",
+        email: targetEmail,
+        subject: `[ADMIN MESSAGE] ${subject}`,
+        message,
+        status: "new",
+        priority: "normal",
+      })
+      .select()
+      .single();
 
-      if (insertError) {
-        console.error("Direct insert failed:", insertError);
-        return NextResponse.json(
-          {
-            error: "Failed to send message",
-            details: insertError.message || rpcError.message || "Unknown error",
-            code: (insertError as any).code || (rpcError as any).code,
-            hint: (insertError as any).hint || (rpcError as any).hint,
-            raw: { rpcError, insertError },
-          },
-          { status: 500 }
-        );
-      }
-
-      return NextResponse.json({
-        success: true,
-        message: "Message sent successfully",
-        data: inserted,
-      });
+    if (helpErr) {
+      console.error("Failed to write admin message into help_requests:", helpErr);
+      return NextResponse.json(
+        { error: "Failed to send message", details: helpErr.message, debug: { to_user_id, targetUserErr } },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({
       success: true,
-      message: "Message sent successfully",
-      data: adminMessage
+      message: "Message sent via help requests",
+      data: helpRow,
     });
 
   } catch (error) {

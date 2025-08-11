@@ -62,12 +62,26 @@ export function AuthProvider({ children }: AuthProviderProps) {
           try {
             const adminStatus = await isCurrentUserAdmin();
             setIsAdmin(adminStatus);
+            // Hint cookie for nav rendering on hard refresh
+            if (typeof document !== 'undefined') {
+              if (adminStatus) {
+                document.cookie = 'sf_is_admin=1; path=/; max-age=60; samesite=lax';
+              } else {
+                document.cookie = 'sf_is_admin=; path=/; max-age=0; samesite=lax';
+              }
+            }
           } catch (error) {
             console.error("Error checking admin status:", error);
             setIsAdmin(false);
+            if (typeof document !== 'undefined') {
+              document.cookie = 'sf_is_admin=; path=/; max-age=0; samesite=lax';
+            }
           }
         } else {
           setIsAdmin(false);
+          if (typeof document !== 'undefined') {
+            document.cookie = 'sf_is_admin=; path=/; max-age=0; samesite=lax';
+          }
         }
         
         setLoading(false);

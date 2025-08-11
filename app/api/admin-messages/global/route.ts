@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerSupabaseClient } from "@/lib/supabaseServer";
+import { createServerSupabaseClient, createAdminSupabaseClient } from "@/lib/supabaseServer";
+export const runtime = "nodejs";
 
 // POST - Send a global message from admin to all users
 export async function POST(request: NextRequest) {
@@ -40,17 +41,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get all users from auth.users via admin client
-    const { createClient } = require('@supabase/supabase-js');
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-    const adminSupabase = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    });
+    // Use service-role admin client
+    const adminSupabase = await createAdminSupabaseClient();
 
     // Get all users
     const { data: allUsers, error: usersError } = await adminSupabase.auth.admin.listUsers();
@@ -63,13 +55,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create message records for all users
-    const messageRecords = allUsers.users.map(targetUser => ({
-      from_admin_id: user.id,
-      to_user_id: targetUser.id,
+    // Create help_request records for all users (delivery channel)
+    const helpRecords = allUsers.users.map(targetUser => ({
+      name: "Admin",
+      email: targetUser.email,
       subject: `[ANNOUNCEMENT] ${subject}`,
       message,
-      is_read: false
+      status: "new",
+      priority: "normal",
     }));
 
     // Insert all messages in batches to avoid payload limits
@@ -77,12 +70,12 @@ export async function POST(request: NextRequest) {
     let totalSent = 0;
     let errors: string[] = [];
 
-    for (let i = 0; i < messageRecords.length; i += batchSize) {
-      const batch = messageRecords.slice(i, i + batchSize);
+    for (let i = 0; i < helpRecords.length; i += batchSize) {
+      const batch = helpRecords.slice(i, i + batchSize);
       
       try {
-        const { data: insertedMessages, error: insertError } = await supabase
-          .from("admin_messages")
+        const { data: insertedMessages, error: insertError } = await adminSupabase
+          .from("help_requests")
           .insert(batch)
           .select();
 
@@ -109,7 +102,7 @@ export async function POST(request: NextRequest) {
         success: false,
         error: "Partial failure in sending global messages",
         details: {
-          totalUsers: messageRecords.length,
+          totalUsers: helpRecords.length,
           sent: totalSent,
           errors: errors
         }
@@ -120,9 +113,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: `Global message sent to ${totalSent} users successfully`,
+      message: `Global message sent to ${totalSent} users successfully (via help requests)`,
       data: {
-        totalUsers: messageRecords.length,
+        totalUsers: helpRecords.length,
         sent: totalSent,
         subject: `[ANNOUNCEMENT] ${subject}`
       }
