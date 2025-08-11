@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerSupabaseClient } from "@/lib/supabaseServer";
+import { createServerSupabaseClient, createAdminSupabaseClient } from "@/lib/supabaseServer";
 
 // POST - Send a message from admin to user
 export async function POST(request: NextRequest) {
@@ -43,51 +43,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // First, test if we can access the table at all
-    console.log("🔍 Testing table access first...");
-    const { data: tableTest, error: tableError } = await supabase
-      .from("admin_messages")
-      .select("count")
-      .limit(1);
-    
-    if (tableError) {
-      console.error("❌ Table access test failed:", tableError);
-      return NextResponse.json(
-        { error: "Table access failed", details: tableError.message },
-        { status: 500 }
-      );
-    }
-    
-    console.log("✅ Table access successful, proceeding with insert...");
+    // Prefer RPC to bypass PostgREST table visibility issues
+    console.log("🚀 Attempting to insert message via RPC admin_send_message...");
+    const adminSupabase = await createAdminSupabaseClient();
+    const { data: adminMessage, error: rpcError } = await adminSupabase.rpc(
+      "admin_send_message",
+      {
+        p_from_admin_id: user.id,
+        p_to_user_id: to_user_id,
+        p_subject: subject,
+        p_message: message,
+      }
+    );
 
-    // Insert the message
-    console.log("🚀 Attempting to insert message into admin_messages table...");
-    const { data: adminMessage, error: insertError } = await supabase
-      .from("admin_messages")
-      .insert({
-        from_admin_id: user.id,
-        to_user_id,
-        subject,
-        message,
-        is_read: false
-      })
-      .select()
-      .single();
-
-    if (insertError) {
-      console.error("Error sending admin message:", insertError);
-      console.error("Insert error details:", {
-        code: insertError.code,
-        message: insertError.message,
-        details: insertError.details,
-        hint: insertError.hint
-      });
-      console.error("Insert error type:", typeof insertError);
-      console.error("Insert error stringified:", JSON.stringify(insertError));
-      
-      const errorMessage = insertError.message || "Unknown database error";
+    if (rpcError) {
+      console.error("Error sending admin message via RPC:", rpcError);
       return NextResponse.json(
-        { error: "Failed to send message", details: errorMessage, rawError: insertError },
+        { error: "Failed to send message", details: rpcError.message || "RPC error" },
         { status: 500 }
       );
     }
