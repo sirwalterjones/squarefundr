@@ -69,6 +69,9 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
   const [userSearchResults, setUserSearchResults] = useState<any[]>([]);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [isGlobalMessage, setIsGlobalMessage] = useState(false);
+  const [userSearchLoading, setUserSearchLoading] = useState(false);
+  const [highlightIndex, setHighlightIndex] = useState<number>(-1);
+  const [recentRecipients, setRecentRecipients] = useState<any[]>([]);
 
   const loadCampaigns = async () => {
     setLoading(true);
@@ -508,6 +511,7 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
     }
 
     try {
+      setUserSearchLoading(true);
       const response = await fetch(`/api/users-autocomplete?q=${encodeURIComponent(query)}`);
       if (response.ok) {
         const data = await response.json();
@@ -516,6 +520,8 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
       }
     } catch (error) {
       console.error("Error searching users:", error);
+    } finally {
+      setUserSearchLoading(false);
     }
   };
 
@@ -523,6 +529,17 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
     setSelectedMessageUser(user);
     setUserSearchQuery(user.display);
     setShowUserDropdown(false);
+    // Update recent recipients (unique by id), keep last 5
+    try {
+      const existing: any[] = JSON.parse(localStorage.getItem("sf:recentRecipients") || "[]");
+      const filtered = existing.filter((u) => u.id !== user.id);
+      const next = [
+        { id: user.id, name: user.name || user.display || user.email, email: user.email, display: user.display || `${user.name} (${user.email})` },
+        ...filtered
+      ].slice(0, 5);
+      localStorage.setItem("sf:recentRecipients", JSON.stringify(next));
+      setRecentRecipients(next);
+    } catch {}
   };
 
   const openMessageModal = (user?: any, isGlobal: boolean = false) => {
@@ -537,6 +554,13 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
     setMessageSubject("");
     setMessageContent("");
     setMessageModalOpen(true);
+    // Load recent recipients when opening
+    try {
+      const existing: any[] = JSON.parse(localStorage.getItem("sf:recentRecipients") || "[]");
+      setRecentRecipients(existing);
+    } catch {
+      setRecentRecipients([]);
+    }
   };
 
   const sendMessage = async () => {
@@ -627,6 +651,24 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
       setSendingMessage(false);
     }
   };
+
+  // Debounce search when query changes
+  useEffect(() => {
+    if (!messageModalOpen) return;
+    if (isGlobalMessage) return;
+    if (userSearchQuery.trim().length < 2) {
+      setUserSearchResults([]);
+      setShowUserDropdown(recentRecipients.length > 0);
+      setHighlightIndex(-1);
+      return;
+    }
+    const t = setTimeout(() => {
+      searchUsers(userSearchQuery.trim());
+      setHighlightIndex(0);
+    }, 250);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userSearchQuery, messageModalOpen, isGlobalMessage]);
 
   const filteredCampaigns = campaigns.filter(
     (campaign) =>
@@ -1776,25 +1818,62 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
                         value={userSearchQuery}
                         onChange={(e) => {
                           setUserSearchQuery(e.target.value);
-                          searchUsers(e.target.value);
+                        }}
+                        onKeyDown={(e) => {
+                          if (!showUserDropdown) return;
+                          const max = userSearchResults.length - 1;
+                          if (e.key === 'ArrowDown') {
+                            e.preventDefault();
+                            setHighlightIndex((prev) => Math.min(prev + 1, max));
+                          } else if (e.key === 'ArrowUp') {
+                            e.preventDefault();
+                            setHighlightIndex((prev) => Math.max(prev - 1, 0));
+                          } else if (e.key === 'Enter') {
+                            e.preventDefault();
+                            if (highlightIndex >= 0 && highlightIndex <= max) {
+                              selectUser(userSearchResults[highlightIndex]);
+                            }
+                          } else if (e.key === 'Escape') {
+                            setShowUserDropdown(false);
+                          }
                         }}
                         placeholder="Type to search for users..."
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
                       />
                       
                       {/* User Dropdown */}
-                      {showUserDropdown && userSearchResults.length > 0 && (
+                      {showUserDropdown && (
                         <div className="absolute top-full left-0 right-0 bg-white border border-gray-300 rounded-lg mt-1 max-h-60 overflow-y-auto z-10 shadow-lg">
-                          {userSearchResults.map((user, index) => (
-                            <button
-                              key={user.id || index}
-                              onClick={() => selectUser(user)}
-                              className="w-full px-3 py-2 text-left hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
-                            >
-                              <div className="font-medium text-gray-900">{user.name}</div>
-                              <div className="text-sm text-gray-500">{user.email}</div>
-                            </button>
-                          ))}
+                          {userSearchLoading && (
+                            <div className="px-3 py-2 text-sm text-gray-500">Searching...</div>
+                          )}
+                          {!userSearchLoading && userSearchResults.length > 0 && (
+                            userSearchResults.map((user, index) => (
+                              <button
+                                key={user.id || index}
+                                onClick={() => selectUser(user)}
+                                className={`w-full px-3 py-2 text-left border-b border-gray-100 last:border-b-0 ${index === highlightIndex ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
+                              >
+                                <div className="font-medium text-gray-900">{user.name}</div>
+                                <div className="text-sm text-gray-500">{user.email}</div>
+                              </button>
+                            ))
+                          )}
+                          {!userSearchLoading && userSearchResults.length === 0 && recentRecipients.length > 0 && (
+                            <div>
+                              <div className="px-3 py-2 text-xs uppercase tracking-wide text-gray-400">Recent</div>
+                              {recentRecipients.map((user, index) => (
+                                <button
+                                  key={user.id || index}
+                                  onClick={() => selectUser(user)}
+                                  className="w-full px-3 py-2 text-left hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
+                                >
+                                  <div className="font-medium text-gray-900">{user.name}</div>
+                                  <div className="text-sm text-gray-500">{user.email}</div>
+                                </button>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
