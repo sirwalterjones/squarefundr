@@ -4,6 +4,7 @@ import { createServerSupabaseClient } from "@/lib/supabaseServer";
 // POST - Send a message from admin to user
 export async function POST(request: NextRequest) {
   try {
+    console.log("🔥 Admin messages API POST called");
     const supabase = await createServerSupabaseClient();
     
     // Check authentication
@@ -32,8 +33,10 @@ export async function POST(request: NextRequest) {
     }
 
     const { to_user_id, subject, message } = await request.json();
+    console.log("📝 Message data:", { to_user_id, subject, message: message?.substring(0, 50) + "..." });
 
     if (!to_user_id || !subject || !message) {
+      console.log("❌ Missing required fields");
       return NextResponse.json(
         { error: "Missing required fields: to_user_id, subject, message" },
         { status: 400 }
@@ -41,6 +44,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Insert the message
+    console.log("🚀 Attempting to insert message into admin_messages table...");
     const { data: adminMessage, error: insertError } = await supabase
       .from("admin_messages")
       .insert({
@@ -55,8 +59,14 @@ export async function POST(request: NextRequest) {
 
     if (insertError) {
       console.error("Error sending admin message:", insertError);
+      console.error("Insert error details:", {
+        code: insertError.code,
+        message: insertError.message,
+        details: insertError.details,
+        hint: insertError.hint
+      });
       return NextResponse.json(
-        { error: "Failed to send message" },
+        { error: "Failed to send message", details: insertError.message },
         { status: 500 }
       );
     }
