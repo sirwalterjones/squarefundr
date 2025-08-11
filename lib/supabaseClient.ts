@@ -391,77 +391,32 @@ const CACHE_DURATION = 30000; // 30 seconds
 
 // Function to check if current user is admin
 export async function isCurrentUserAdmin(): Promise<boolean> {
-  // Create timeout promise to prevent hanging
-  const timeoutPromise = new Promise<never>((_, reject) => {
-    setTimeout(() => reject(new Error('Admin check timeout after 5 seconds')), 5000); // Reduced to 5 seconds
-  });
-
-  const adminCheckPromise = async () => {
-    try {
-      const {
-        data: { user },
-        error,
-      } = await supabase.auth.getUser();
-
-      if (error) {
-        console.error("Error getting user:", error);
-        return false;
-      }
-
-      if (!user) {
-        console.log("No authenticated user");
-        return false;
-      }
-
-      // Check cache first
-      const cached = adminCheckCache[user.id];
-      if (cached && (Date.now() - cached.timestamp) < CACHE_DURATION) {
-        console.log(`✅ Using cached admin status for ${user.email}: ${cached.result}`);
-        return cached.result;
-      }
-
-      console.log(`Checking admin status for user ID: ${user.id} (${user.email})`);
-
-      const { data, error: roleError } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id)
-        .eq("role", "admin")
-        .single();
-
-      if (roleError) {
-        console.error("Error checking user role:", roleError);
-        // Special case: if it's "row not found", that just means they're not an admin
-        if (roleError.code === 'PGRST116') {
-          console.log("User is not an admin (no role record found)");
-          return false;
-        }
-        // For other errors, throw to trigger retry logic in caller
-        throw roleError;
-      }
-
-      const isAdmin = data !== null;
-      console.log(`Admin check result: ${isAdmin} for ${user.email}`);
-      
-      // Cache the result
-      adminCheckCache[user.id] = {
-        result: isAdmin,
-        timestamp: Date.now()
-      };
-      
-      return isAdmin;
-    } catch (error) {
-      console.error("Error checking admin status:", error);
-      // Re-throw to allow caller to handle retry logic
-      throw error;
-    }
-  };
-
+  // Call a dedicated API that uses service-role server client for fast, reliable result
   try {
-    return await Promise.race([adminCheckPromise(), timeoutPromise]);
-  } catch (error) {
-    console.error("Admin check failed or timed out:", error);
-    throw error;
+    const { data: { user }, error } = await supabase.auth.getUser();
+    if (error || !user) return false;
+
+    const cached = adminCheckCache[user.id];
+    if (cached && (Date.now() - cached.timestamp) < CACHE_DURATION) {
+      console.log(`✅ Using cached admin status for ${user.email}: ${cached.result}`);
+      return cached.result;
+    }
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 4000);
+    const resp = await fetch("/api/is-admin", { signal: controller.signal });
+    clearTimeout(timeout);
+    if (!resp.ok) {
+      console.warn("/api/is-admin returned non-OK status:", resp.status);
+      return false;
+    }
+    const json = await resp.json();
+    const result = !!json?.isAdmin;
+    adminCheckCache[user.id] = { result, timestamp: Date.now() };
+    return result;
+  } catch (e) {
+    console.error("Admin check failed:", e);
+    return false;
   }
 }
 
