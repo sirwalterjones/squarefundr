@@ -9,7 +9,7 @@ export async function PUT(request: NextRequest) {
   try {
     console.log("[EDIT-DONATION] Starting edit donation request");
 
-    const { transactionId, donorName, donorEmail, status } = await request.json();
+    const { transactionId, donorName, donorEmail, status, total } = await request.json();
 
     if (!transactionId) {
       return NextResponse.json({ error: "Transaction ID is required" }, { status: 400 });
@@ -79,6 +79,7 @@ export async function PUT(request: NextRequest) {
     if (donorName !== undefined) updateData.donor_name = donorName;
     if (donorEmail !== undefined) updateData.donor_email = donorEmail;
     if (status !== undefined) updateData.status = status;
+    if (typeof total === 'number' && !Number.isNaN(total)) updateData.total = total;
 
     const { error: updateError } = await adminSupabase
       .from("transactions")
