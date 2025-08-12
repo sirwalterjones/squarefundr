@@ -494,6 +494,11 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
       }
 
       // Create receipt data (prefer recorded paid total if available)
+      const explicitTotal =
+        typeof donation.total === 'number'
+          ? donation.total
+          : (Number(donation.total) || undefined);
+
       const receiptData = createReceiptData(
         campaign,
         squares,
@@ -501,7 +506,7 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
         donation.donor_email || "No email provided",
         donation.payment_method === "paypal" ? "paypal" : "cash",
         donation.id,
-        typeof donation.total === 'number' ? donation.total : undefined,
+        explicitTotal,
       );
 
       // Generate and download PDF
