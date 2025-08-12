@@ -322,6 +322,9 @@ export async function GET(request: NextRequest) {
         transaction.donor_email || "",
       );
       redirectUrl.searchParams.set("payment_method", "paypal");
+      if (typeof transaction.total === "number") {
+        redirectUrl.searchParams.set("total", String(transaction.total));
+      }
 
       console.log(`Redirecting to success page: ${redirectUrl.toString()}`);
 

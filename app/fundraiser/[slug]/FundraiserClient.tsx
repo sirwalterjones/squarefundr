@@ -66,6 +66,7 @@ export default function FundraiserClient({
     const demo = urlParams.get("demo");
     const donorName = urlParams.get("donor_name");
     const donorEmail = urlParams.get("donor_email");
+    const paidTotal = urlParams.get("total");
     const transactionId = urlParams.get("transaction_id");
     const paymentMethod = urlParams.get("payment_method") as
       | "paypal"
@@ -98,6 +99,7 @@ export default function FundraiserClient({
             donorEmail,
             paymentMethod,
             transactionId,
+            total: paidTotal ? Number(paidTotal) : undefined,
           });
         }
       }
@@ -514,9 +516,11 @@ export default function FundraiserClient({
                       lastReceiptData.transactionId,
                       typeof transaction?.total === 'number'
                         ? transaction.total
-                        : (receiptSquares.length > 0
-                            ? receiptSquares.reduce((sum, s) => sum + s.value, 0)
-                            : undefined),
+                        : (typeof lastReceiptData.total === 'number'
+                            ? lastReceiptData.total
+                            : (receiptSquares.length > 0
+                                ? receiptSquares.reduce((sum, s) => sum + s.value, 0)
+                                : undefined)),
                     );
                     generatePDFReceipt(receipt);
                   } catch (e) {
