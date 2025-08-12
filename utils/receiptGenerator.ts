@@ -218,8 +218,10 @@ export function createReceiptData(
   donorEmail: string,
   paymentMethod: "paypal" | "cash",
   transactionId?: string,
+  explicitTotalAmount?: number,
 ): ReceiptData {
-  const totalAmount = squares.reduce((sum, square) => sum + square.value, 0);
+  const calculatedAmount = squares.reduce((sum, square) => sum + square.value, 0);
+  const totalAmount = typeof explicitTotalAmount === 'number' ? explicitTotalAmount : calculatedAmount;
 
   return {
     campaign,
