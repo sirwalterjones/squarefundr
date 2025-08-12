@@ -201,6 +201,7 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
     donorName: string;
     donorEmail: string;
     status: string;
+    total: number;
   }) => {
     try {
       const response = await fetch("/api/edit-donation", {
@@ -211,6 +212,7 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
           donorName: data.donorName,
           donorEmail: data.donorEmail,
           status: data.status,
+          total: typeof data.total === 'number' ? data.total : undefined,
         }),
       });
 

@@ -11,6 +11,7 @@ interface EditDonationModalProps {
     donorName: string;
     donorEmail: string;
     status: string;
+    total: number;
   }) => void;
 }
 
@@ -23,6 +24,7 @@ export default function EditDonationModal({
   const [donorName, setDonorName] = useState("");
   const [donorEmail, setDonorEmail] = useState("");
   const [status, setStatus] = useState("pending");
+  const [total, setTotal] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(false);
 
   // Update form fields when donation changes
@@ -31,6 +33,7 @@ export default function EditDonationModal({
       setDonorName(donation.donor_name || "");
       setDonorEmail(donation.donor_email || "");
       setStatus(donation.status || "pending");
+      setTotal(typeof donation.total === "number" ? donation.total : Number(donation.total) || 0);
     }
   }, [donation]);
 
@@ -39,7 +42,7 @@ export default function EditDonationModal({
     setIsLoading(true);
 
     try {
-      await onSave({ donorName, donorEmail, status });
+      await onSave({ donorName, donorEmail, status, total: Number(total) || 0 });
       onClose();
     } catch (error) {
       console.error("Error saving donation:", error);
@@ -122,6 +125,21 @@ export default function EditDonationModal({
                   <option value="completed">Completed</option>
                   <option value="failed">Failed</option>
                 </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Total Amount (USD)
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={Number.isFinite(total) ? total : 0}
+                  onChange={(e) => setTotal(parseFloat(e.target.value))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="0.00"
+                />
               </div>
 
               <div className="flex space-x-3 pt-4">
