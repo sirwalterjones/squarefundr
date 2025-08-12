@@ -465,6 +465,17 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
 
       // Get the actual squares data for this transaction
       let squares: SelectedSquare[] = [];
+      // Fetch latest transaction from server to ensure we use the current paid total
+      let latestServerTotal: number | undefined = undefined;
+      try {
+        const txRes = await fetch(`/api/debug-transaction?transaction_id=${encodeURIComponent(donation.id)}`, { cache: 'no-store' });
+        if (txRes.ok) {
+          const txJson = await txRes.json();
+          if (typeof txJson?.transaction?.total === 'number') {
+            latestServerTotal = txJson.transaction.total;
+          }
+        }
+      } catch {}
       
       // We'll keep a square breakdown, but the Total shown on the receipt
       // will explicitly use the recorded paid amount (donation.total)
@@ -508,9 +519,9 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
 
       // Create receipt data (prefer recorded paid total if available)
       const explicitTotal =
-        typeof donation.total === 'number'
-          ? donation.total
-          : (Number(donation.total) || undefined);
+        typeof latestServerTotal === 'number'
+          ? latestServerTotal
+          : (typeof donation.total === 'number' ? donation.total : (Number(donation.total) || undefined));
 
       const receiptData = createReceiptData(
         campaign,
