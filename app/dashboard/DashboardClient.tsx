@@ -5,7 +5,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { User } from "@supabase/supabase-js";
 import { Campaign } from "@/types";
-import { formatPrice } from "@/utils/pricingUtils";
+import { formatPrice, calculateSquarePrice } from "@/utils/pricingUtils";
 import EditDonationModal from "@/components/EditDonationModal";
 import {
   generatePDFReceipt,
@@ -445,6 +445,8 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
       // Get the actual squares data for this transaction
       let squares: SelectedSquare[] = [];
       
+      // We'll keep a square breakdown, but the Total shown on the receipt
+      // will explicitly use the recorded paid amount (donation.total)
       if (donation.square_ids && donation.square_ids.length > 0) {
         // Fetch actual square data from the database
         const response = await fetch(`/api/campaigns/${campaign.slug}`);
@@ -452,14 +454,23 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
           const { squares: campaignSquares } = await response.json();
           
           // Filter to get only the squares for this transaction
-          squares = campaignSquares
-            .filter((square: any) => donation.square_ids.includes(square.id))
-            .map((square: any) => ({
+          const matched = campaignSquares.filter((square: any) => donation.square_ids.includes(square.id));
+          // Recalculate values from campaign pricing for the breakdown only
+          squares = matched.map((square: any) => {
+            const value = calculateSquarePrice(
+              square.row,
+              square.col,
+              square.number,
+              campaign.pricing_type,
+              campaign.price_data,
+            );
+            return {
               row: square.row,
               col: square.col,
               number: square.number,
-              value: square.value || square.price, // Use actual square value from database
-            }));
+              value,
+            } as SelectedSquare;
+          });
         }
       }
       

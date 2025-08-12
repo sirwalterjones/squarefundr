@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { Campaign, Square, SelectedSquare } from "@/types";
 import GridOverlay from "@/components/GridOverlay";
 import PaymentModal from "@/components/PaymentModal";
-import { formatPrice, calculateTotalPrice } from "@/utils/pricingUtils";
+import { formatPrice, calculateTotalPrice, calculateSquarePrice } from "@/utils/pricingUtils";
 import {
   generatePDFReceipt,
   createReceiptData,
@@ -487,12 +487,21 @@ export default function FundraiserClient({
 
                     // Map to SelectedSquare[]
                     const receiptSquares: SelectedSquare[] = Array.isArray(txSquares)
-                      ? txSquares.map((s: any) => ({
-                          row: Number(s.row) || 0,
-                          col: Number(s.col) || 0,
-                          number: Number(s.number) || 0,
-                          value: Number(s.value) || 0,
-                        }))
+                      ? txSquares.map((s: any) => {
+                          const v = calculateSquarePrice(
+                            Number(s.row) || 0,
+                            Number(s.col) || 0,
+                            Number(s.number) || 0,
+                            campaign.pricing_type,
+                            campaign.price_data,
+                          );
+                          return {
+                            row: Number(s.row) || 0,
+                            col: Number(s.col) || 0,
+                            number: Number(s.number) || 0,
+                            value: v,
+                          };
+                        })
                       : [];
 
                     // Build receipt with explicit paid total if we have it
@@ -503,7 +512,11 @@ export default function FundraiserClient({
                       (transaction?.donor_email || lastReceiptData.donorEmail) as string,
                       lastReceiptData.paymentMethod,
                       lastReceiptData.transactionId,
-                      typeof transaction?.total === 'number' ? transaction.total : undefined,
+                      typeof transaction?.total === 'number'
+                        ? transaction.total
+                        : (receiptSquares.length > 0
+                            ? receiptSquares.reduce((sum, s) => sum + s.value, 0)
+                            : undefined),
                     );
                     generatePDFReceipt(receipt);
                   } catch (e) {
