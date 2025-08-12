@@ -217,11 +217,17 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
       });
 
       if (response.ok) {
-        // Force refresh with cache busting
-        console.log('[DASHBOARD] Edit successful, refreshing donations...');
-        setTimeout(() => {
-          loadDonations();
-        }, 100);
+        // Optimistically update UI
+        setDonations(prev => prev.map(d => d.id === selectedDonation.id ? {
+          ...d,
+          donor_name: data.donorName,
+          donor_email: data.donorEmail,
+          status: data.status,
+          total: typeof data.total === 'number' ? data.total : d.total,
+          amount: typeof data.total === 'number' ? data.total : d.amount,
+        } : d));
+        // Also refresh from server to ensure consistency
+        await loadDonations(selectedCampaignFilter || undefined);
       } else {
         const errorData = await response.json();
         console.error("Error updating donation:", errorData);
