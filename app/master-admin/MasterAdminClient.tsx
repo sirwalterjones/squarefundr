@@ -510,14 +510,29 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
       return;
     }
 
+    // Client-side filter of already loaded users for fast, reliable autocomplete
     try {
       setUserSearchLoading(true);
-      const response = await fetch(`/api/users-autocomplete?q=${encodeURIComponent(query)}`);
-      if (response.ok) {
-        const data = await response.json();
-        setUserSearchResults(data.users || []);
-        setShowUserDropdown(true);
-      }
+      const q = query.toLowerCase();
+      const results = users
+        .filter(u => {
+          const name = u.raw_user_meta_data?.full_name || u.raw_user_meta_data?.name || "";
+          return (
+            u.email.toLowerCase().includes(q) ||
+            name.toLowerCase().includes(q)
+          );
+        })
+        .slice(0, 10)
+        .map(u => ({
+          id: u.id,
+          email: u.email,
+          name: u.raw_user_meta_data?.full_name || u.raw_user_meta_data?.name || u.email,
+          display: (u.raw_user_meta_data?.full_name || u.raw_user_meta_data?.name)
+            ? `${u.raw_user_meta_data?.full_name || u.raw_user_meta_data?.name} (${u.email})`
+            : u.email,
+        }));
+      setUserSearchResults(results);
+      setShowUserDropdown(results.length > 0);
     } catch (error) {
       console.error("Error searching users:", error);
     } finally {
@@ -578,7 +593,7 @@ function MasterAdminClient({ user }: MasterAdminClientProps) {
 
     setSendingMessage(true);
     try {
-      const endpoint = (isGlobalMessage ? "/api/admin-messages/global" : "/api/admin-messages2") + `?t=${Date.now()}`;
+      const endpoint = (isGlobalMessage ? "/api/admin-messages/global" : "/api/admin-messages") + `?t=${Date.now()}`;
       const body = isGlobalMessage 
         ? {
             subject: messageSubject,
