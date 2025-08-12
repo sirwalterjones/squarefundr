@@ -471,17 +471,53 @@ export default function FundraiserClient({
             </div>
             {showReceiptButton && lastReceiptData && (
               <button
-                onClick={() => {
-                  // Create receipt with available data
-                  const receipt = createReceiptData(
-                    campaign,
-                    selectedSquares.length > 0 ? selectedSquares : [], // Use selected squares or empty array
-                    lastReceiptData.donorName,
-                    lastReceiptData.donorEmail,
-                    lastReceiptData.paymentMethod,
-                    lastReceiptData.transactionId,
-                  );
-                  generatePDFReceipt(receipt);
+                onClick={async () => {
+                  try {
+                    // Prefer server transaction + squares so totals and values are exact
+                    const txRes = await fetch(`/api/debug-transaction?transaction_id=${encodeURIComponent(lastReceiptData.transactionId)}`);
+                    let txJson: any = null;
+                    if (txRes.ok) txJson = await txRes.json();
+
+                    const transaction = txJson?.transaction;
+                    let txSquares = (txJson?.squares || []) as any[];
+                    if ((!txSquares || txSquares.length === 0) && Array.isArray(txJson?.squaresByEmail)) {
+                      // Fallback to squares found by donor email
+                      txSquares = txJson.squaresByEmail;
+                    }
+
+                    // Map to SelectedSquare[]
+                    const receiptSquares: SelectedSquare[] = Array.isArray(txSquares)
+                      ? txSquares.map((s: any) => ({
+                          row: Number(s.row) || 0,
+                          col: Number(s.col) || 0,
+                          number: Number(s.number) || 0,
+                          value: Number(s.value) || 0,
+                        }))
+                      : [];
+
+                    // Build receipt with explicit paid total if we have it
+                    const receipt = createReceiptData(
+                      campaign,
+                      receiptSquares.length > 0 ? receiptSquares : (selectedSquares || []),
+                      (transaction?.donor_name || lastReceiptData.donorName) as string,
+                      (transaction?.donor_email || lastReceiptData.donorEmail) as string,
+                      lastReceiptData.paymentMethod,
+                      lastReceiptData.transactionId,
+                      typeof transaction?.total === 'number' ? transaction.total : undefined,
+                    );
+                    generatePDFReceipt(receipt);
+                  } catch (e) {
+                    // As a last resort, generate from selection
+                    const fallback = createReceiptData(
+                      campaign,
+                      selectedSquares || [],
+                      lastReceiptData.donorName,
+                      lastReceiptData.donorEmail,
+                      lastReceiptData.paymentMethod,
+                      lastReceiptData.transactionId,
+                    );
+                    generatePDFReceipt(fallback);
+                  }
                 }}
                 className="inline-flex items-center space-x-2 bg-white text-green-600 hover:bg-gray-100 px-4 py-2 rounded-lg transition-colors text-sm font-medium border border-green-600"
               >
