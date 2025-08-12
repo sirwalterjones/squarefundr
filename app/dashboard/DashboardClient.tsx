@@ -217,15 +217,28 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
       });
 
       if (response.ok) {
-        // Optimistically update UI
-        setDonations(prev => prev.map(d => d.id === selectedDonation.id ? {
-          ...d,
-          donor_name: data.donorName,
-          donor_email: data.donorEmail,
-          status: data.status,
-          total: typeof data.total === 'number' ? data.total : d.total,
-          amount: typeof data.total === 'number' ? data.total : d.amount,
-        } : d));
+        const result = await response.json().catch(() => null);
+        const updated = result?.updated;
+        if (updated) {
+          setDonations(prev => prev.map(d => d.id === updated.id ? {
+            ...d,
+            donor_name: updated.donor_name,
+            donor_email: updated.donor_email,
+            status: updated.status,
+            total: updated.total,
+            amount: updated.total,
+          } : d));
+        } else {
+          // Fallback optimistic update
+          setDonations(prev => prev.map(d => d.id === selectedDonation.id ? {
+            ...d,
+            donor_name: data.donorName,
+            donor_email: data.donorEmail,
+            status: data.status,
+            total: typeof data.total === 'number' ? data.total : d.total,
+            amount: typeof data.total === 'number' ? data.total : d.amount,
+          } : d));
+        }
         // Also refresh from server to ensure consistency
         await loadDonations(selectedCampaignFilter || undefined);
       } else {

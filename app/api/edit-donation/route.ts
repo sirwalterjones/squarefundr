@@ -213,8 +213,16 @@ export async function PUT(request: NextRequest) {
       squaresUpdated: updatedSquares?.length || 0
     });
 
+    // Return fresh updated transaction for UI
+    const { data: updatedTransaction } = await adminSupabase
+      .from("transactions")
+      .select("*")
+      .eq("id", transactionId)
+      .single();
+
     return NextResponse.json({ 
       success: true,
+      updated: updatedTransaction,
       squaresReserved: updatedSquares?.length || 0
     });
   } catch (error) {
