@@ -38,6 +38,7 @@ export default function PaymentModal({
   const [showSuccess, setShowSuccess] = useState(false);
   const [showReceiptDownload, setShowReceiptDownload] = useState(false);
   const [receiptData, setReceiptData] = useState<any>(null);
+  const [paypalUrl, setPaypalUrl] = useState<string>("");
 
   const {
     register,
@@ -93,22 +94,24 @@ export default function PaymentModal({
         setShowReceiptDownload(true);
 
         // Generate PayPal URL (simple redirect to PayPal.me or manual PayPal)
-        const paypalUrl = campaign.paypal_email 
+        const generatedPaypalUrl = campaign.paypal_email 
           ? `https://www.paypal.me/${campaign.paypal_email.replace('@', '').replace('.', '')}/${total}`
           : `https://www.paypal.com/paypalme//${total}`;
 
-        // Show success message with PayPal redirect option
+        // Store PayPal URL and show success modal
+        setPaypalUrl(generatedPaypalUrl);
+        setShowSuccess(true);
+        setShowReceiptDownload(true);
+        
+        // Auto-close after 30 seconds if no action taken
         setTimeout(() => {
-          if (confirm(`Squares claimed! Click OK to complete payment via PayPal ($${total}), or Cancel to close.`)) {
-            window.open(paypalUrl, '_blank');
-          }
           onSuccess();
           onClose();
           reset();
           setShowSuccess(false);
           setShowReceiptDownload(false);
           setReceiptData(null);
-        }, 3000);
+        }, 30000);
       } else {
         throw new Error(result.error || "Failed to claim squares");
       }
@@ -339,9 +342,9 @@ export default function PaymentModal({
 
             {/* Success Message */}
             {showSuccess && (
-              <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-                <div className="flex items-center justify-center space-x-3">
-                  <div className="flex-shrink-0">
+              <div className="mb-4 p-6 bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-xl shadow-sm">
+                <div className="text-center">
+                  <div className="mx-auto w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-4">
                     <svg
                       className="w-6 h-6 text-green-600"
                       fill="none"
@@ -356,17 +359,37 @@ export default function PaymentModal({
                       />
                     </svg>
                   </div>
-                  <div className="text-center">
-                    <h4 className="text-lg font-medium text-green-900 mb-1">
-                      Success!
-                    </h4>
-                    <p className="text-sm text-green-700 mb-3">
-                      Your squares have been successfully claimed.
-                    </p>
+                  
+                  <h4 className="text-xl font-semibold text-gray-900 mb-2">
+                    🎉 Squares Successfully Claimed!
+                  </h4>
+                  
+                  <p className="text-gray-600 mb-4">
+                    Your squares are now reserved. Complete your payment to secure them.
+                  </p>
+
+                  {paymentMethod === "paypal" && paypalUrl && (
+                    <div className="mb-4">
+                      <button
+                        onClick={() => window.open(paypalUrl, '_blank')}
+                        className="inline-flex items-center justify-center w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors duration-200 shadow-md hover:shadow-lg mb-3"
+                      >
+                        <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M20.067 8.478c.492-3.172-.726-5.33-2.484-6.35-1.695-1.002-4.154-1.253-6.83-1.253H5.758c-.406 0-.746.295-.81.685L2.35 19.227c-.052.314.183.584.508.584h3.657l.919-5.789-.029.179c.064-.391.404-.686.81-.686h1.685c3.309 0 5.899-1.336 6.655-5.201.028-.145.049-.285.067-.42.481-.304.923-.697 1.145-1.416z"/>
+                        </svg>
+                        Complete Payment via PayPal ({formatPrice(total)})
+                      </button>
+                      <p className="text-xs text-gray-500">
+                        Opens in a new window • Secure payment processing
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="flex justify-center space-x-3">
                     {showReceiptDownload && receiptData && (
                       <button
                         onClick={() => generatePDFReceipt(receiptData)}
-                        className="inline-flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium"
+                        className="inline-flex items-center space-x-2 bg-gray-100 hover:bg-gray-200 text-gray-800 px-4 py-2 rounded-lg transition-colors text-sm font-medium"
                       >
                         <svg
                           className="w-4 h-4"
@@ -384,6 +407,21 @@ export default function PaymentModal({
                         <span>Download Receipt</span>
                       </button>
                     )}
+                    
+                    <button
+                      onClick={() => {
+                        onSuccess();
+                        onClose();
+                        reset();
+                        setShowSuccess(false);
+                        setShowReceiptDownload(false);
+                        setReceiptData(null);
+                        setPaypalUrl("");
+                      }}
+                      className="inline-flex items-center space-x-2 bg-gray-100 hover:bg-gray-200 text-gray-800 px-4 py-2 rounded-lg transition-colors text-sm font-medium"
+                    >
+                      <span>Close</span>
+                    </button>
                   </div>
                 </div>
               </div>
