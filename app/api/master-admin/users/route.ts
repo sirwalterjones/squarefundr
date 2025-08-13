@@ -181,13 +181,7 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // Create admin client for database operations
-    const adminSupabase = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    });
+    // Use existing admin client for database operations
 
     // Update user
     const updateData: any = {};
