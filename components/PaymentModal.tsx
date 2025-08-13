@@ -93,8 +93,10 @@ export default function PaymentModal({
         setShowSuccess(true);
         setShowReceiptDownload(true);
 
-        // Generate PayPal URL - direct to PayPal with email for manual sending
-        const generatedPaypalUrl = `https://www.paypal.com/send`;
+        // Generate PayPal URL - direct payment link with pre-filled recipient and amount
+        const generatedPaypalUrl = campaign.paypal_email 
+          ? `https://www.paypal.com/paypalme2/send?recipient=${encodeURIComponent(campaign.paypal_email)}&amount=${total}&currency=USD`
+          : `https://www.paypal.com/send`;
 
         // Store PayPal URL and show success modal
         setPaypalUrl(generatedPaypalUrl);
@@ -368,21 +370,6 @@ export default function PaymentModal({
 
                   {paymentMethod === "paypal" && paypalUrl && (
                     <div className="mb-4">
-                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-3">
-                        <h5 className="font-medium text-blue-900 mb-2">Complete Payment via PayPal</h5>
-                        <p className="text-sm text-blue-800 mb-3">
-                          Send <strong>{formatPrice(total)}</strong> to:
-                        </p>
-                        <div className="bg-white border border-blue-300 rounded px-3 py-2 mb-3">
-                          <p className="font-mono text-sm text-blue-900 select-all">
-                            {campaign.paypal_email || "Contact campaign owner for PayPal details"}
-                          </p>
-                        </div>
-                        <p className="text-xs text-blue-700 mb-3">
-                          Click the button below to open PayPal, then send money to the email above.
-                        </p>
-                      </div>
-                      
                       <button
                         onClick={() => window.open(paypalUrl, '_blank')}
                         className="inline-flex items-center justify-center w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors duration-200 shadow-md hover:shadow-lg mb-3"
@@ -390,10 +377,10 @@ export default function PaymentModal({
                         <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24" fill="currentColor">
                           <path d="M20.067 8.478c.492-3.172-.726-5.33-2.484-6.35-1.695-1.002-4.154-1.253-6.83-1.253H5.758c-.406 0-.746.295-.81.685L2.35 19.227c-.052.314.183.584.508.584h3.657l.919-5.789-.029.179c.064-.391.404-.686.81-.686h1.685c3.309 0 5.899-1.336 6.655-5.201.028-.145.049-.285.067-.42.481-.304.923-.697 1.145-1.416z"/>
                         </svg>
-                        Open PayPal to Send Payment
+                        Complete Payment via PayPal ({formatPrice(total)})
                       </button>
                       <p className="text-xs text-gray-500">
-                        Opens PayPal in a new window • Send to the email address shown above
+                        Opens PayPal with recipient and amount pre-filled • Secure payment processing
                       </p>
                     </div>
                   )}
