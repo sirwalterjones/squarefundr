@@ -247,7 +247,7 @@ export async function DELETE(request: NextRequest) {
     // Create admin client for role check
 
 
-    const adminSupabase = createClient(supabaseUrl, supabaseServiceKey, {
+    // Use existing admin client
 
 
       auth: {
@@ -294,12 +294,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Create admin client for database operations
-    const adminSupabase = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    });
+    // Use existing admin client
 
     // Delete user from auth (this will cascade delete their campaigns)
     const { error: deleteError } =
