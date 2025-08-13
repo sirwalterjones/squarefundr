@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
   console.log("[CASH-CLAIM] Starting cash claim request");
 
   try {
-    const { campaignId, squares, donorName, donorEmail } = await request.json();
+    const { campaignId, squares, donorName, donorEmail, paymentType = "cash" } = await request.json();
 
     console.log("[CASH-CLAIM] Request data:", {
       campaignId,
@@ -124,7 +124,7 @@ export async function POST(request: NextRequest) {
         claimed_by: donorEmail,
         donor_name: donorName,
         payment_status: "completed" as const,
-        payment_type: "cash" as const,
+        payment_type: paymentType as const,
         claimed_at: new Date().toISOString(),
       };
     });
@@ -192,7 +192,7 @@ export async function POST(request: NextRequest) {
       campaign_id: campaignId,
       square_ids: validSquareIds, // Store as array of valid IDs
       total: totalAmount,
-      payment_method: "cash",
+              payment_method: paymentType,
       donor_email: donorEmail,
       donor_name: donorName,
       status: "completed",

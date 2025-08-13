@@ -56,9 +56,10 @@ export default function PaymentModal({
 
   const handlePayPalPayment = async (data: DonorFormData) => {
     setIsProcessing(true);
+    setError(null);
     try {
-      // Create PayPal order
-      const response = await fetch("/api/create-paypal-order", {
+      // Claim squares immediately like cash payment (since we can't verify PayPal success)
+      const response = await fetch("/api/claim-squares-cash", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -66,29 +67,58 @@ export default function PaymentModal({
         body: JSON.stringify({
           campaignId: campaign.id,
           squares: selectedSquares,
-          donorEmail: data.email,
           donorName: data.name,
+          donorEmail: data.email,
+          paymentType: "paypal",
         }),
       });
 
       const result = await response.json();
 
-      if (result.approvalUrl) {
-        // DON'T call onSuccess() here - squares should only show as claimed after payment completion
-        console.log("PayPal order created successfully, redirecting to PayPal...");
+      if (response.ok) {
+        // Calculate total for PayPal redirect
+        const total = selectedSquares.reduce((sum, square) => sum + square.value, 0);
         
-        // Redirect immediately to PayPal for payment
-        window.location.href = result.approvalUrl;
+        // Create receipt data
+        const receipt = createReceiptData(
+          campaign,
+          selectedSquares,
+          data.name,
+          data.email,
+          "paypal",
+          result.transactionId,
+        );
+        setReceiptData(receipt);
+        setShowSuccess(true);
+        setShowReceiptDownload(true);
+
+        // Generate PayPal URL (simple redirect to PayPal.me or manual PayPal)
+        const paypalUrl = campaign.paypal_email 
+          ? `https://www.paypal.me/${campaign.paypal_email.replace('@', '').replace('.', '')}/${total}`
+          : `https://www.paypal.com/paypalme//${total}`;
+
+        // Show success message with PayPal redirect option
+        setTimeout(() => {
+          if (confirm(`Squares claimed! Click OK to complete payment via PayPal ($${total}), or Cancel to close.`)) {
+            window.open(paypalUrl, '_blank');
+          }
+          onSuccess();
+          onClose();
+          reset();
+          setShowSuccess(false);
+          setShowReceiptDownload(false);
+          setReceiptData(null);
+        }, 3000);
       } else {
-        throw new Error(result.error || "Failed to create PayPal order");
+        throw new Error(result.error || "Failed to claim squares");
       }
     } catch (error) {
-      console.error("Payment error:", error);
-      setError(
+      console.error("PayPal payment error:", error);
+      const errorMessage =
         error instanceof Error
           ? error.message
-          : "Payment failed. Please try again.",
-      );
+          : "Failed to claim squares. Please try again.";
+      setError(errorMessage);
     } finally {
       setIsProcessing(false);
     }
