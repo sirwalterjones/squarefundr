@@ -91,7 +91,8 @@ export async function GET(request: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser();
     
     if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      // Gracefully return empty list during initial session bootstrap
+      return NextResponse.json({ helpRequests: [] }, { status: 200 });
     }
 
     // Use admin client to check user role (bypasses RLS)
@@ -104,7 +105,8 @@ export async function GET(request: NextRequest) {
       .single();
 
     if (!userRole) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      // Not an admin: return empty list instead of 403 to avoid noisy client errors
+      return NextResponse.json({ helpRequests: [] }, { status: 200 });
     }
 
     // Get all help requests for admins (use admin client to avoid any RLS edge cases)
