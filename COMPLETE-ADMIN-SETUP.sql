@@ -10,9 +10,20 @@ CREATE TABLE IF NOT EXISTS public.user_roles (
     user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     role TEXT NOT NULL CHECK (role IN ('admin', 'user')),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    UNIQUE(user_id, role)
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- Add unique constraint separately to handle IF NOT EXISTS
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint 
+        WHERE conname = 'user_roles_user_id_role_key' 
+        AND conrelid = 'public.user_roles'::regclass
+    ) THEN
+        ALTER TABLE public.user_roles ADD CONSTRAINT user_roles_user_id_role_key UNIQUE(user_id, role);
+    END IF;
+END $$;
 
 -- Enable RLS
 ALTER TABLE public.user_roles ENABLE ROW LEVEL SECURITY;
@@ -229,11 +240,21 @@ CREATE TRIGGER update_help_messages_updated_at BEFORE UPDATE ON public.help_mess
 -- =====================================================
 
 -- Get Walter's user ID and make him admin
-INSERT INTO public.user_roles (user_id, role)
-SELECT id, 'admin'
-FROM auth.users 
-WHERE email = 'walterjonesjr@gmail.com'
-ON CONFLICT (user_id, role) DO NOTHING;
+DO $$
+DECLARE
+    walter_id UUID;
+BEGIN
+    -- Get Walter's user ID
+    SELECT id INTO walter_id FROM auth.users WHERE email = 'walterjonesjr@gmail.com';
+    
+    -- Only insert if not already admin
+    IF walter_id IS NOT NULL AND NOT EXISTS (
+        SELECT 1 FROM public.user_roles 
+        WHERE user_id = walter_id AND role = 'admin'
+    ) THEN
+        INSERT INTO public.user_roles (user_id, role) VALUES (walter_id, 'admin');
+    END IF;
+END $$;
 
 -- =====================================================
 -- SETUP COMPLETE!
