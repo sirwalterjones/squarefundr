@@ -93,8 +93,24 @@ export default function PaymentModal({
         setShowSuccess(true);
         setShowReceiptDownload(true);
 
-        // Generate PayPal URL - direct to PayPal homepage since specific send URLs vary
-        const generatedPaypalUrl = `https://www.paypal.com/signin`;
+        // Generate PayPal URL using classic PayPal button format that actually works
+        const paypalParams = new URLSearchParams({
+          cmd: "_xclick",
+          business: campaign.paypal_email || '',
+          item_name: `Square Donation - ${campaign.title}`,
+          amount: total.toFixed(2),
+          currency_code: "USD",
+          return: `${window.location.origin}/fundraiser/${campaign.slug}?success=true&transaction_id=${result.transactionId}`,
+          cancel_return: `${window.location.origin}/fundraiser/${campaign.slug}`,
+          custom: JSON.stringify({
+            campaign_id: campaign.id,
+            transaction_id: result.transactionId,
+          }),
+          no_shipping: "1",
+          no_note: "1",
+        });
+        
+        const generatedPaypalUrl = `https://www.paypal.com/cgi-bin/webscr?${paypalParams.toString()}`;
 
         // Store PayPal URL and show success modal
         setPaypalUrl(generatedPaypalUrl);
@@ -368,22 +384,6 @@ export default function PaymentModal({
 
                   {paymentMethod === "paypal" && paypalUrl && (
                     <div className="mb-4">
-                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-3">
-                        <h5 className="font-medium text-blue-900 mb-2">PayPal Payment Details</h5>
-                        <div className="space-y-2">
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm text-blue-800">Send to:</span>
-                            <span className="font-mono text-sm text-blue-900 bg-white px-2 py-1 rounded border select-all">
-                              {campaign.paypal_email}
-                            </span>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm text-blue-800">Amount:</span>
-                            <span className="font-semibold text-blue-900">{formatPrice(total)} USD</span>
-                          </div>
-                        </div>
-                      </div>
-                      
                       <button
                         onClick={() => window.open(paypalUrl, '_blank')}
                         className="inline-flex items-center justify-center w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors duration-200 shadow-md hover:shadow-lg mb-3"
@@ -391,10 +391,10 @@ export default function PaymentModal({
                         <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24" fill="currentColor">
                           <path d="M20.067 8.478c.492-3.172-.726-5.33-2.484-6.35-1.695-1.002-4.154-1.253-6.83-1.253H5.758c-.406 0-.746.295-.81.685L2.35 19.227c-.052.314.183.584.508.584h3.657l.919-5.789-.029.179c.064-.391.404-.686.81-.686h1.685c3.309 0 5.899-1.336 6.655-5.201.028-.145.049-.285.067-.42.481-.304.923-.697 1.145-1.416z"/>
                         </svg>
-                        Open PayPal to Send Payment
+                        Complete Payment via PayPal ({formatPrice(total)})
                       </button>
                       <p className="text-xs text-gray-500 text-center">
-                        Opens PayPal • Use "Send Money" with the details above
+                        Secure PayPal checkout • Payment processed directly
                       </p>
                     </div>
                   )}
