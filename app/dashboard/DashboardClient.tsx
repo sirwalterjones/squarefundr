@@ -12,6 +12,7 @@ import {
   createReceiptData,
 } from "@/utils/receiptGenerator";
 import { SelectedSquare } from "@/types";
+import { supabase } from "@/lib/supabaseClient";
 
 interface CampaignWithStats extends Campaign {
   stats: {
@@ -54,6 +55,10 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
   const [helpRequestModalOpen, setHelpRequestModalOpen] = useState(false);
   const [newHelpRequestModalOpen, setNewHelpRequestModalOpen] = useState(false);
   const [submittingHelpRequest, setSubmittingHelpRequest] = useState(false);
+  const [helpMessages, setHelpMessages] = useState<any[]>([]);
+  const [loadingMessages, setLoadingMessages] = useState(false);
+  const [newMessage, setNewMessage] = useState("");
+  const [sendingMessage, setSendingMessage] = useState(false);
   const [deletingCampaign, setDeletingCampaign] = useState(false);
 
   // Load donations on component mount to show count in tab header
@@ -64,6 +69,62 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
     };
     loadInitialData();
   }, []);
+
+  // Real-time subscription for help requests
+  useEffect(() => {
+    if (!user?.email) return;
+
+    const channel = supabase
+      .channel("help-requests-changes")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "help_requests",
+          filter: `email=eq.${user.email}`,
+        },
+        (payload) => {
+          console.log("Help request updated:", payload);
+          // Refresh help requests when changes occur
+          loadHelpRequests();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.email]);
+
+  // Real-time subscription for help messages
+  useEffect(() => {
+    if (!selectedHelpRequest?.id) return;
+
+    const channel = supabase
+      .channel(`help-messages-${selectedHelpRequest.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "help_messages",
+          filter: `help_request_id=eq.${selectedHelpRequest.id}`,
+        },
+        (payload) => {
+          console.log("New help message:", payload);
+          // Add new message to the list if it's not from current user
+          if (payload.new && payload.new.sender_email !== user.email) {
+            setHelpMessages(prev => [...prev, payload.new as any]);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedHelpRequest?.id, user?.email]);
 
   const totalRaised = campaigns.reduce(
     (sum, campaign) => sum + campaign.stats.totalRaised,
@@ -137,9 +198,70 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
     }
   };
 
-  const viewHelpRequestDetails = (request: any) => {
+  const viewHelpRequestDetails = async (request: any) => {
     setSelectedHelpRequest(request);
     setHelpRequestModalOpen(true);
+    await loadHelpMessages(request.id);
+  };
+
+  const loadHelpMessages = async (helpRequestId: string) => {
+    setLoadingMessages(true);
+    try {
+      const response = await fetch(`/api/help-messages?help_request_id=${helpRequestId}`, {
+        headers: {
+          "Cache-Control": "no-cache",
+          "Pragma": "no-cache",
+        },
+        cache: "no-store",
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setHelpMessages(data.messages || []);
+      } else {
+        console.error("Failed to load help messages");
+        setHelpMessages([]);
+      }
+    } catch (error: any) {
+      console.error("Error loading help messages:", error);
+      setHelpMessages([]);
+    } finally {
+      setLoadingMessages(false);
+    }
+  };
+
+  const sendHelpMessage = async () => {
+    if (!newMessage.trim() || !selectedHelpRequest) return;
+    
+    setSendingMessage(true);
+    try {
+      const response = await fetch("/api/help-messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          help_request_id: selectedHelpRequest.id,
+          message: newMessage.trim(),
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setHelpMessages(prev => [...prev, data.message]);
+        setNewMessage("");
+        // Refresh help requests to update the list
+        await loadHelpRequests();
+      } else {
+        const error = await response.json();
+        alert(error.error || "Failed to send message. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error sending help message:", error);
+      alert("Failed to send message. Please try again.");
+    } finally {
+      setSendingMessage(false);
+    }
   };
 
   const submitHelpRequest = async (formData: {
@@ -1658,13 +1780,35 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
           <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex justify-between items-center mb-6">
-                <h3 className="text-xl font-semibold text-gray-900">
-                  Help Request Details
-                </h3>
+                <div>
+                  <h3 className="text-xl font-semibold text-gray-900">
+                    {selectedHelpRequest.subject}
+                  </h3>
+                  <div className="flex items-center space-x-4 mt-2">
+                    <span
+                      className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        selectedHelpRequest.status === 'new'
+                          ? 'bg-blue-100 text-blue-800'
+                          : selectedHelpRequest.status === 'in_progress'
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : selectedHelpRequest.status === 'resolved'
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-gray-100 text-gray-800'
+                      }`}
+                    >
+                      {selectedHelpRequest.status.replace('_', ' ')}
+                    </span>
+                    <span className="text-sm text-gray-500">
+                      Created {new Date(selectedHelpRequest.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                </div>
                 <button
                   onClick={() => {
                     setHelpRequestModalOpen(false);
                     setSelectedHelpRequest(null);
+                    setHelpMessages([]);
+                    setNewMessage("");
                   }}
                   className="text-gray-400 hover:text-gray-600"
                 >
@@ -1674,135 +1818,117 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
                 </button>
               </div>
 
-              <div className="space-y-6">
-                {/* Request Info */}
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Subject
-                      </label>
-                      <div className="text-sm font-semibold text-gray-900">
-                        {selectedHelpRequest.subject}
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Status
-                      </label>
-                      <span
-                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                          selectedHelpRequest.status === 'new'
-                            ? 'bg-blue-100 text-blue-800'
-                            : selectedHelpRequest.status === 'in_progress'
-                            ? 'bg-yellow-100 text-yellow-800'
-                            : selectedHelpRequest.status === 'resolved'
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-gray-100 text-gray-800'
-                        }`}
-                      >
-                        {selectedHelpRequest.status.replace('_', ' ')}
-                      </span>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Priority
-                      </label>
-                      <span
-                        className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                          selectedHelpRequest.priority === 'urgent'
-                            ? 'bg-red-100 text-red-700'
-                            : selectedHelpRequest.priority === 'high'
-                            ? 'bg-orange-100 text-orange-700'
-                            : selectedHelpRequest.priority === 'normal'
-                            ? 'bg-gray-100 text-gray-700'
-                            : 'bg-gray-100 text-gray-700'
-                        }`}
-                      >
-                        {selectedHelpRequest.priority}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="mt-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Submitted
-                    </label>
-                    <div className="text-sm text-gray-600">
-                      {new Date(selectedHelpRequest.created_at).toLocaleString()}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Your Message */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Your Message
-                  </label>
-                  <div className="bg-white border border-gray-200 p-4 rounded-lg">
-                    <p className="text-sm text-gray-900 whitespace-pre-wrap">
-                      {selectedHelpRequest.message}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Admin Response */}
-                {selectedHelpRequest.notes ? (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Admin Response
-                    </label>
-                    <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
-                      <p className="text-sm text-blue-900 whitespace-pre-wrap">
-                        {selectedHelpRequest.notes}
-                      </p>
-                    </div>
+              {/* Conversation Messages */}
+              <div className="space-y-4 mb-6">
+                {loadingMessages ? (
+                  <div className="flex justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                   </div>
                 ) : (
-                  <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg">
-                    <div className="flex items-center">
-                      <svg className="w-5 h-5 text-yellow-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      <div>
-                        <p className="text-sm font-medium text-yellow-800">
-                          {selectedHelpRequest.status === 'new' 
-                            ? "Your request is waiting for review"
-                            : "Your request is being worked on"
-                          }
-                        </p>
-                        <p className="text-xs text-yellow-700 mt-1">
-                          You'll receive a response here when available.
-                        </p>
+                  <>
+                    {/* Initial Request */}
+                    <div className="flex justify-end">
+                      <div className="max-w-md bg-blue-500 text-white rounded-lg p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-medium text-blue-100">You</span>
+                          <span className="text-xs text-blue-200">
+                            {new Date(selectedHelpRequest.created_at).toLocaleString()}
+                          </span>
+                        </div>
+                        <p className="whitespace-pre-wrap text-sm">{selectedHelpRequest.message}</p>
                       </div>
                     </div>
-                  </div>
-                )}
 
-                {/* Resolution Info */}
-                {selectedHelpRequest.resolved_at && (
-                  <div className="bg-green-50 border border-green-200 p-4 rounded-lg">
-                    <div className="flex items-center">
-                      <svg className="w-5 h-5 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                      <div>
-                        <p className="text-sm font-medium text-green-800">
-                          Request Resolved
-                        </p>
-                        <p className="text-xs text-green-700 mt-1">
-                          Resolved on {new Date(selectedHelpRequest.resolved_at).toLocaleString()}
-                        </p>
+                    {/* Threaded Messages */}
+                    {helpMessages.map((message: any) => (
+                      <div
+                        key={message.id}
+                        className={`flex ${message.sender_type === 'user' ? 'justify-end' : 'justify-start'}`}
+                      >
+                        <div
+                          className={`max-w-md rounded-lg p-4 ${
+                            message.sender_type === 'user'
+                              ? 'bg-blue-500 text-white'
+                              : 'bg-gray-100 text-gray-900'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <span
+                              className={`font-medium text-sm ${
+                                message.sender_type === 'user' ? 'text-blue-100' : 'text-gray-600'
+                              }`}
+                            >
+                              {message.sender_type === 'user' ? 'You' : 'Admin'}
+                            </span>
+                            <span
+                              className={`text-xs ${
+                                message.sender_type === 'user' ? 'text-blue-200' : 'text-gray-500'
+                              }`}
+                            >
+                              {new Date(message.created_at).toLocaleString()}
+                            </span>
+                          </div>
+                          <p className="whitespace-pre-wrap text-sm">{message.message}</p>
+                        </div>
                       </div>
-                    </div>
-                  </div>
+                    ))}
+
+                    {/* No messages yet */}
+                    {helpMessages.length === 0 && selectedHelpRequest.status === 'new' && (
+                      <div className="text-center py-8">
+                        <div className="text-gray-500">
+                          <svg className="w-12 h-12 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-3.582 8-8 8a8.959 8.959 0 01-4.906-1.456l-3.815 1.072a1 1 0 01-1.295-1.295l1.072-3.815A8.959 8.959 0 013 12c0-4.418 3.582-8 8-8s8 3.582 8 8z" />
+                          </svg>
+                          <p className="text-sm">Waiting for admin response...</p>
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
+
+              {/* Reply Area */}
+              {selectedHelpRequest.status !== 'closed' && (
+                <div className="border-t pt-6">
+                  <div className="space-y-3">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Send a reply
+                    </label>
+                    <textarea
+                      value={newMessage}
+                      onChange={(e) => setNewMessage(e.target.value)}
+                      placeholder="Type your message here..."
+                      rows={3}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                      disabled={sendingMessage}
+                    />
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-gray-500">
+                        {newMessage.length}/2000 characters
+                      </span>
+                      <button
+                        onClick={sendHelpMessage}
+                        disabled={!newMessage.trim() || sendingMessage || newMessage.length > 2000}
+                        className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                      >
+                        {sendingMessage && (
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        )}
+                        {sendingMessage ? "Sending..." : "Send Reply"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="flex justify-center pt-6 border-t mt-6">
                 <button
                   onClick={() => {
                     setHelpRequestModalOpen(false);
                     setSelectedHelpRequest(null);
+                    setHelpMessages([]);
+                    setNewMessage("");
                   }}
                   className="px-6 py-2 bg-gray-600 text-white hover:bg-gray-700 rounded-lg transition-colors"
                 >
