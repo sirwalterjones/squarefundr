@@ -18,9 +18,11 @@ CREATE TABLE IF NOT EXISTS public.user_roles (
 ALTER TABLE public.user_roles ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for user_roles
+DROP POLICY IF EXISTS "Users can view their own roles" ON public.user_roles;
 CREATE POLICY "Users can view their own roles" ON public.user_roles
     FOR SELECT USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Admins can view all roles" ON public.user_roles;
 CREATE POLICY "Admins can view all roles" ON public.user_roles
     FOR SELECT USING (
         EXISTS (
@@ -29,6 +31,7 @@ CREATE POLICY "Admins can view all roles" ON public.user_roles
         )
     );
 
+DROP POLICY IF EXISTS "Admins can insert/update/delete roles" ON public.user_roles;
 CREATE POLICY "Admins can insert/update/delete roles" ON public.user_roles
     FOR ALL USING (
         EXISTS (
@@ -59,11 +62,13 @@ CREATE TABLE IF NOT EXISTS public.help_requests (
 ALTER TABLE public.help_requests ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for help_requests
+DROP POLICY IF EXISTS "Users can view their own help requests" ON public.help_requests;
 CREATE POLICY "Users can view their own help requests" ON public.help_requests
     FOR SELECT USING (
         email = (SELECT email FROM auth.users WHERE id = auth.uid())
     );
 
+DROP POLICY IF EXISTS "Admins can view all help requests" ON public.help_requests;
 CREATE POLICY "Admins can view all help requests" ON public.help_requests
     FOR SELECT USING (
         EXISTS (
@@ -72,15 +77,20 @@ CREATE POLICY "Admins can view all help requests" ON public.help_requests
         )
     );
 
-CREATE POLICY "Anyone can insert help requests" ON public.help_requests
+DROP POLICY IF EXISTS "Anyone can insert help requests" ON public.help_requests;
+DROP POLICY IF EXISTS "Anyone can submit help requests" ON public.help_requests;
+CREATE POLICY "Anyone can submit help requests" ON public.help_requests
     FOR INSERT WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Users can update their own help requests" ON public.help_requests;
 CREATE POLICY "Users can update their own help requests" ON public.help_requests
     FOR UPDATE USING (
         email = (SELECT email FROM auth.users WHERE id = auth.uid())
     );
 
-CREATE POLICY "Admins can update all help requests" ON public.help_requests
+DROP POLICY IF EXISTS "Admins can update help requests" ON public.help_requests;
+DROP POLICY IF EXISTS "Admins can update all help requests" ON public.help_requests;
+CREATE POLICY "Admins can update help requests" ON public.help_requests
     FOR UPDATE USING (
         EXISTS (
             SELECT 1 FROM public.user_roles ur 
@@ -113,7 +123,9 @@ CREATE TABLE IF NOT EXISTS public.help_messages (
 ALTER TABLE public.help_messages ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for help_messages
-CREATE POLICY "Users can view messages for their help requests" ON public.help_messages
+DROP POLICY IF EXISTS "Users can view messages for their help requests" ON public.help_messages;
+DROP POLICY IF EXISTS "Users can view messages in their help requests" ON public.help_messages;
+CREATE POLICY "Users can view messages in their help requests" ON public.help_messages
     FOR SELECT USING (
         EXISTS (
             SELECT 1 FROM public.help_requests hr 
@@ -122,6 +134,7 @@ CREATE POLICY "Users can view messages for their help requests" ON public.help_m
         )
     );
 
+DROP POLICY IF EXISTS "Admins can view all help messages" ON public.help_messages;
 CREATE POLICY "Admins can view all help messages" ON public.help_messages
     FOR SELECT USING (
         EXISTS (
@@ -130,7 +143,9 @@ CREATE POLICY "Admins can view all help messages" ON public.help_messages
         )
     );
 
-CREATE POLICY "Users can insert messages for their help requests" ON public.help_messages
+DROP POLICY IF EXISTS "Users can insert messages for their help requests" ON public.help_messages;
+DROP POLICY IF EXISTS "Users can send messages in their help requests" ON public.help_messages;
+CREATE POLICY "Users can send messages in their help requests" ON public.help_messages
     FOR INSERT WITH CHECK (
         sender_type = 'user' AND
         EXISTS (
@@ -140,7 +155,9 @@ CREATE POLICY "Users can insert messages for their help requests" ON public.help
         )
     );
 
-CREATE POLICY "Admins can insert messages for any help request" ON public.help_messages
+DROP POLICY IF EXISTS "Admins can insert messages for any help request" ON public.help_messages;
+DROP POLICY IF EXISTS "Admins can send messages to any help request" ON public.help_messages;
+CREATE POLICY "Admins can send messages to any help request" ON public.help_messages
     FOR INSERT WITH CHECK (
         sender_type = 'admin' AND
         EXISTS (
@@ -149,10 +166,13 @@ CREATE POLICY "Admins can insert messages for any help request" ON public.help_m
         )
     );
 
+DROP POLICY IF EXISTS "Users can update their own messages" ON public.help_messages;
 CREATE POLICY "Users can update their own messages" ON public.help_messages
     FOR UPDATE USING (sender_user_id = auth.uid());
 
-CREATE POLICY "Admins can update all messages" ON public.help_messages
+DROP POLICY IF EXISTS "Admins can update all messages" ON public.help_messages;
+DROP POLICY IF EXISTS "Admins can update all help messages" ON public.help_messages;
+CREATE POLICY "Admins can update all help messages" ON public.help_messages
     FOR UPDATE USING (
         EXISTS (
             SELECT 1 FROM public.user_roles ur 
@@ -192,12 +212,15 @@ END;
 $$ language 'plpgsql';
 
 -- Triggers for updated_at
+DROP TRIGGER IF EXISTS update_user_roles_updated_at ON public.user_roles;
 CREATE TRIGGER update_user_roles_updated_at BEFORE UPDATE ON public.user_roles
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_help_requests_updated_at ON public.help_requests;
 CREATE TRIGGER update_help_requests_updated_at BEFORE UPDATE ON public.help_requests
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_help_messages_updated_at ON public.help_messages;
 CREATE TRIGGER update_help_messages_updated_at BEFORE UPDATE ON public.help_messages
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
