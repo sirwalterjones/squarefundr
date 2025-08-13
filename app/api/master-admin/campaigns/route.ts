@@ -18,8 +18,16 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Check if user is admin
-    const { data: userRole, error: roleError } = await supabase
+    // Create admin client for database operations
+    const adminSupabase = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    });
+
+    // Check if user is admin using admin client
+    const { data: userRole, error: roleError } = await adminSupabase
       .from("user_roles")
       .select("role")
       .eq("user_id", user.id)
@@ -32,14 +40,6 @@ export async function GET(request: NextRequest) {
         { status: 403 },
       );
     }
-
-    // Create admin client for database operations
-    const adminSupabase = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    });
 
     // Get all campaigns
     const { data: campaigns, error: campaignError } = await adminSupabase
@@ -87,8 +87,16 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Check if user is admin
-    const { data: userRole, error: roleError } = await supabase
+    // Create admin client for database operations
+    const adminSupabase = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    });
+
+    // Check if user is admin using admin client
+    const { data: userRole, error: roleError } = await adminSupabase
       .from("user_roles")
       .select("role")
       .eq("user_id", user.id)
@@ -101,14 +109,6 @@ export async function DELETE(request: NextRequest) {
         { status: 403 },
       );
     }
-
-    // Create admin client for database operations
-    const adminSupabase = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    });
 
     // Delete campaign (this will cascade delete squares and transactions)
     const { error: deleteError } = await adminSupabase
