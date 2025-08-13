@@ -94,11 +94,19 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user is admin
-    const { data: userRole } = await supabase
+    const { data: userRole, error: roleError } = await supabase
       .from("user_roles")
       .select("role")
       .eq("user_id", user.id)
       .single();
+
+    // If user_roles table doesn't exist, provide helpful error
+    if (roleError?.code === '42P01') {
+      return NextResponse.json(
+        { error: "Help messaging system is not yet set up. Please contact support to complete database setup." },
+        { status: 503 }
+      );
+    }
 
     const isAdmin = userRole?.role === "admin";
 
@@ -110,6 +118,14 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (helpRequestError || !helpRequest) {
+      // If help_requests table doesn't exist, provide helpful error
+      if (helpRequestError?.code === '42P01') {
+        return NextResponse.json(
+          { error: "Help messaging system is not yet set up. Please contact support to complete database setup." },
+          { status: 503 }
+        );
+      }
+      
       return NextResponse.json(
         { error: "Help request not found" },
         { status: 404 }
