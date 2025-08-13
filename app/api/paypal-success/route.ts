@@ -170,6 +170,53 @@ export async function GET(request: NextRequest) {
         console.error("Error finding reserved squares:", reservedSquareError);
       }
 
+      // CRITICAL FIX: If no squares were found, try to claim available squares for this payment
+      if (!squaresToUpdate || squaresToUpdate.length === 0) {
+        console.log(`[PAYPAL-SUCCESS] No pre-claimed squares found! Attempting to claim available squares for $${transaction.total}`);
+        
+        // Get all available squares for this campaign
+        const { data: availableSquares, error: availableSquareError } = await supabase
+          .from("squares")
+          .select("*")
+          .eq("campaign_id", transaction.campaign_id)
+          .is("claimed_by", null)
+          .order("number");
+          
+        if (availableSquares && availableSquares.length > 0) {
+          console.log(`[PAYPAL-SUCCESS] Found ${availableSquares.length} available squares`);
+          
+          // Select squares that match the paid amount
+          let currentTotal = 0;
+          const selectedSquares = [];
+          
+          for (const square of availableSquares) {
+            if (currentTotal < transaction.total) {
+              selectedSquares.push(square);
+              currentTotal += square.value;
+              
+              if (currentTotal >= transaction.total) {
+                break;
+              }
+            }
+          }
+          
+          console.log(`[PAYPAL-SUCCESS] Selected ${selectedSquares.length} squares totaling $${currentTotal} for payment of $${transaction.total}`);
+          
+          if (selectedSquares.length > 0 && currentTotal >= transaction.total) {
+            squaresToUpdate = selectedSquares;
+            
+            // Update transaction with the selected square IDs
+            const squareIds = selectedSquares.map(s => s.id);
+            await supabase
+              .from("transactions")
+              .update({ square_ids: squareIds })
+              .eq("id", transactionId);
+              
+            console.log(`[PAYPAL-SUCCESS] Updated transaction ${transactionId} with square IDs:`, squareIds);
+          }
+        }
+      }
+
       if (squaresToUpdate && squaresToUpdate.length > 0) {
         // Update squares to mark as completed and remove temp prefix
         console.log(`Updating squares for transaction ${transactionId}`);
