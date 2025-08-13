@@ -94,13 +94,16 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { data: userRole } = await supabase
+    // Use admin client to check user role (bypasses RLS)
+    const adminSupabase = await createAdminSupabaseClient();
+    const { data: userRole } = await adminSupabase
       .from("user_roles")
       .select("role")
       .eq("user_id", user.id)
+      .eq("role", "admin")
       .single();
 
-    if (!userRole || userRole.role !== "admin") {
+    if (!userRole) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -149,13 +152,16 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { data: userRole } = await supabase
+    // Use admin client to check user role (bypasses RLS)
+    const adminSupabase = await createAdminSupabaseClient();
+    const { data: userRole } = await adminSupabase
       .from("user_roles")
       .select("role")
       .eq("user_id", user.id)
+      .eq("role", "admin")
       .single();
 
-    if (!userRole || userRole.role !== "admin") {
+    if (!userRole) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
