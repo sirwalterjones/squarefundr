@@ -18,8 +18,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if user is admin
-    const { data: userRole, error: roleError } = await supabase
+    // Check if user is admin (using admin client to bypass RLS)
+    const adminSupabase = await createAdminSupabaseClient();
+    const { data: userRole, error: roleError } = await adminSupabase
       .from("user_roles")
       .select("role")
       .eq("user_id", user.id)
@@ -113,8 +114,9 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const for_user_id = searchParams.get("for_user_id");
 
-    // Check if user is admin
-    const { data: userRole } = await supabase
+    // Check if user is admin (using admin client to bypass RLS)
+    const adminSupabase = await createAdminSupabaseClient();
+    const { data: userRole } = await adminSupabase
       .from("user_roles")
       .select("role")
       .eq("user_id", user.id)
