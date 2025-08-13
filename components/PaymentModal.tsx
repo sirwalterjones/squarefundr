@@ -74,14 +74,11 @@ export default function PaymentModal({
       const result = await response.json();
 
       if (result.approvalUrl) {
-        // CRITICAL: Update the UI to show squares as reserved BEFORE redirecting
-        console.log("PayPal order created successfully, updating UI before redirect...");
-        onSuccess(); // This updates the parent component's squares state
+        // DON'T call onSuccess() here - squares should only show as claimed after payment completion
+        console.log("PayPal order created successfully, redirecting to PayPal...");
         
-        // Small delay to ensure UI updates, then redirect
-        setTimeout(() => {
-          window.location.href = result.approvalUrl;
-        }, 100);
+        // Redirect immediately to PayPal for payment
+        window.location.href = result.approvalUrl;
       } else {
         throw new Error(result.error || "Failed to create PayPal order");
       }
