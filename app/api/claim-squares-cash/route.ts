@@ -124,7 +124,7 @@ export async function POST(request: NextRequest) {
         claimed_by: donorEmail,
         donor_name: donorName,
         payment_status: "completed" as const,
-        payment_type: paymentType as const,
+        payment_type: paymentType,
         claimed_at: new Date().toISOString(),
       };
     });
