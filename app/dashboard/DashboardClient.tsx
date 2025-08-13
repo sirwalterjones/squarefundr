@@ -480,8 +480,8 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
       // Check if we have actual claimed squares by this donor from the debug API
       const actualSquares = latestServerTotal !== undefined ? 
         (await fetch(`/api/debug-transaction?transaction_id=${encodeURIComponent(donation.id)}`, { cache: 'no-store' })
-          .then(res => res.ok ? res.json() : {})
-          .then(data => data.squaresByEmail || [])
+          .then(res => res.ok ? res.json() : null)
+          .then(data => data?.squaresByEmail || [])
           .catch(() => [])) : [];
       
       if (actualSquares.length > 0) {
