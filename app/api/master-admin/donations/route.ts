@@ -206,25 +206,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Create admin client for role check
-
-
-    const adminSupabase = createClient(supabaseUrl, supabaseServiceKey, {
-
-
-      auth: {
-
-
-        autoRefreshToken: false,
-
-
-        persistSession: false,
-
-
-      },
-
-
-    });
+    // Use existing admin client for role check
 
 
 
@@ -255,13 +237,7 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // Create admin client for database operations
-    const adminSupabase = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    });
+    // Continue with admin client for database operations
 
     // Get the transaction to find associated squares
     const { data: transaction, error: fetchError } = await adminSupabase

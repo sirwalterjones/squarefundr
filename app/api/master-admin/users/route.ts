@@ -244,25 +244,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Create admin client for role check
-
-
-    // Use existing admin client
-
-
-      auth: {
-
-
-        autoRefreshToken: false,
-
-
-        persistSession: false,
-
-
-      },
-
-
-    });
+    // Use existing admin client for role check
 
 
 
