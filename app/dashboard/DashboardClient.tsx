@@ -477,44 +477,30 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
         }
       } catch {}
       
-      // We'll keep a square breakdown, but the Total shown on the receipt
-      // will explicitly use the recorded paid amount (donation.total)
-      if (donation.square_ids && donation.square_ids.length > 0) {
-        // Fetch actual square data from the database
-        const response = await fetch(`/api/campaigns/${campaign.slug}`);
-        if (response.ok) {
-          const { squares: campaignSquares } = await response.json();
-          
-          // Filter to get only the squares for this transaction
-          const matched = campaignSquares.filter((square: any) => donation.square_ids.includes(square.id));
-          // Recalculate values from campaign pricing for the breakdown only
-          squares = matched.map((square: any) => {
-            const value = calculateSquarePrice(
-              square.row,
-              square.col,
-              square.number,
-              campaign.pricing_type,
-              campaign.price_data,
-            );
-            return {
-              row: square.row,
-              col: square.col,
-              number: square.number,
-              value,
-            } as SelectedSquare;
-          });
-        }
-      }
+      // Check if we have actual claimed squares by this donor from the debug API
+      const actualSquares = latestServerTotal !== undefined ? 
+        (await fetch(`/api/debug-transaction?transaction_id=${encodeURIComponent(donation.id)}`, { cache: 'no-store' })
+          .then(res => res.ok ? res.json() : {})
+          .then(data => data.squaresByEmail || [])
+          .catch(() => [])) : [];
       
-      // If no squares found, create placeholder data
-      if (squares.length === 0) {
-        const squareIds = donation.square_ids || [];
-        squares = squareIds.map((id: string, index: number) => ({
-          row: 0,
-          col: index,
-          number: index + 1,
-          value: donation.total / squareIds.length,
+      if (actualSquares.length > 0) {
+        // Use actually claimed squares
+        squares = actualSquares.map((sq: any) => ({
+          row: sq.row,
+          col: sq.col,
+          value: sq.value,
+          number: sq.number,
         }));
+      } else {
+        // No actual squares claimed - create a generic representation
+        // This prevents showing random unclaimed squares on the receipt
+        squares = [{
+          row: 1,
+          col: 1,
+          value: latestServerTotal || Number(donation.total) || 0,
+          number: 1,
+        }];
       }
 
       // Create receipt data (prefer recorded paid total if available)
