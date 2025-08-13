@@ -45,9 +45,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const adminSupabase = await createAdminSupabaseClient();
+    const adminSupabaseForOps = await createAdminSupabaseClient();
     // NEW IMPLEMENTATION: write admin messages as help requests (works reliably)
-    const { data: targetUserResp, error: targetUserErr } = await adminSupabase.auth.admin.getUserById(to_user_id);
+    const { data: targetUserResp, error: targetUserErr } = await adminSupabaseForOps.auth.admin.getUserById(to_user_id);
     if (targetUserErr) {
       console.error("getUserById failed:", targetUserErr);
     }
@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { data: helpRow, error: helpErr } = await adminSupabase
+    const { data: helpRow, error: helpErr } = await adminSupabaseForOps
       .from("help_requests")
       .insert({
         name: "Admin",

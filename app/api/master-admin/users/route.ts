@@ -67,13 +67,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Create admin client for database operations
-    const adminSupabase = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    });
+    // Continue with admin client for database operations
 
     // Check if specific user ID is requested
     const { searchParams } = new URL(request.url);
@@ -156,25 +150,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Create admin client for role check
-
-
-    const adminSupabase = createClient(supabaseUrl, supabaseServiceKey, {
-
-
-      auth: {
-
-
-        autoRefreshToken: false,
-
-
-        persistSession: false,
-
-
-      },
-
-
-    });
+    // Use existing admin client for role check
 
 
 

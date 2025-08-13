@@ -103,13 +103,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Create admin client for database operations
-    const adminSupabase = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    });
+    // Continue with admin client for database operations
 
     // Get all campaigns for lookup
     const { data: campaigns, error: campaignError } = await adminSupabase
