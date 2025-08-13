@@ -193,9 +193,13 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
         setHelpRequests(userRequests);
       } else {
         console.error("Failed to load help requests");
+        // Set empty array if help system not set up yet
+        setHelpRequests([]);
       }
     } catch (error: any) {
       console.error("Error loading help requests:", error);
+      // Set empty array on error
+      setHelpRequests([]);
     } finally {
       setLoadingHelp(false);
     }
