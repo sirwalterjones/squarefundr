@@ -150,9 +150,13 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Use existing admin client for role check
-
-
+    // Create admin client for role check
+    const adminSupabase = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    });
 
     // Check if user is admin using admin client
 
@@ -181,7 +185,7 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // Use existing admin client for database operations
+    // Continue with admin client for database operations
 
     // Update user
     const updateData: any = {};
@@ -244,9 +248,13 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Use existing admin client for role check
-
-
+    // Create admin client for role check
+    const adminSupabase = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    });
 
     // Check if user is admin using admin client
 
