@@ -61,10 +61,13 @@ function DashboardClient({ campaigns, user }: DashboardClientProps) {
   const [sendingMessage, setSendingMessage] = useState(false);
   const [deletingCampaign, setDeletingCampaign] = useState(false);
 
-  // Load donations on component mount to show count in tab header
+  // Load donations and help requests on component mount to show counts in tab headers
   useEffect(() => {
     const loadInitialData = async () => {
-      await loadDonations(selectedCampaignFilter || undefined);
+      await Promise.all([
+        loadDonations(selectedCampaignFilter || undefined),
+        loadHelpRequests()
+      ]);
       setInitialLoading(false);
     };
     loadInitialData();

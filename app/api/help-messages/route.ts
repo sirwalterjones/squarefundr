@@ -30,8 +30,21 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       console.error("Error fetching help messages:", error);
+      console.error("Error details:", {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint
+      });
+      
+      // If table doesn't exist, return empty messages instead of error
+      if (error.code === '42P01') {
+        console.log("help_messages table doesn't exist yet, returning empty array");
+        return NextResponse.json({ messages: [] });
+      }
+      
       return NextResponse.json(
-        { error: "Failed to fetch messages" },
+        { error: "Failed to fetch messages", details: error.message },
         { status: 500 }
       );
     }
@@ -104,7 +117,7 @@ export async function POST(request: NextRequest) {
     }
 
     // For non-admins, verify they own this help request
-    if (!isAdmin && helpRequest.email !== user.email) {
+    if (!isAdmin && helpRequest.email !== (user.email || user.user_metadata?.email)) {
       return NextResponse.json(
         { error: "You can only send messages to your own help requests" },
         { status: 403 }
@@ -131,8 +144,23 @@ export async function POST(request: NextRequest) {
 
     if (insertError) {
       console.error("Error creating help message:", insertError);
+      console.error("Insert error details:", {
+        code: insertError.code,
+        message: insertError.message,
+        details: insertError.details,
+        hint: insertError.hint
+      });
+      
+      // If table doesn't exist, provide helpful error
+      if (insertError.code === '42P01') {
+        return NextResponse.json(
+          { error: "Help messaging system is not yet set up. Please contact support." },
+          { status: 503 }
+        );
+      }
+      
       return NextResponse.json(
-        { error: "Failed to send message" },
+        { error: "Failed to send message", details: insertError.message },
         { status: 500 }
       );
     }
